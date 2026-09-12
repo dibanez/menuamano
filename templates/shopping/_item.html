@@ -16,7 +16,7 @@
       {% if item.is_surplus and item.needed_quantity == 0 %}
         Comprado {{ item.purchased_quantity|qty:item.unit }}. Ya no hace falta según el plan.
       {% elif item.unit %}
-        Hace falta {{ item.needed_quantity|qty:item.unit }}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}
+        Hace falta {{ item.needed_quantity|qty:item.unit }}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}{% if item.suggested_purchase %}. <strong>Compra {{ item.suggested_purchase|qty:item.unit }}</strong>{% endif %}
       {% elif item.needed_quantity %}
         Cantidad: {{ item.needed_quantity|num }}
       {% endif %}

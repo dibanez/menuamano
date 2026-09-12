@@ -130,6 +130,16 @@ def test_manual_quantity_correction_is_used(household, admin_user, monday, plann
     assert needs[shopping.item_key(line.ingredient_id, "clove")].quantity == Decimal("3")
 
 
+def test_suggested_purchase_rounds_pieces_up_only():
+    eggs = ShoppingItem(unit="unit", needed_quantity=Decimal("1.9"), purchased_quantity=Decimal("0"))
+    assert eggs.suggested_purchase == Decimal("2")
+    eggs.purchased_quantity = Decimal("1")
+    assert eggs.suggested_purchase == Decimal("1")  # 0.9 still pending
+    assert ShoppingItem(unit="unit", needed_quantity=Decimal("3")).suggested_purchase is None
+    assert ShoppingItem(unit="g", needed_quantity=Decimal("150.5")).suggested_purchase is None
+    assert ShoppingItem(unit="unit", needed_quantity=Decimal("1.5"), is_manual=True).suggested_purchase is None
+
+
 def test_list_for_other_range_is_not_touched(household, admin_user, monday, planned_dinner):
     other = shopping.create_list(household, admin_user, monday + timedelta(days=10), monday + timedelta(days=12))
     assert not ShoppingItem.objects.filter(shopping_list=other).exists()

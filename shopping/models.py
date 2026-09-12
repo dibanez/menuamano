@@ -1,11 +1,11 @@
-from decimal import Decimal
+from decimal import ROUND_CEILING, Decimal
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
-from foods.models import Category, Unit
+from foods.models import UNIT_INFO, Category, Dimension, Unit
 
 
 class ShoppingList(models.Model):
@@ -72,6 +72,19 @@ class ShoppingItem(models.Model):
             return self.purchased_quantity >= self.needed_quantity
         # Manual items without quantity are simply ticked; surplus rows are already bought.
         return self.purchased_quantity > 0
+
+    @property
+    def suggested_purchase(self):
+        """Whole number to buy for pieces (1.9 eggs → 2). None when it adds nothing."""
+        if self.is_manual or self.unit not in Unit.values:
+            return None
+        if UNIT_INFO[Unit(self.unit)][0] != Dimension.COUNT:
+            return None
+        pending = self.pending_quantity
+        rounded = pending.to_integral_value(rounding=ROUND_CEILING)
+        if pending <= 0 or rounded == pending:
+            return None
+        return rounded
 
     @property
     def is_surplus(self):
