@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.production
+staticfiles/
+.pytest_cache/
+.coverage
+htmlcov/
+*.sqlite3
+.DS_Store
+.playwright-mcp/

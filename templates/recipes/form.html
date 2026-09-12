@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{% if recipe %}Editar receta{% else %}Nueva receta{% endif %} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if recipe %}Editar {{ recipe.name }}{% else %}Nueva receta{% endif %}</h1>
+  {% if recipe %}<p class="lead">Guardar crea una versión nueva. Las comidas ya planificadas mantienen la versión que usaban.</p>{% endif %}
+</div>
+<form method="post">
+  {% csrf_token %}
+  <section class="panel">
+    {% include "partials/form_fields.html" %}
+  </section>
+
+  <section class="panel">
+    <h2 class="mt-0">Ingredientes</h2>
+    <p class="muted small">Elige ingredientes del catálogo para que la compra y las alergias se calculen bien. ¿No está? <a href="{% url 'foods:create' %}" target="_blank" rel="noopener">Crear ingrediente</a>. Deja la cantidad vacía para «al gusto».</p>
+    {{ ingredients.management_form }}
+    {% if ingredients.non_form_errors %}<ul class="errorlist nonfield">{% for e in ingredients.non_form_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    <div id="ing-rows">
+      {% for form in ingredients %}{% include "recipes/_ingredient_row.html" %}{% endfor %}
+    </div>
+    <template id="ing-empty">{% with form=ingredients.empty_form %}{% include "recipes/_ingredient_row.html" %}{% endwith %}</template>
+    <button class="btn small" type="button" data-add-row="ing"><svg class="icon icon-s"><use href="#i-plus"/></svg>Añadir ingrediente</button>
+  </section>
+
+  <section class="panel">
+    <h2 class="mt-0">Pasos</h2>
+    {{ steps.management_form }}
+    <div id="steps-rows">
+      {% for form in steps %}{% include "recipes/_step_row.html" %}{% endfor %}
+    </div>
+    <template id="steps-empty">{% with form=steps.empty_form %}{% include "recipes/_step_row.html" %}{% endwith %}</template>
+    <button class="btn small" type="button" data-add-row="steps"><svg class="icon icon-s"><use href="#i-plus"/></svg>Añadir paso</button>
+  </section>
+
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Guardar receta</button>
+    <a class="btn ghost" href="{% if recipe %}{% url 'recipes:detail' recipe.pk %}{% else %}{% url 'recipes:list' %}{% endif %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

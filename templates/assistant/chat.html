@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Asistente · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Asistente</h1>
+  <span class="badge {% if ai_status.is_demo %}demo{% elif ai_status.available %}ok{% else %}unknown{% endif %}">{{ ai_status.label }}</span>
+  <p class="lead">Pide cambios con tus palabras. El asistente prepara una propuesta; el calendario solo cambia cuando la revisas y pulsas «Aplicar».</p>
+</div>
+
+{% if ai_status.is_demo %}
+  <div class="notice"><strong>Modo demostración</strong>{{ ai_status.detail }} Entiende frases sencillas sobre días, comidas, tiempo de preparación y número de personas.</div>
+{% elif not ai_status.available %}
+  <div class="notice unknown"><strong>El asistente no está disponible</strong>{{ ai_status.detail }}</div>
+{% endif %}
+
+{% if pending %}
+  <section class="panel">
+    <h2 class="mt-0">Propuestas por revisar</h2>
+    <ul class="list">{% for p in pending %}<li><a href="{% url 'assistant:proposal' p.pk %}">{{ p.get_operation_display }} del {{ p.created_at|date:"j M, H:i" }}</a></li>{% endfor %}</ul>
+  </section>
+{% endif %}
+
+<div class="chat" id="chat-log" aria-live="polite">
+  {% if chat_messages %}
+    {% include "assistant/_messages.html" %}
+  {% else %}
+    <div class="empty">
+      <p>Algunas ideas:</p>
+      <p>«Organiza la próxima semana para cuatro; el miércoles solo cenamos dos».<br>
+      «Cambia la cena del jueves por algo que lleve menos de veinte minutos».<br>
+      «Mantén los desayunos y modifica solo las cenas».<br>
+      «No repitas las recetas de la semana pasada».</p>
+    </div>
+  {% endif %}
+</div>
+
+{% if can_edit and ai_status.available %}
+<form class="chat-form" method="post" action="{% url 'assistant:chat_send' %}"
+      hx-post="{% url 'assistant:chat_send' %}" hx-target="#chat-log" hx-swap="beforeend"
+      hx-disabled-elt="find button, find textarea" hx-on::after-request="if(event.detail.successful) this.reset()">
+  {% csrf_token %}
+  <label class="sr-only" for="message">Mensaje</label>
+  <div class="row" style="align-items:flex-end">
+    <textarea id="message" name="message" rows="2" maxlength="1000" required placeholder="¿Qué quieres cambiar?" style="flex:1;min-height:56px"></textarea>
+    <button class="btn primary" type="submit">
+      <span class="hide-on-request">Enviar</span>
+      <span class="htmx-indicator row" style="gap:6px"><span class="spinner" aria-hidden="true"></span>Pensando…</span>
+    </button>
+  </div>
+  <p class="muted small" style="margin:6px 0 0">Mientras se genera la respuesta no se cambia nada. Solo se envían códigos de comensal, grupos de edad y restricciones, nunca nombres ni pesos.</p>
+</form>
+{% elif not can_edit %}
+  <p class="muted">Con el rol de lectura puedes consultar las propuestas, pero no pedirlas ni aplicarlas.</p>
+{% endif %}
+{% endblock %}

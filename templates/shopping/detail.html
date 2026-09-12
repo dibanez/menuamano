@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ shopping_list }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ shopping_list }}</h1>
+  <a class="btn small" href="{% url 'shopping:index' %}">Todas las listas</a>
+  <p class="lead">Del {{ shopping_list.start_date|date:"l j \d\e F" }} al {{ shopping_list.end_date|date:"l j \d\e F" }}. Se actualiza sola cuando cambia el menú.</p>
+</div>
+
+<div class="panel">
+  <div class="row between"><strong>{{ done }} de {{ total }} comprados</strong>
+    {% if can_edit %}
+    <form method="post" action="{% url 'shopping:recalculate' shopping_list.pk %}">{% csrf_token %}<button class="btn small" type="submit">Recalcular</button></form>
+    {% endif %}
+  </div>
+  <div class="progress" style="margin-top:8px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span style="width:{{ percent }}%"></span></div>
+  <p class="muted small" style="margin:8px 0 0">menuamano todavía no gestiona la despensa: la lista no descuenta lo que ya tengáis en casa. Los ingredientes «al gusto» no aparecen.</p>
+</div>
+
+{% for label, items in groups %}
+  <section class="shop-group">
+    <h3>{{ label }}</h3>
+    <ul class="list">{% for item in items %}{% include "shopping/_item.html" %}{% endfor %}</ul>
+  </section>
+{% empty %}
+  <div class="empty">
+    <p><strong>La lista está vacía.</strong> Solo las comidas con la modalidad «cocinar en casa» y con recetas generan compra.</p>
+    <a class="btn" href="{% url 'planning:week' %}?fecha={{ shopping_list.start_date|date:'Y-m-d' }}">Ir al calendario</a>
+  </div>
+{% endfor %}
+
+{% if surplus %}
+  <section class="shop-group">
+    <h3>Comprado y ya no necesario</h3>
+    <p class="muted small">El menú cambió después de comprar. Se mantiene el registro; no se da por consumido.</p>
+    <ul class="list">{% for item in surplus %}{% include "shopping/_item.html" %}{% endfor %}</ul>
+  </section>
+{% endif %}
+
+{% if can_edit %}
+<section class="panel" style="margin-top:20px">
+  <h2 class="mt-0">Añadir algo más</h2>
+  <form method="post" action="{% url 'shopping:manual_add' shopping_list.pk %}">
+    {% csrf_token %}
+    <div class="grid-2">
+      {% include "partials/field.html" with field=manual_form.name %}
+      {% include "partials/field.html" with field=manual_form.category %}
+      {% include "partials/field.html" with field=manual_form.quantity %}
+      {% include "partials/field.html" with field=manual_form.unit %}
+    </div>
+    {% include "partials/field.html" with field=manual_form.note %}
+    <button class="btn" type="submit">Añadir a la lista</button>
+  </form>
+</section>
+<form method="post" action="{% url 'shopping:delete' shopping_list.pk %}" class="row" style="justify-content:flex-end">
+  {% csrf_token %}<button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para borrar">Borrar lista</button>
+</form>
+{% endif %}
+{% endblock %}

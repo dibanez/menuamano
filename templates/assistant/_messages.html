@@ -1,0 +1,4 @@
+{% for m in chat_messages %}
+  <div class="bubble {{ m.role }}{% if m.is_error %} error{% endif %}">{{ m.text }}{% if m.proposal %}
+    <div style="margin-top:8px"><a class="btn small" href="{% url 'assistant:proposal' m.proposal_id %}">Revisar la propuesta</a> <span class="badge">{{ m.proposal.get_status_display }}</span></div>{% endif %}</div>
+{% endfor %}

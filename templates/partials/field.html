@@ -1,0 +1,19 @@
+{% if field.field.widget.allow_multiple_selected and field.field.widget.input_type == "checkbox" %}
+<fieldset class="field{% if field.errors %} has-error{% endif %}">
+  <legend>{{ field.label }}</legend>
+  <div class="choices">{{ field }}</div>
+  {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+  {% if field.errors %}<ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</fieldset>
+{% else %}
+<div class="field{% if field.errors %} has-error{% endif %}">
+  {% if field.field.widget.input_type == "checkbox" %}
+    <label class="check">{{ field }} {{ field.label }}</label>
+  {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<div class="help">{{ field.help_text|safe }}</div>{% endif %}
+  {% if field.errors %}<ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endif %}

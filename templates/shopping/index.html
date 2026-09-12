@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Compra · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Listas de compra</h1>
+  <p class="lead">Elige los días que vas a cubrir; no tienen por qué coincidir con la semana del menú.</p>
+</div>
+
+{% if can_edit %}
+<form method="post" action="{% url 'shopping:create' %}" class="panel">
+  {% csrf_token %}
+  <h2 class="mt-0">Nueva lista</h2>
+  <div class="grid-2">
+    {% if form.non_field_errors %}<ul class="errorlist nonfield" style="grid-column:1/-1">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+    {% include "partials/field.html" with field=form.start %}
+    {% include "partials/field.html" with field=form.end %}
+  </div>
+  {% include "partials/field.html" with field=form.name %}
+  <button class="btn primary" type="submit">Calcular la lista</button>
+</form>
+{% endif %}
+
+<ul class="list panel">
+  {% for sl in lists %}
+    <li class="row between">
+      <a href="{% url 'shopping:detail' sl.pk %}"><strong>{{ sl }}</strong></a>
+      <span class="muted small">{{ sl.start_date|date:"j M" }} – {{ sl.end_date|date:"j M Y" }}</span>
+    </li>
+  {% empty %}
+    <li class="muted">Aún no hay listas. Planifica algunas comidas y crea la primera.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

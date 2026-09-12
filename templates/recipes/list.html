@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Recetas · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Recetario</h1>
+  {% if can_edit %}<a class="btn primary" href="{% url 'recipes:create' %}"><svg class="icon icon-s"><use href="#i-plus"/></svg>Nueva receta</a>{% endif %}
+</div>
+<form method="get" class="row" style="margin-bottom:12px">
+  <label class="sr-only" for="q">Buscar recetas</label>
+  <input id="q" type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre o etiqueta" style="flex:1">
+  <button class="btn" type="submit">Buscar</button>
+</form>
+<div class="row" style="margin-bottom:16px">
+  <div class="segmented">
+    <a href="{% url 'recipes:list' %}" {% if not only_favorites and not archived %}aria-current="page"{% endif %}>Todas</a>
+    <a href="?favoritas=1" {% if only_favorites %}aria-current="page"{% endif %}>Favoritas</a>
+    <a href="?archivadas=1" {% if archived %}aria-current="page"{% endif %}>Archivadas</a>
+  </div>
+</div>
+
+{% if can_edit and ai_status.available %}
+<details class="panel">
+  <summary class="link-btn">Pedir una receta al asistente{% if ai_status.is_demo %} <span class="badge demo">Modo demostración</span>{% endif %}</summary>
+  <form method="post" action="{% url 'assistant:generate_recipe' %}" class="row" style="margin-top:10px" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <label class="sr-only" for="recipe-idea">Qué receta quieres</label>
+    <input id="recipe-idea" type="text" name="message" maxlength="500" placeholder="Algo rápido con verduras para cenar" style="flex:1">
+    <button class="btn" type="submit">Proponer receta</button>
+  </form>
+  <p class="muted small" style="margin:6px 0 0">Se comprueba con las restricciones de todos los comensales y se guarda como pendiente de revisión.</p>
+</details>
+{% endif %}
+
+<div class="recipes-grid">
+  {% for recipe in recipes %}
+    <a class="recipe-card" href="{% url 'recipes:detail' recipe.pk %}">
+      <span class="row between">
+        <span class="name">{{ recipe.name }}</span>
+        {% if recipe.pk in favorites %}<svg class="icon icon-s" style="fill:var(--breakfast);stroke:var(--breakfast)" aria-label="Favorita"><use href="#i-star"/></svg>{% endif %}
+      </span>
+      <span class="row small muted">
+        <span class="row" style="gap:4px"><svg class="icon icon-s"><use href="#i-clock"/></svg>{{ recipe.total_minutes }} min</span>
+        <span>{{ recipe.get_difficulty_display }}</span>
+        <span>{{ recipe.base_servings }} raciones</span>
+      </span>
+      <span class="row">
+        {% if recipe.origin != "manual" %}<span class="badge {% if recipe.origin == 'ai' %}info{% endif %}">{{ recipe.get_origin_display }}</span>{% endif %}
+        {% if recipe.review_status == "needs_review" %}<span class="badge unknown">Pendiente de revisión</span>{% endif %}
+        {% for tag in recipe.tags %}<span class="badge">{{ tag }}</span>{% endfor %}
+      </span>
+      <span class="small muted">{% if recipe.times_used %}Planificada {{ recipe.times_used }} {{ recipe.times_used|pluralize:"vez,veces" }}; la última, el {{ recipe.last_used|date:"j M" }}{% else %}Aún no planificada{% endif %}</span>
+    </a>
+  {% empty %}
+    <div class="empty" style="grid-column:1/-1">
+      {% if q or only_favorites or archived %}
+        <p>No hay recetas que coincidan.</p>
+      {% else %}
+        <p><strong>El recetario está vacío.</strong> Empieza por los platos que ya cocináis; con ellos el calendario y la compra se rellenan solos.</p>
+        {% if can_edit %}<a class="btn primary" href="{% url 'recipes:create' %}">Crear la primera receta</a>{% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

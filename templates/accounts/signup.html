@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · menuamano{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1>Crear una cuenta</h1>
+  <p class="muted">Con una cuenta puedes compartir hogares con tu familia o tus compañeros de piso.</p>
+  <form method="post" class="panel">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <button class="btn primary block" type="submit">Crear cuenta</button>
+  </form>
+  <p>¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}">Entrar</a></p>
+</div>
+{% endblock %}

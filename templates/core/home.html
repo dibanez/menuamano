@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Hoy · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ today|date:"l j \d\e F"|capfirst }}</h1>
+</div>
+
+{% if not diner_count %}
+  <div class="empty">
+    <p><strong>Empieza por las personas.</strong> Añade a quienes coméis en casa, con sus alergias y gustos, para que las comidas se ajusten a cada una.</p>
+    {% if can_edit %}<a class="btn primary" href="{% url 'diners:create' %}">Añadir comensal</a>{% endif %}
+  </div>
+{% elif not recipe_count %}
+  <div class="empty">
+    <p><strong>Aún no hay recetas.</strong> Guarda las que cocináis habitualmente y podrás planificarlas en el calendario.</p>
+    {% if can_edit %}<a class="btn primary" href="{% url 'recipes:create' %}">Crear receta</a>{% endif %}
+  </div>
+{% endif %}
+
+<section class="day today" aria-labelledby="today-title">
+  <div class="day-head"><h2 id="today-title">Qué comemos hoy</h2><a class="small" href="{% url 'planning:day' today|date:'Y-m-d' %}">Ver el día</a></div>
+  {% for slot in day.slots %}{% include "planning/_slot.html" %}{% endfor %}
+</section>
+
+<section class="panel">
+  <div class="row between">
+    <h2 class="mt-0">Compra</h2>
+    {% if shopping_list %}<a class="btn small" href="{% url 'shopping:detail' shopping_list.pk %}">Abrir lista</a>{% endif %}
+  </div>
+  {% if shopping_list %}
+    <p class="mt-0">{{ shopping_list }}: {% if pending %}<strong>{{ pending }} artículo{{ pending|pluralize }} pendiente{{ pending|pluralize }}</strong>{% else %}todo comprado{% endif %}.</p>
+  {% else %}
+    <p class="muted">No hay ninguna lista para estos días.</p>
+    <a class="btn small" href="{% url 'shopping:index' %}">Crear lista de compra</a>
+  {% endif %}
+</section>
+
+{% if alerts %}
+<section class="panel">
+  <h2 class="mt-0">Comidas que necesitan atención</h2>
+  <ul class="list">
+    {% for meal in alerts %}
+      <li class="row between">
+        <a href="{% url 'planning:meal' meal.pk %}">{{ meal.get_meal_type_display }} del {{ meal.date|date:"l j" }}</a>
+        {% status_badge meal.safety_status %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="day">
+  <div class="day-head"><h2>Mañana</h2><a class="small" href="{% url 'planning:week' %}">Ver la semana</a></div>
+  {% for slot in tomorrow.slots %}{% include "planning/_slot.html" %}{% endfor %}
+</section>
+{% endblock %}

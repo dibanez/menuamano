@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}{{ recipe.name }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ recipe.name }}</h1>
+  <span class="row">
+    {% include "recipes/_favorite.html" %}
+    {% if can_edit %}<a class="btn small" href="{% url 'recipes:edit' recipe.pk %}">Editar</a>{% endif %}
+  </span>
+  {% if recipe.description %}<p class="lead">{{ recipe.description }}</p>{% endif %}
+</div>
+
+<div class="row" style="margin-bottom:16px">
+  <span class="badge"><svg class="icon icon-s"><use href="#i-clock"/></svg>{{ recipe.prep_minutes }} min de preparación, {{ recipe.cook_minutes }} de cocción</span>
+  <span class="badge">{{ recipe.get_difficulty_display }}</span>
+  {% if recipe.equipment %}<span class="badge">{{ recipe.equipment }}</span>{% endif %}
+  <span class="badge {% if recipe.origin == 'ai' %}info{% endif %}">{{ recipe.get_origin_display }}</span>
+  <span class="badge">Versión {{ recipe.version }}</span>
+  {% for tag in recipe.tags %}<span class="badge">{{ tag }}</span>{% endfor %}
+</div>
+
+{% if recipe.review_status == "needs_review" %}
+  <div class="notice unknown">
+    <strong>Pendiente de revisión</strong>
+    Esta receta no la ha revisado nadie del hogar todavía. Comprueba ingredientes y cantidades antes de usarla.
+    {% if can_edit %}
+    <form method="post" action="{% url 'recipes:reviewed' recipe.pk %}" style="margin-top:8px">{% csrf_token %}<button class="btn small" type="submit">La he revisado</button></form>
+    {% endif %}
+  </div>
+{% endif %}
+{% if recipe.is_archived %}<div class="notice">Receta archivada: no se propone al planificar.</div>{% endif %}
+
+<section class="panel">
+  <div class="row between">
+    <h2 class="mt-0">Ingredientes</h2>
+    <form method="get" class="row" hx-get="{% url 'recipes:detail' recipe.pk %}" hx-target="#ingredients" hx-swap="outerHTML" hx-trigger="change">
+      <label for="raciones">Raciones</label>
+      <input id="raciones" name="raciones" type="number" min="0.5" max="50" step="0.5" value="{{ servings|input_num }}" style="width:90px" inputmode="decimal">
+      <noscript><button class="btn small" type="submit">Calcular</button></noscript>
+    </form>
+  </div>
+  <p class="muted small">La receta base es para {{ recipe.base_servings }} raciones. Las cantidades se escalan sin convertir entre gramos, mililitros y piezas.</p>
+  {% include "recipes/_ingredients.html" %}
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">Preparación</h2>
+  <ol class="steps">
+    {% for step in steps %}<li>{{ step.text|linebreaksbr }}</li>{% empty %}<li class="muted">Sin pasos todavía.</li>{% endfor %}
+  </ol>
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">¿Para quién sirve?</h2>
+  {% if compatibility %}
+    <ul class="list">
+      {% for diner, result in compatibility %}
+        <li>
+          <div class="row between"><strong>{{ diner.alias }}</strong>{% status_badge result.status %}</div>
+          {% for issue in result.issues %}{% if issue.level != "warning" %}<div class="small muted">{{ issue.message }}</div>{% endif %}{% endfor %}
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="muted small">{{ label_reminder }}</p>
+  {% else %}
+    <p class="muted">Añade comensales para ver con quién es compatible.</p>
+  {% endif %}
+</section>
+
+{% if can_edit and not recipe.is_archived %}
+<section class="panel">
+  <h2 class="mt-0">Añadir a una comida</h2>
+  <form method="post" action="{% url 'planning:add_recipe_to_slot' %}" class="grid-2">
+    {% csrf_token %}
+    <input type="hidden" name="recipe" value="{{ recipe.pk }}">
+    {% with form=add_form %}{% include "partials/form_fields.html" %}{% endwith %}
+    <div><button class="btn primary" type="submit">Añadir al calendario</button></div>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel flat">
+  <h2 class="mt-0">Historial</h2>
+  <ul class="list">
+    {% for use in history %}
+      <li><a href="{% url 'planning:meal' use.meal_id %}">{{ use.meal.get_meal_type_display }} del {{ use.meal.date|date:"j M Y" }}</a> <span class="muted small">(versión {{ use.recipe_version }})</span></li>
+    {% empty %}
+      <li class="muted">Todavía no se ha planificado.</li>
+    {% endfor %}
+  </ul>
+  {% if can_edit %}
+  <form method="post" action="{% url 'recipes:archive' recipe.pk %}" style="margin-top:12px">{% csrf_token %}
+    <button class="btn small ghost" type="submit">{% if recipe.is_archived %}Recuperar receta{% else %}Archivar receta{% endif %}</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Peso de {{ diner.alias }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Seguimiento de peso</h1>
+  <a class="btn small" href="{% url 'diners:detail' diner.pk %}">Volver al perfil</a>
+  <p class="lead">{{ diner.alias }}. Registro opcional y privado.</p>
+</div>
+
+<div class="notice">
+  <strong>Solo un registro</strong>
+  menuamano guarda las mediciones con su fecha y no calcula objetivos, calorías ni dietas a partir de ellas.
+  {% if diner.is_minor %}En menores, cualquier seguimiento debería hacerse con criterio profesional.{% endif %}
+</div>
+
+<section class="panel">
+  <h2 class="mt-0">Nueva medición</h2>
+  <form method="post" action="{% url 'diners:weight_add' diner.pk %}" class="grid-2">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <div><button class="btn primary" type="submit">Registrar</button></div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">Historial</h2>
+  {% if weights %}
+    <table class="simple">
+      <thead><tr><th>Fecha</th><th>Peso</th><th>Registrado por</th></tr></thead>
+      <tbody>
+        {% for w in weights %}<tr><td>{{ w.measured_on|date:"j M Y" }}</td><td>{{ w.weight_kg|num }} kg</td><td class="muted">{{ w.recorded_by|default:"—" }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">Aún no hay mediciones.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">Quién puede verlo</h2>
+  <ul class="list">
+    {% if diner.linked_user %}<li>{{ diner.linked_user }} <span class="muted small">(titular)</span></li>{% endif %}
+    {% for g in grants %}
+      <li class="row between">
+        <span>{{ g.user }}</span>
+        {% if can_manage %}<form method="post" action="{% url 'diners:grant_remove' diner.pk g.pk %}">{% csrf_token %}<button class="btn small ghost danger" type="submit">Retirar acceso</button></form>{% endif %}
+      </li>
+    {% empty %}
+      {% if not diner.linked_user %}<li class="muted">Nadie más tiene acceso.</li>{% endif %}
+    {% endfor %}
+  </ul>
+  {% if can_manage and grant_form.fields.user.queryset.exists %}
+    <form method="post" action="{% url 'diners:grant_add' diner.pk %}" class="row" style="margin-top:12px">
+      {% csrf_token %}
+      <span style="flex:1;min-width:12rem">{{ grant_form.user }}</span>
+      <button class="btn" type="submit">Dar acceso</button>
+    </form>
+  {% endif %}
+  {% if not can_manage %}<p class="muted small">Solo {% if diner.linked_user %}la persona titular{% else %}la administración del hogar{% endif %} puede cambiar estos accesos.</p>{% endif %}
+</section>
+{% endblock %}

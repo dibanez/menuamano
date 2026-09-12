@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ the_day|date:"j M" }} · menuamano{% endblock %}
+{% block content %}
+{% include "planning/_period_nav.html" %}
+<div class="period-nav">
+  <a class="btn small" href="{% url 'planning:day' prev|date:'Y-m-d' %}" aria-label="Día anterior"><svg class="icon icon-s"><use href="#i-left"/></svg></a>
+  <h1 class="title" style="margin:0;font-size:1.25rem">{{ the_day|date:"l j \d\e F"|capfirst }}</h1>
+  <a class="btn small" href="{% url 'planning:day' next|date:'Y-m-d' %}" aria-label="Día siguiente"><svg class="icon icon-s"><use href="#i-right"/></svg></a>
+</div>
+<section class="day{% if day.is_today %} today{% endif %}">
+  {% with show_people=True %}
+    {% for slot in day.slots %}{% include "planning/_slot.html" %}{% endfor %}
+  {% endwith %}
+</section>
+{% endblock %}

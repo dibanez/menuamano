@@ -1,0 +1,5 @@
+{% if form.non_field_errors %}
+  <ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+{% endif %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+{% for field in form.visible_fields %}{% include "partials/field.html" %}{% endfor %}

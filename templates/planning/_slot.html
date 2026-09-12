@@ -1,0 +1,24 @@
+{% load menu %}
+<a class="meal {{ slot.meal_type }}{% if not slot.meal %} placeholder{% endif %}" href="{% url 'planning:slot' slot.date|date:'Y-m-d' slot.meal_type %}">
+  <span></span>
+  <span>
+    <span class="meal-type">{{ slot.label }}</span><br>
+    {% if slot.meal %}
+      {% with meal=slot.meal recipes=slot.meal.recipes.all people=slot.meal.attendees.all %}
+        <span class="meal-title">{% if recipes %}{% for mr in recipes %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}{{ meal.get_mode_display }}{% endif %}</span><br>
+        <span class="meal-meta">{% if recipes %}{{ meal.get_mode_display }}, {% endif %}{{ people|length }} persona{{ people|length|pluralize }}{% if meal.outcome != "pending" %}, {{ meal.get_outcome_display|lower }}{% endif %}</span>
+        {% if show_people and people %}<br><span class="meal-meta">{% for a in people %}{{ a.label }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
+        {% if show_people and meal.notes %}<br><span class="meal-meta">{{ meal.notes }}</span>{% endif %}
+      {% endwith %}
+    {% else %}
+      <span class="meal-title muted">{% if slot.defaults.mode_is_explicit %}{{ slot.defaults.mode_label }} ({% if slot.defaults.source == "exception" %}excepción{% else %}regla{% endif %}){% else %}Sin planificar{% endif %}</span><br>
+      <span class="meal-meta">{% with n=slot.defaults.diners|length %}{{ n }} persona{{ n|pluralize }} en casa habitualmente{% endwith %}</span>
+    {% endif %}
+  </span>
+  <span class="meal-side">
+    {% if slot.meal %}
+      {% status_badge slot.meal.safety_status %}
+      {% if slot.meal.locked %}<svg class="icon icon-s" role="img" aria-label="Protegida"><use href="#i-lock"/></svg>{% endif %}
+    {% endif %}
+  </span>
+</a>

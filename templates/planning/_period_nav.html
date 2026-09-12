@@ -1,0 +1,8 @@
+<div class="row between" style="margin-bottom:12px">
+  <nav class="segmented" aria-label="Vista del calendario">
+    <a href="{% url 'planning:day' nav_day|date:'Y-m-d' %}" {% if view == 'day' %}aria-current="page"{% endif %}>Día</a>
+    <a href="{% url 'planning:week' %}?fecha={{ nav_day|date:'Y-m-d' }}" {% if view == 'week' %}aria-current="page"{% endif %}>Semana</a>
+    <a href="{% url 'planning:month' %}?fecha={{ nav_day|date:'Y-m-d' }}" {% if view == 'month' %}aria-current="page"{% endif %}>Mes</a>
+  </nav>
+  <a class="small" href="{% url 'planning:rules' %}">Reglas y excepciones</a>
+</div>

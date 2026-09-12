@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Comensales · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Comensales</h1>
+  {% if can_edit %}<a class="btn primary" href="{% url 'diners:create' %}"><svg class="icon icon-s"><use href="#i-plus"/></svg>Añadir</a>{% endif %}
+  <p class="lead">Las personas para las que cocináis, tengan cuenta o no.</p>
+</div>
+
+{% for diner in diners %}
+  <a class="recipe-card" href="{% url 'diners:detail' diner.pk %}" style="margin-bottom:10px">
+    <span class="row between">
+      <span class="name">{{ diner.alias }}</span>
+      <span class="muted small">{% if diner.age is not None %}{{ diner.age }} años{% endif %}{% if not diner.is_active %} (inactivo){% endif %}</span>
+    </span>
+    <span class="row">
+      {% for r in diner.restrictions.all %}<span class="badge conflict">{% if r.trait %}{{ r.trait|trait_label }}{% else %}{{ r.ingredient }}{% endif %}</span>{% empty %}<span class="muted small">Sin restricciones registradas</span>{% endfor %}
+    </span>
+    <span class="muted small">Ración {{ diner.portion_factor|num }}</span>
+  </a>
+{% empty %}
+  <div class="empty">
+    <p><strong>Todavía no hay comensales.</strong> Añade a cada persona que come en casa. Sus alergias se comprobarán en cada comida.</p>
+    {% if can_edit %}<a class="btn primary" href="{% url 'diners:create' %}">Añadir el primero</a>{% endif %}
+  </div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Entrar · menuamano{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1>Entra en tu cocina</h1>
+  <p class="muted">Planifica qué coméis, quién come en casa y qué hay que comprar.</p>
+  <form method="post" class="panel">
+    {% csrf_token %}
+    {% include "partials/form_fields.html" %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn primary block" type="submit">Entrar</button>
+  </form>
+  <p>¿Aún no tienes cuenta? <a href="{% url 'accounts:signup' %}">Crear una cuenta</a></p>
+</div>
+{% endblock %}

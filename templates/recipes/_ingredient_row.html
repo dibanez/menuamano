@@ -1,0 +1,12 @@
+<div class="formset-row ingredients">
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+  {% if form.non_field_errors %}<ul class="errorlist nonfield" style="grid-column:1/-1">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  <div class="field{% if form.ingredient.errors %} has-error{% endif %}"><label for="{{ form.ingredient.id_for_label }}">Ingrediente</label>{{ form.ingredient }}{{ form.ingredient.errors }}</div>
+  <div class="field{% if form.quantity.errors %} has-error{% endif %}"><label for="{{ form.quantity.id_for_label }}">Cantidad</label>{{ form.quantity }}{{ form.quantity.errors }}</div>
+  <div class="field"><label for="{{ form.unit.id_for_label }}">Unidad</label>{{ form.unit }}</div>
+  <div class="field"><label for="{{ form.note.id_for_label }}">Nota</label>{{ form.note }}</div>
+  <div class="row">
+    <label class="check small">{{ form.optional }} Opcional</label>
+    {% if form.DELETE %}<label class="check small">{{ form.DELETE }} Quitar</label>{% endif %}
+  </div>
+</div>

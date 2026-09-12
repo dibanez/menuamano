@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ label }}, {{ the_day|date:"l j \d\e F" }}</h1>
+  <a class="btn small" href="{% url 'planning:week' %}?fecha={{ the_day|date:'Y-m-d' }}">Volver a la semana</a>
+</div>
+<div class="empty">
+  <p><strong>Esta comida aún no está planificada.</strong></p>
+  <p>
+    {% if defaults.mode_is_explicit %}Según {% if defaults.source == "exception" %}la excepción de este día{% else %}vuestras reglas{% endif %}: {{ defaults.mode_label|lower }}.{% endif %}
+    {% if defaults.diners %}Suelen estar {% for d in defaults.diners %}{{ d.alias }}{% if not forloop.last %}{% if forloop.revcounter == 2 %} y {% else %}, {% endif %}{% endif %}{% endfor %}.{% else %}Nadie suele estar en casa a esta hora.{% endif %}
+  </p>
+  {% if can_edit %}
+    <form method="post">{% csrf_token %}<button class="btn primary" type="submit">Planificar esta comida</button></form>
+  {% endif %}
+</div>
+{% endblock %}

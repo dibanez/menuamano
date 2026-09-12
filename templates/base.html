@@ -1,0 +1,79 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2c7a4b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232c7a4b'/%3E%3Cpath d='M7 20c5-2 10 1 18-3' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <title>{% block title %}menuamano{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  {% include "partials/icons.html" %}
+  {% with section=request.resolver_match.app_name %}
+  <header class="topbar">
+    <a class="wordmark" href="{% url 'core:home' %}">menuamano</a>
+    {% if user.is_authenticated %}
+      <details class="switcher">
+        <summary>
+          <svg class="icon icon-s"><use href="#i-home"/></svg>
+          <span>{% if household %}{{ household.name }}{% else %}Sin hogar{% endif %}</span>
+        </summary>
+        <div class="switcher-menu">
+          {% for other in other_memberships %}
+            <form method="post" action="{% url 'households:switch' %}">
+              {% csrf_token %}
+              <input type="hidden" name="household" value="{{ other.household_id }}">
+              <button type="submit">Cambiar a {{ other.household.name }}</button>
+            </form>
+          {% endfor %}
+          {% if household %}
+            <a href="{% url 'households:settings' %}">Configuración del hogar</a>
+            <a href="{% url 'diners:list' %}">Comensales</a>
+            <a href="{% url 'foods:list' %}">Ingredientes</a>
+            <a href="{% url 'planning:rules' %}">Reglas y excepciones</a>
+          {% endif %}
+          <a href="{% url 'households:onboarding' %}">Crear otro hogar</a>
+          <hr>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit">Cerrar sesión ({{ user.short_name }})</button>
+          </form>
+        </div>
+      </details>
+    {% endif %}
+  </header>
+
+  <main class="page" id="main">
+    {% if messages %}
+      <ul class="messages" role="status">
+        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if household %}
+    <nav class="tabbar" aria-label="Secciones">
+      <a href="{% url 'core:home' %}" {% if section == 'core' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-sun"/></svg><span>Hoy</span>
+      </a>
+      <a href="{% url 'planning:week' %}" {% if section == 'planning' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-calendar"/></svg><span>Calendario</span>
+      </a>
+      <a href="{% url 'recipes:list' %}" {% if section == 'recipes' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-book"/></svg><span>Recetas</span>
+      </a>
+      <a href="{% url 'shopping:current' %}" {% if section == 'shopping' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-basket"/></svg><span>Compra</span>
+      </a>
+      <a href="{% url 'assistant:chat' %}" {% if section == 'assistant' %}aria-current="page"{% endif %}>
+        <svg class="icon"><use href="#i-chat"/></svg><span>Asistente</span>
+      </a>
+    </nav>
+  {% endif %}
+  {% endwith %}
+</body>
+</html>

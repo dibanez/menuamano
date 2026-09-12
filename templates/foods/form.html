@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Ingrediente · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if ingredient %}Editar {{ ingredient.name }}{% else %}Nuevo ingrediente{% endif %}</h1>
+  <p class="lead">Marca «información revisada» solo si has comprobado qué contiene. Mientras no lo esté, cualquier comida con este ingrediente pedirá revisión para quien tenga restricciones.</p>
+</div>
+<form method="post" class="panel">
+  {% csrf_token %}
+  {% include "partials/form_fields.html" %}
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Guardar</button>
+    <a class="btn ghost" href="{% url 'foods:list' %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

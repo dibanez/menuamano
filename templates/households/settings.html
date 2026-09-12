@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Configuración · menuamano{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Configuración del hogar</h1></div>
+
+<form method="post" class="panel">
+  {% csrf_token %}
+  {% include "partials/form_fields.html" %}
+  <div class="form-actions"><button class="btn primary" type="submit">Guardar cambios</button></div>
+</form>
+
+<section class="panel">
+  <h2>Miembros</h2>
+  <p class="muted small">Administración gestiona el hogar y sus miembros. Edición gestiona menús, recetas y compra. Lectura solo consulta.</p>
+  <ul class="list">
+    {% for m in members %}
+      <li class="row between">
+        <span><strong>{{ m.user }}</strong><br><span class="muted small">{{ m.user.email }}</span></span>
+        <span class="row">
+          <form method="post" action="{% url 'households:change_role' m.pk %}" class="row">
+            {% csrf_token %}
+            <label class="sr-only" for="role-{{ m.pk }}">Rol</label>
+            <select id="role-{{ m.pk }}" name="role" style="width:auto">
+              {% for value, label in roles %}<option value="{{ value }}" {% if m.role == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button class="btn small" type="submit">Cambiar</button>
+          </form>
+          {% if m.user != user %}
+          <form method="post" action="{% url 'households:remove_member' m.pk %}">
+            {% csrf_token %}
+            <button class="btn small danger" type="submit" data-confirm="¿Seguro? Pulsa otra vez">Quitar</button>
+          </form>
+          {% endif %}
+        </span>
+      </li>
+    {% endfor %}
+  </ul>
+  <h3>Añadir a alguien</h3>
+  <form method="post" action="{% url 'households:add_member' %}">
+    {% csrf_token %}
+    {% with form=member_form %}{% include "partials/form_fields.html" %}{% endwith %}
+    <button class="btn" type="submit">Añadir al hogar</button>
+  </form>
+</section>
+
+<section class="panel flat">
+  <h2>Más ajustes</h2>
+  <ul class="list">
+    <li><a href="{% url 'diners:list' %}">Comensales y restricciones</a></li>
+    <li><a href="{% url 'planning:rules' %}">Reglas recurrentes y excepciones</a></li>
+    <li><a href="{% url 'foods:list' %}">Ingredientes del hogar</a></li>
+  </ul>
+</section>
+{% endblock %}

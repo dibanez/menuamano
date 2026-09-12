@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{% if diner %}Editar {{ diner.alias }}{% else %}Nuevo comensal{% endif %} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if diner %}Editar {{ diner.alias }}{% else %}Nuevo comensal{% endif %}</h1>
+  <p class="lead">Las alergias y restricciones se añaden en el siguiente paso, en el perfil.</p>
+</div>
+<form method="post" class="panel">
+  {% csrf_token %}
+  {% include "partials/form_fields.html" %}
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Guardar</button>
+    <a class="btn ghost" href="{% if diner %}{% url 'diners:detail' diner.pk %}{% else %}{% url 'diners:list' %}{% endif %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

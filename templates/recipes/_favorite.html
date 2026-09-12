@@ -1,0 +1,7 @@
+<form method="post" action="{% url 'recipes:favorite' recipe.pk %}" hx-post="{% url 'recipes:favorite' recipe.pk %}" hx-swap="outerHTML" class="inline">
+  {% csrf_token %}
+  <button class="btn small" type="submit" aria-pressed="{% if is_favorite %}true{% else %}false{% endif %}">
+    <svg class="icon icon-s" {% if is_favorite %}style="fill:var(--breakfast);stroke:var(--breakfast)"{% endif %}><use href="#i-star"/></svg>
+    {% if is_favorite %}Favorita{% else %}Guardar como favorita{% endif %}
+  </button>
+</form>

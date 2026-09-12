@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Reglas y excepciones · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Reglas y excepciones</h1>
+  <p class="lead">Las reglas se repiten cada semana; las excepciones cambian un día concreto y siempre prevalecen. Se aplican al crear comidas nuevas y al regenerar; no modifican comidas ya protegidas.</p>
+</div>
+
+<section class="panel">
+  <h2 class="mt-0">Reglas semanales</h2>
+  <ul class="list">
+    {% for rule in rules %}
+      <li class="row between">
+        <span><strong>{{ rule.get_weekday_display }}, {{ rule.get_meal_type_display|lower }}:</strong> {{ rule.get_mode_display|lower }}{% if rule.notes %} <span class="muted">({{ rule.notes }})</span>{% endif %}
+          {% if rule.valid_from or rule.valid_until %}<span class="muted small">{% if rule.valid_from %} desde {{ rule.valid_from|date:"j M" }}{% endif %}{% if rule.valid_until %} hasta {{ rule.valid_until|date:"j M" }}{% endif %}</span>{% endif %}</span>
+        {% if can_edit %}<form method="post" action="{% url 'planning:rule_delete' rule.pk %}">{% csrf_token %}<button class="btn small ghost danger" type="submit">Borrar</button></form>{% endif %}
+      </li>
+    {% empty %}
+      <li class="muted">Sin reglas. Por ejemplo: «los viernes cenamos fuera».</li>
+    {% endfor %}
+  </ul>
+  {% if can_edit %}
+  <details style="margin-top:12px"><summary class="btn small">Nueva regla</summary>
+    <form method="post" action="{% url 'planning:rule_add' %}" style="margin-top:12px">
+      {% csrf_token %}
+      {% with form=rule_form %}{% include "partials/form_fields.html" %}{% endwith %}
+      <button class="btn primary" type="submit">Guardar regla</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">Excepciones por fecha</h2>
+  <ul class="list">
+    {% for exc in exceptions %}
+      <li class="row between">
+        <span><strong>{{ exc.date|date:"l j M" }}, {{ exc.get_meal_type_display|lower }}:</strong>
+          {% if exc.mode %}{{ exc.get_mode_display|lower }}{% else %}misma modalidad{% endif %}{% if exc.override_attendance %}, solo {% for d in exc.attendees.all %}{{ d.alias }}{% if not forloop.last %}, {% endif %}{% empty %}nadie{% endfor %}{% endif %}
+          {% if exc.notes %}<span class="muted">({{ exc.notes }})</span>{% endif %}</span>
+        {% if can_edit %}<form method="post" action="{% url 'planning:exception_delete' exc.pk %}">{% csrf_token %}<button class="btn small ghost danger" type="submit">Borrar</button></form>{% endif %}
+      </li>
+    {% empty %}
+      <li class="muted">Sin excepciones próximas.</li>
+    {% endfor %}
+  </ul>
+  {% if can_edit %}
+  <details style="margin-top:12px"><summary class="btn small">Nueva excepción</summary>
+    <form method="post" action="{% url 'planning:exception_add' %}" style="margin-top:12px">
+      {% csrf_token %}
+      {% with form=exception_form %}{% include "partials/form_fields.html" %}{% endwith %}
+      <button class="btn primary" type="submit">Guardar excepción</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+{% endblock %}

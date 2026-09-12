@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Calendario · menuamano{% endblock %}
+{% block content %}
+{% include "planning/_period_nav.html" %}
+<div class="period-nav">
+  <a class="btn small" href="?fecha={{ prev|date:'Y-m-d' }}" aria-label="Semana anterior"><svg class="icon icon-s"><use href="#i-left"/></svg></a>
+  <h1 class="title" style="margin:0;font-size:1.25rem">Semana del {{ start|date:"j" }}{% if start.month != end.month %} de {{ start|date:"F" }}{% endif %} al {{ end|date:"j \d\e F" }}</h1>
+  <a class="btn small" href="?fecha={{ next|date:'Y-m-d' }}" aria-label="Semana siguiente"><svg class="icon icon-s"><use href="#i-right"/></svg></a>
+</div>
+
+{% for day in days %}
+  <section class="day{% if day.is_today %} today{% endif %}">
+    <div class="day-head">
+      <h2><a href="{% url 'planning:day' day.date|date:'Y-m-d' %}" style="color:inherit;text-decoration:none">{{ day.date|date:"l j"|capfirst }}</a></h2>
+      {% if day.is_today %}<span class="small muted">Hoy</span>{% endif %}
+    </div>
+    {% for slot in day.slots %}{% include "planning/_slot.html" %}{% endfor %}
+  </section>
+{% endfor %}
+
+{% if can_edit %}
+<section class="panel">
+  <h2 class="mt-0">Rellenar o regenerar un intervalo</h2>
+  <p class="muted small">Usa vuestras recetas, la asistencia habitual, las reglas y las excepciones. Solo elige recetas compatibles según los datos. Las comidas protegidas con candado no se tocan; las que editas a mano quedan protegidas.</p>
+  <form method="post" action="{% url 'planning:regenerate' %}" class="grid-2" hx-disabled-elt="find button">
+    {% csrf_token %}
+    {% with form=range_form %}{% include "partials/form_fields.html" %}{% endwith %}
+    <div><button class="btn primary" type="submit">Regenerar</button></div>
+  </form>
+  {% if ai_status.available %}
+  <form method="post" action="{% url 'assistant:plan_range' %}" style="margin-top:12px" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">
+    <input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}">
+    <button class="btn" type="submit">Pedir una propuesta al asistente para esta semana</button>
+    {% if ai_status.is_demo %}<span class="badge demo">Modo demostración</span>{% endif %}
+    <p class="muted small" style="margin:6px 0 0">Verás los cambios antes de aplicarlos.</p>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

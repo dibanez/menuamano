@@ -1,0 +1,5 @@
+<div class="formset-row">
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="field"><label for="{{ form.text.id_for_label }}">Paso</label>{{ form.text }}{{ form.text.errors }}</div>
+  {% if form.DELETE %}<label class="check small">{{ form.DELETE }} Quitar este paso</label>{% endif %}
+</div>
