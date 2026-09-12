@@ -28,14 +28,23 @@ def month_start():
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
-def ai_calls_this_month(household):
+def ai_calls(household, since=None):
+    """Billable AI calls of the household, ever or since a moment. Demo calls are free."""
     from assistant.models import AIRequestLog
 
-    return (
-        AIRequestLog.objects.filter(household=household, created_at__gte=month_start(), status__in=BILLABLE_AI_STATUSES)
-        .exclude(provider="demo")
-        .count()
-    )
+    calls = AIRequestLog.objects.filter(household=household, status__in=BILLABLE_AI_STATUSES).exclude(provider="demo")
+    if since is not None:
+        calls = calls.filter(created_at__gte=since)
+    return calls.count()
+
+
+def ai_calls_this_month(household):
+    return ai_calls(household, since=month_start())
+
+
+def ai_calls_counted(household, plan):
+    """Calls that count against the plan: this month's for a monthly quota, all of them for a trial."""
+    return ai_calls_this_month(household) if plan.ai_renews else ai_calls(household)
 
 
 def check_ai(household):
@@ -43,11 +52,13 @@ def check_ai(household):
     plan = household_plan(household)
     if not plan.has_ai:
         return False, "El asistente con IA forma parte del plan Premium."
-    if ai_calls_this_month(household) >= plan.ai_monthly_limit:
-        message = f"Habéis usado las {plan.ai_monthly_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
-        if plan.code == FREE:
-            message += f" Con Premium tenéis {get_plan(PREMIUM).ai_monthly_limit} al mes."
-        return False, message
+    if ai_calls_counted(household, plan) >= plan.ai_limit:
+        if plan.ai_renews:
+            return False, f"Habéis usado las {plan.ai_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
+        return False, (
+            f"Habéis usado las {plan.ai_limit} peticiones de prueba del asistente. Para seguir usándolo, "
+            f"pasad a Premium: {get_plan(PREMIUM).ai_monthly_limit} peticiones al mes."
+        )
     return True, ""
 
 
@@ -68,11 +79,12 @@ class Usage:
     max_members: int
     ai_calls: int
     ai_limit: int
+    ai_renews: bool
 
 
 def usage(household):
     plan = household_plan(household)
     return Usage(
         members=household.memberships.count(), max_members=plan.max_members,
-        ai_calls=ai_calls_this_month(household), ai_limit=plan.ai_monthly_limit,
+        ai_calls=ai_calls_counted(household, plan), ai_limit=plan.ai_limit, ai_renews=plan.ai_renews,
     )

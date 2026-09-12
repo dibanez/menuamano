@@ -15,7 +15,11 @@
   <h2 class="mt-0">Uso de este mes</h2>
   <p class="mt-0">Personas con cuenta: <strong>{{ usage.members }} de {{ usage.max_members }}</strong></p>
   {% if usage.ai_limit %}
-    <p class="mt-0">Peticiones al asistente con IA: <strong>{{ usage.ai_calls }} de {{ usage.ai_limit }}</strong>. El cupo se renueva el día 1.</p>
+    {% if usage.ai_renews %}
+      <p class="mt-0">Peticiones al asistente con IA: <strong>{{ usage.ai_calls }} de {{ usage.ai_limit }}</strong>. El cupo se renueva el día 1.</p>
+    {% else %}
+      <p class="mt-0">Peticiones de prueba al asistente con IA: <strong>{{ usage.ai_calls }} de {{ usage.ai_limit }}</strong>. No se renuevan: para seguir usando el asistente, pasad a Premium.</p>
+    {% endif %}
     <div class="progress" role="progressbar" aria-label="Uso del asistente este mes" aria-valuemin="0" aria-valuemax="{{ usage.ai_limit }}" aria-valuenow="{{ usage.ai_calls }}"><span style="width:{% widthratio usage.ai_calls usage.ai_limit 100 %}%"></span></div>
   {% else %}
     <p class="mt-0 muted">El asistente con IA está incluido en Premium.</p>
@@ -45,7 +49,7 @@
   <h2 class="mt-0">Premium</h2>
   <ul class="plan-features">
     <li>Asistente con IA: propone menús, reemplazos y recetas que revisas antes de aplicar</li>
-    <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes{% if free.has_ai %} (ahora {{ free.ai_monthly_limit }}){% endif %}</li>
+    <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes{% if free.has_ai %} (ahora {{ free.ai_total_limit }} de prueba, sin renovar){% endif %}</li>
     <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar (ahora {{ free.max_members }})</li>
   </ul>
   {% if is_household_admin and billing_enabled %}
