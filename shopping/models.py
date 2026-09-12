@@ -42,6 +42,8 @@ class ShoppingItem(models.Model):
         "comprado", max_digits=12, decimal_places=3, default=Decimal("0"), validators=[MinValueValidator(Decimal("0"))]
     )
     is_manual = models.BooleanField(default=False)
+    # True when part of the quantity comes from an approximate piece/volume ↔ grams equivalence.
+    is_approximate = models.BooleanField(default=False)
     manual_note = models.CharField("nota", max_length=120, blank=True)
     sources = models.JSONField(default=list, blank=True)
     purchased_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)

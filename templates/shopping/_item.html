@@ -16,7 +16,7 @@
       {% if item.is_surplus and item.needed_quantity == 0 %}
         Comprado {{ item.purchased_quantity|qty:item.unit }}. Ya no hace falta según el plan.
       {% elif item.unit %}
-        Hace falta {{ item.needed_quantity|qty:item.unit }}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}{% if item.suggested_purchase %}. <strong>Compra {{ item.suggested_purchase|qty:item.unit }}</strong>{% endif %}
+        Hace falta {% if item.is_approximate %}≈ {% endif %}{{ item.needed_quantity|qty:item.unit }}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}{% if item.suggested_purchase %}. <strong>Compra {{ item.suggested_purchase|qty:item.unit }}</strong>{% endif %}
       {% elif item.needed_quantity %}
         Cantidad: {{ item.needed_quantity|num }}
       {% endif %}
@@ -29,8 +29,9 @@
     <summary>{% if item.source_rows %}Para qué comidas{% else %}Anotar cantidad{% endif %}</summary>
     {% if item.source_rows %}
     <ul style="margin:6px 0;padding-left:18px">
-      {% for s in item.source_rows %}<li>{{ s.meal_type }} del {{ s.date|date:"D j" }}: {{ s.recipe }} ({{ s.quantity|qty:s.unit }})</li>{% endfor %}
+      {% for s in item.source_rows %}<li>{{ s.meal_type }} del {{ s.date|date:"D j" }}: {{ s.recipe }} ({{ s.quantity|qty:s.unit }}{% if s.converted %}, convertido con una equivalencia aproximada{% endif %})</li>{% endfor %}
     </ul>
+    {% if item.is_approximate and item.ingredient_id %}<p style="margin:4px 0">Cantidad aproximada: mezcla piezas o volumen con gramos. <a href="{% url 'foods:equivalences' item.ingredient_id %}">Ver equivalencias</a></p>{% endif %}
     {% endif %}
     {% if can_edit %}
     <form method="post" action="{% url 'shopping:item_purchased' item.pk %}" hx-post="{% url 'shopping:item_purchased' item.pk %}" hx-target="#item-{{ item.pk }}" hx-swap="outerHTML" class="qty-form">

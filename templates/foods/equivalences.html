@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Equivalencias de {{ ingredient.name }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Equivalencias de {{ ingredient.name }}</h1>
+  <a class="btn small" href="{% url 'foods:list' %}">Ingredientes</a>
+  <p class="lead">Cuánto pesa una pieza o un mililitro. Con ellas la compra junta, por ejemplo, «2 huevos» y «120 g de huevo». Sin equivalencia, las cantidades nunca se convierten.</p>
+</div>
+
+<section class="panel">
+  <h2 class="mt-0">Equivalencias en uso</h2>
+  <ul class="list">
+    {% for item in rows %}
+      {% with r=item.row %}
+      <li class="row between">
+        <span>
+          1 {{ r.get_unit_display }} ≈ <strong>{{ r.grams|num }} g</strong>
+          {% if r.note %}<span class="muted small">({{ r.note }})</span>{% endif %}
+          {% if r.household_id %}<span class="badge ok">De tu hogar</span>{% else %}<span class="badge">Catálogo</span>{% endif %}
+          {% if item.overridden %}<span class="badge info">Sustituida por la de tu hogar</span>{% endif %}
+        </span>
+        {% if r.household_id and can_edit %}
+          <form method="post" action="{% url 'foods:equivalence_delete' ingredient.pk r.pk %}">{% csrf_token %}<button class="btn small ghost danger" type="submit">Quitar</button></form>
+        {% endif %}
+      </li>
+      {% endwith %}
+    {% empty %}
+      <li class="muted">No hay equivalencias: las cantidades en piezas, volumen y gramos se mantienen separadas en la compra.</li>
+    {% endfor %}
+  </ul>
+  <p class="muted small" style="margin-top:8px">Son valores aproximados; la lista de compra marca con «≈» las cantidades convertidas. La compra se agrupa en la unidad habitual del ingrediente ({{ ingredient.get_default_unit_display }}).</p>
+</section>
+
+{% if can_edit %}
+<section class="panel">
+  <h2 class="mt-0">Añadir o ajustar una equivalencia</h2>
+  <p class="muted small">Se guarda solo para tu hogar. Si ya existe una del catálogo para la misma unidad, la tuya tiene prioridad.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid-2">
+      {% include "partials/field.html" with field=form.unit %}
+      {% include "partials/field.html" with field=form.grams %}
+    </div>
+    {% include "partials/field.html" with field=form.note %}
+    <button class="btn primary" type="submit">Guardar equivalencia</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

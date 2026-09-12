@@ -1,6 +1,22 @@
 from django import forms
 
-from .models import Ingredient, Trait, normalize_name
+from .models import CONVERTIBLE_UNITS, Ingredient, Trait, Unit, UnitConversion, normalize_name
+
+
+class ConversionForm(forms.ModelForm):
+    class Meta:
+        model = UnitConversion
+        fields = ("unit", "grams", "note")
+        labels = {"unit": "Unidad", "grams": "Pesa (g)"}
+        help_texts = {"note": "Por ejemplo: «huevo mediano», «sin hueso»."}
+        widgets = {"grams": forms.NumberInput(attrs={"step": "any", "min": "0.001", "inputmode": "decimal"})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["unit"].choices = [
+            (u.value, "1 ml (se usa para todas las medidas de volumen)" if u == Unit.ML else f"1 {u.label}")
+            for u in CONVERTIBLE_UNITS
+        ]
 
 
 class IngredientForm(forms.ModelForm):

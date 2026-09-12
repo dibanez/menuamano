@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.postgres.fields import ArrayField
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils.text import slugify
@@ -195,3 +196,40 @@ class Ingredient(models.Model):
     def trait_labels(self):
         labels = dict(Trait.choices)
         return [labels.get(t, t) for t in self.traits]
+
+
+# Units that can carry a weight equivalence: pieces, and millilitres for every volume unit.
+CONVERTIBLE_UNITS = [Unit.ML] + [u for u, (dimension, _) in UNIT_INFO.items() if dimension == Dimension.COUNT]
+
+
+class UnitConversion(models.Model):
+    """Known approximate weight of one unit of an ingredient (e.g. one egg ≈ 60 g, 1 ml of oil ≈ 0.92 g).
+
+    Only these equivalences allow mixing pieces or volumes with grams. Rows without household
+    belong to the shared catalogue; a household row for the same unit overrides it.
+    """
+
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name="conversions")
+    household = models.ForeignKey(
+        "households.Household", null=True, blank=True, on_delete=models.CASCADE, related_name="unit_conversions"
+    )
+    unit = models.CharField("unidad", max_length=8, choices=[(u.value, u.label) for u in CONVERTIBLE_UNITS])
+    grams = models.DecimalField(
+        "peso en gramos", max_digits=8, decimal_places=3,
+        validators=[MinValueValidator(Decimal("0.001")), MaxValueValidator(Decimal("5000"))],
+    )
+    note = models.CharField("nota", max_length=80, blank=True)
+
+    class Meta:
+        verbose_name = "equivalencia de peso"
+        verbose_name_plural = "equivalencias de peso"
+        ordering = ["unit"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["ingredient", "household", "unit"], name="unique_unit_conversion", nulls_distinct=False
+            ),
+            models.CheckConstraint(condition=models.Q(grams__gt=0), name="unit_conversion_positive"),
+        ]
+
+    def __str__(self):
+        return f"1 {self.get_unit_display()} de {self.ingredient} ≈ {self.grams} g"

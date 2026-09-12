@@ -11,6 +11,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from foods import conversions
 from foods.models import CATEGORY_ORDER, Category
 from foods.units import scale, to_base
 from planning.models import MODES_WITH_SHOPPING
@@ -27,6 +28,7 @@ class Need:
     unit: str
     quantity: Decimal = ZERO
     sources: list = field(default_factory=list)
+    approximate: bool = False
 
 
 def item_key(ingredient_id, unit):
@@ -36,8 +38,16 @@ def item_key(ingredient_id, unit):
 def compute_needs(household, start, end):
     """Aggregate ingredients of meals that need preparation, scaled to planned servings."""
     needs = OrderedDict()
-    meals = meals_queryset(household).filter(date__gte=start, date__lte=end, mode__in=MODES_WITH_SHOPPING)
-    for meal in meals.order_by("date", "meal_type"):
+    meals = list(
+        meals_queryset(household)
+        .filter(date__gte=start, date__lte=end, mode__in=MODES_WITH_SHOPPING)
+        .order_by("date", "meal_type")
+    )
+    tables = conversions.load(
+        household,
+        {line.ingredient_id for meal in meals for mr in meal.recipes.all() for line in mr.ingredients.all()},
+    )
+    for meal in meals:
         meal_servings = planned_servings(meal)  # includes servings reserved for linked leftovers
         for meal_recipe in meal.recipes.all():
             servings = meal_recipe.effective_servings(meal_servings)
@@ -49,17 +59,27 @@ def compute_needs(household, start, end):
                 if total is None or total <= 0:
                     continue  # "to taste" or nobody attending
                 unit, quantity = to_base(total, line.unit)
+                approximate = False
+                target = conversions.shopping_unit(line.ingredient)
+                if unit != target:
+                    # Pieces, volumes and grams only merge through a known equivalence.
+                    converted = conversions.convert(total, line.unit, target, tables.get(line.ingredient_id, {}))
+                    if converted is not None:
+                        unit, quantity, approximate = target, converted, True
                 key = item_key(line.ingredient_id, unit)
                 need = needs.setdefault(key, Need(ingredient=line.ingredient, unit=unit))
                 need.quantity += quantity
+                need.approximate = need.approximate or approximate
                 need.sources.append(
                     {
                         "meal_id": meal.pk,
                         "date": meal.date.isoformat(),
                         "meal_type": meal.get_meal_type_display(),
                         "recipe": meal_recipe.name,
-                        "quantity": str(quantity.quantize(Decimal("0.001"))),
-                        "unit": str(unit),
+                        # As written in the recipe (scaled), so people see where each amount comes from.
+                        "quantity": str(Decimal(total).quantize(Decimal("0.001"))),
+                        "unit": str(line.unit),
+                        "converted": approximate,
                     }
                 )
     return needs
@@ -87,6 +107,7 @@ def recalculate(shopping_list):
                 ShoppingItem.objects.create(
                     shopping_list=shopping_list, key=key, ingredient=need.ingredient, name=need.ingredient.name,
                     category=need.ingredient.category, unit=need.unit, needed_quantity=quantity, sources=need.sources,
+                    is_approximate=need.approximate,
                 )
                 stats.created += 1
             else:
@@ -94,7 +115,8 @@ def recalculate(shopping_list):
                 item.sources = need.sources
                 item.name = need.ingredient.name
                 item.category = need.ingredient.category
-                item.save(update_fields=["needed_quantity", "sources", "name", "category", "updated_at"])
+                item.is_approximate = need.approximate
+                item.save(update_fields=["needed_quantity", "sources", "name", "category", "is_approximate", "updated_at"])
                 stats.updated += 1
         for item in existing.values():
             if item.purchased_quantity > 0:

@@ -22,7 +22,10 @@
         {% if not ing.trait_info_complete %}<span class="badge unknown">Sin revisar</span>{% endif %}
         {% if ing.is_processed %}<span class="badge info">Revisar etiqueta</span>{% endif %}
       </span>
-      {% if ing.household_id and can_edit %}<a class="btn small" href="{% url 'foods:edit' ing.pk %}">Editar</a>{% elif not ing.household_id %}<span class="muted small">Catálogo</span>{% endif %}
+      <span class="row">
+        <a class="btn small ghost" href="{% url 'foods:equivalences' ing.pk %}">Equivalencias</a>
+        {% if ing.household_id and can_edit %}<a class="btn small" href="{% url 'foods:edit' ing.pk %}">Editar</a>{% elif not ing.household_id %}<span class="muted small">Catálogo</span>{% endif %}
+      </span>
     </li>
   {% empty %}
     <li class="muted">No hay ingredientes que coincidan.</li>
