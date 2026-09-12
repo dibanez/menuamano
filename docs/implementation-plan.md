@@ -122,7 +122,8 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 - [x] Recuperación y cambio de contraseña, con aviso por correo cuando cambia.
 - [x] Invitaciones por correo (opcional), manteniendo el enlace para copiar si falla el envío.
 - [x] Errores del servidor a `DJANGO_ADMINS`.
-- [x] Webhook de Mailgun con firma verificada: rebotes, quejas y fallos en `EmailEvent`.
+- [x] ~~Webhook de Mailgun con firma verificada~~: retirado el 12-09-2026; los rebotes y las quejas
+  se consultan en Mailgun.
 - [x] Comando `send_test_email` para comprobar la configuración desde Dokploy.
 - [x] Healthcheck `/healthz` y `compose.prod.yaml` para Dokploy.
 

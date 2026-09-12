@@ -1,11 +1,7 @@
-import hashlib
-import hmac
-import json
 import os
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 from unittest import mock
 
@@ -15,7 +11,6 @@ from django.core.management import CommandError, call_command
 from django.urls import reverse
 
 from core.emails import send_email
-from core.models import EmailEvent
 from households.models import Invitation
 
 from .factories import PASSWORD, make_user
@@ -118,7 +113,7 @@ def test_send_test_email_command(db):
 # --- Production settings ----------------------------------------------------------------------------
 
 EMAIL_VARS = ["EMAIL_PROVIDER", "MAILGUN_API_KEY", "MAILGUN_SENDER_DOMAIN", "MAILGUN_API_URL", "DEFAULT_FROM_EMAIL",
-              "MAILGUN_WEBHOOK_SIGNING_KEY", "ANYMAIL_WEBHOOK_SECRET", "DJANGO_ADMINS", "SERVER_EMAIL",
+              "DJANGO_ADMINS", "SERVER_EMAIL",
               "EMAIL_HOST", "EMAIL_PORT", "EMAIL_HOST_USER", "EMAIL_HOST_PASSWORD", "EMAIL_USE_TLS", "EMAIL_USE_SSL"]
 PRINT_SETTINGS = (
     "import django; from django.conf import settings; django.setup(); "
@@ -210,45 +205,9 @@ def test_production_console_escape_hatch():
     assert result.stdout.splitlines()[0] == "django.core.mail.backends.console.EmailBackend"
 
 
-# --- Mailgun tracking webhook -------------------------------------------------------------------------
-
-
-def mailgun_payload(token, key="test-signing-key", **event_data):
-    timestamp = str(int(time.time()))
-    signature = hmac.new(key.encode(), f"{timestamp}{token}".encode(), hashlib.sha256).hexdigest()
-    data = {
-        "event": "failed", "severity": "permanent", "reason": "bounce", "recipient": "ana@example.com",
-        "timestamp": time.time(), "message": {"headers": {"message-id": "abc123@mg.example.com"}},
-        "delivery-status": {"description": "Mailbox does not exist", "message": "550 5.1.1 unknown user"},
-        **event_data,
-    }
-    return json.dumps({"signature": {"timestamp": timestamp, "token": token, "signature": signature}, "event-data": data})
-
-
-def test_signed_bounce_is_stored_once(client, db):
-    url = "/anymail/mailgun/tracking/"
-    payload = mailgun_payload("token-1")
-    assert client.post(url, payload, content_type="application/json").status_code == 200
-    assert client.post(url, payload, content_type="application/json").status_code == 200  # provider retry
-    event = EmailEvent.objects.get()
-    assert event.event_type == "bounced"
-    assert event.recipient == "ana@example.com"
-    assert event.message_id == "<abc123@mg.example.com>"
-    assert event.description == "Mailbox does not exist"
-
-
-def test_webhook_with_wrong_signature_is_rejected(client, db):
-    payload = mailgun_payload("token-2", key="not-the-key")
-    response = client.post("/anymail/mailgun/tracking/", payload, content_type="application/json")
-    assert response.status_code == 400
-    assert not EmailEvent.objects.exists()
-
-
-def test_rejected_webhooks_are_logged_without_emailing_admins(client, db, settings, caplog):
-    # Anyone can call the public webhook URL, and Mailgun retries for hours: never mail admins for it.
+def test_there_is_no_mailgun_webhook(client, db, settings):
+    # Removed on purpose: bounces and complaints are read in Mailgun, nothing is received here.
     settings.ADMINS = [("Ops", "ops@example.com")]
-    payload = mailgun_payload("token-3", key="not-the-key")
-    response = client.post("/anymail/mailgun/tracking/", payload, content_type="application/json")
-    assert response.status_code == 400
+    response = client.post("/anymail/mailgun/tracking/", "{}", content_type="application/json")
+    assert response.status_code == 404
     assert mail.outbox == []
-    assert any(r.name == "django.security.AnymailWebhookValidationFailure" for r in caplog.records)

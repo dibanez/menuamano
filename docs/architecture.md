@@ -158,10 +158,9 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   - aviso de contraseña cambiada, tanto al restablecerla como al cambiarla;
   - invitación al hogar, opcional y con el mismo enlace de un solo uso;
   - errores del servidor a `ADMINS`.
-- Webhook de Mailgun (`/anymail/mailgun/tracking/`), que solo existe si hay
-  `MAILGUN_WEBHOOK_SIGNING_KEY`. Anymail verifica la firma HMAC y `core.signals` guarda cada
-  evento en `EmailEvent`. El id del evento evita duplicar los reintentos, y un fallo al guardarlo
-  se registra sin devolver error, para que Mailgun no reintente sin fin.
+- Sin webhook de Mailgun: se retiró porque rechazaba todas las llamadas y llenaba el log. Los
+  rebotes y las quejas se consultan en el panel de Mailgun. `EmailEvent` y su admin conservan los
+  eventos que ya se hubieran guardado.
 
 ## Planes y pagos (Stripe)
 

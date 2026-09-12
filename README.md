@@ -86,7 +86,6 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `DEFAULT_FROM_EMAIL` | Sí | Remitente, p. ej. `menuamano <no-reply@mg.example.com>` |
    | `EMAIL_HOST` | No | `smtp.mailgun.org` por defecto; en la UE, `smtp.eu.mailgun.org` |
    | `EMAIL_PORT` | No | `587` (STARTTLS) por defecto; `465` activa SSL; `2525` si el 587 está bloqueado |
-   | `MAILGUN_WEBHOOK_SIGNING_KEY` | Recomendada | Activa el webhook de rebotes y quejas |
    | `DJANGO_ADMINS` | Recomendada | Quién recibe los errores del servidor, p. ej. `Ana <ana@example.com>` |
    | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Sí* | Clave secreta y secreto del webhook de Stripe |
    | `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Sí* | Ids de precio de Premium (`price_…`) |
@@ -123,15 +122,11 @@ En local los correos se escriben en los logs del contenedor `web`.
 Para usar la API HTTP de Mailgun en lugar de SMTP: `EMAIL_PROVIDER=mailgun`, `MAILGUN_API_KEY`,
 `MAILGUN_SENDER_DOMAIN` y, en la UE, `MAILGUN_API_URL=https://api.eu.mailgun.net/v3`.
 
-Además, en los dos casos:
-1. Webhooks (recomendado): en Mailgun → *Webhooks* apunta los eventos *Permanent failure*,
-   *Temporary failure* y *Spam complaints* a `https://<tu-dominio>/anymail/mailgun/tracking/`, y
-   copia la *HTTP webhook signing key* en `MAILGUN_WEBHOOK_SIGNING_KEY`. Deja vacía
-   `ANYMAIL_WEBHOOK_SECRET`, salvo que pongas ese usuario y contraseña en la URL del webhook
-   (`https://usuario:contraseña@<tu-dominio>/…`); si no, se rechazan todos los eventos. Los eventos se ven en
-   el admin de Django («Eventos de correo»). Sin esa clave, la ruta del webhook no existe.
-2. Comprueba el envío desde la terminal del contenedor `web`:
-   `python manage.py send_test_email tu@correo.com`.
+Para comprobar el envío, desde la terminal del contenedor `web`:
+`python manage.py send_test_email tu@correo.com`.
+
+La aplicación no tiene webhook de Mailgun: los rebotes y las quejas se consultan en el panel de
+Mailgun (*Sending → Logs* y *Suppressions*).
 
 ### Pagos con Stripe
 

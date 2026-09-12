@@ -144,8 +144,6 @@ ANYMAIL = {
         "MAILGUN_SENDER_DOMAIN": env_str("MAILGUN_SENDER_DOMAIN", ""),
         # EU accounts: https://api.eu.mailgun.net/v3
         "MAILGUN_API_URL": env_str("MAILGUN_API_URL", "https://api.mailgun.net/v3"),
-        "MAILGUN_WEBHOOK_SIGNING_KEY": env_str("MAILGUN_WEBHOOK_SIGNING_KEY", ""),
-        "WEBHOOK_SECRET": env_str("ANYMAIL_WEBHOOK_SECRET", ""),
         "REQUESTS_TIMEOUT": env_float("EMAIL_TIMEOUT_SECONDS", 15.0),
     }.items()
     if value not in ("", None)
@@ -202,20 +200,11 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
-    "filters": {"no_traceback": {"()": "core.log_filters.DropTraceback"}},
-    "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
-        "console_brief": {"class": "logging.StreamHandler", "formatter": "plain", "filters": ["no_traceback"]},
-    },
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         # The SDK may log request details at DEBUG; keep it quiet.
         "openai": {"level": "WARNING"},
         "httpx2": {"level": "WARNING"},
-        # The email webhook URL is public and Mailgun retries for hours: log rejected calls in one
-        # line, never email them to DJANGO_ADMINS.
-        "django.security.AnymailWebhookValidationFailure": {
-            "handlers": ["console_brief"], "level": "WARNING", "propagate": False,
-        },
     },
 }

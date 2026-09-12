@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
@@ -15,8 +14,3 @@ urlpatterns = [
     path("plan/", include("billing.urls")),
     path("", include("core.urls")),
 ]
-
-# Mailgun delivery webhooks (bounces, complaints…), only when their signing key is configured:
-# https://<domain>/anymail/mailgun/tracking/
-if settings.ANYMAIL.get("MAILGUN_WEBHOOK_SIGNING_KEY"):
-    urlpatterns.insert(0, path("anymail/", include("anymail.urls")))
