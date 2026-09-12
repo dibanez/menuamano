@@ -83,19 +83,27 @@
   {% if can_edit %}
   <form method="post" action="{% url 'planning:meal_attendees' meal.pk %}">
     {% csrf_token %}
-    <ul class="list">
+    <div class="choices">
       {% for row in diners %}
-        <li class="row between">
-          <label class="check"><input type="checkbox" name="diners" value="{{ row.diner.pk }}" {% if row.attendee %}checked{% endif %}> {{ row.diner.alias }}</label>
-          <span class="row small"><label for="portion-{{ row.diner.pk }}">Ración</label>
+        <label><input type="checkbox" name="diners" value="{{ row.diner.pk }}" {% if row.attendee %}checked{% endif %}> {{ row.diner.alias }}</label>
+      {% empty %}
+        <p class="muted">No hay comensales. <a href="{% url 'diners:create' %}">Añade uno</a>.</p>
+      {% endfor %}
+    </div>
+    {% if diners %}
+    <details class="fold">
+      <summary class="link-btn">Ajustar raciones</summary>
+      <ul class="list">
+        {% for row in diners %}
+          <li class="row between">
+            <label for="portion-{{ row.diner.pk }}">{{ row.diner.alias }}</label>
             <input id="portion-{{ row.diner.pk }}" name="portion-{{ row.diner.pk }}" type="number" step="0.05" min="0.1" max="5" inputmode="decimal" style="width:84px"
               value="{% if row.attendee %}{{ row.attendee.portion|input_num }}{% else %}{{ row.diner.portion_factor|input_num }}{% endif %}">
-          </span>
-        </li>
-      {% empty %}
-        <li class="muted">No hay comensales. <a href="{% url 'diners:create' %}">Añade uno</a>.</li>
-      {% endfor %}
-    </ul>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endif %}
     <div class="form-actions"><button class="btn" type="submit">Guardar asistentes</button></div>
   </form>
   {% else %}
@@ -153,46 +161,52 @@
       <ul class="ingredients-list">
         {% for row in block.lines %}
           {% with line=row.line %}
-          <li style="flex-wrap:wrap">
+          <li>
             <span>{{ line.ingredient.name }}{% if line.substituted_for %} <span class="badge info">sustituye a {{ line.substituted_for.name }}</span>{% endif %}{% if line.optional %} <span class="badge">opcional</span>{% endif %}</span>
             <span class="qty">{% if line.manual_quantity is not None %}{{ line.manual_quantity|qty:line.unit }} <span class="badge">corregida</span>{% else %}{{ row.scaled|qty:line.unit }}{% endif %}</span>
-            {% if can_edit %}
-            <details style="width:100%" class="small">
-              <summary class="link-btn">Ajustar</summary>
-              <div class="grid-2" style="margin-top:8px">
-                <form method="post" action="{% url 'planning:line_quantity' meal.pk line.pk %}" class="row">{% csrf_token %}
-                  <label for="mq-{{ line.pk }}">Cantidad total ({{ line.get_unit_display }})</label>
-                  <input id="mq-{{ line.pk }}" name="manual_quantity" type="number" step="any" min="0" inputmode="decimal" style="width:110px" value="{{ line.manual_quantity|default_if_none:''|input_num }}" placeholder="{{ row.scaled|num }}">
-                  <button class="btn small" type="submit">Corregir</button>
-                </form>
-                <form method="post" action="{% url 'planning:line_substitute' meal.pk line.pk %}" class="row">{% csrf_token %}
-                  <label for="sub-{{ line.pk }}">Sustituir por</label>
-                  <select id="sub-{{ line.pk }}" name="ingredient" style="flex:1;min-width:10rem">
-                    {% for ing in ingredients %}<option value="{{ ing.pk }}" {% if ing.pk == line.ingredient_id %}selected{% endif %}>{{ ing.name }}</option>{% endfor %}
-                  </select>
-                  <button class="btn small" type="submit">Sustituir</button>
-                </form>
-              </div>
-            </details>
-            {% endif %}
           </li>
           {% endwith %}
         {% endfor %}
       </ul>
       {% if mr.steps %}
-        <details style="margin-top:8px"><summary class="link-btn">Cómo se prepara</summary>
+        <details class="fold"><summary class="link-btn">Cómo se prepara</summary>
           <ol class="steps">{% for s in mr.steps %}<li>{{ s|linebreaksbr }}</li>{% endfor %}</ol>
         </details>
       {% endif %}
       {% if can_edit %}
-      <div class="row" style="margin-top:10px">
-        <form method="post" action="{% url 'planning:meal_recipe_servings' meal.pk mr.pk %}" class="row">{% csrf_token %}
-          <label for="srv-{{ mr.pk }}" class="small">Raciones fijas</label>
-          <input id="srv-{{ mr.pk }}" name="servings" type="number" step="0.5" min="0.5" inputmode="decimal" style="width:90px" value="{{ mr.servings_override|default_if_none:''|input_num }}" placeholder="auto">
-          <button class="btn small" type="submit">Aplicar</button>
-        </form>
-        <form method="post" action="{% url 'planning:meal_remove_recipe' meal.pk mr.pk %}">{% csrf_token %}<button class="btn small danger" type="submit">Quitar receta</button></form>
-      </div>
+      <details class="fold">
+        <summary class="link-btn">Cambiar esta receta</summary>
+        <p class="muted small" style="margin:10px 0 0">Los cambios solo afectan a esta comida, no a la receta guardada.</p>
+        <ul class="adjust-lines">
+          {% for row in block.lines %}
+            {% with line=row.line %}
+            <li>
+              <strong>{{ line.ingredient.name }}</strong>
+              <form method="post" action="{% url 'planning:line_quantity' meal.pk line.pk %}" class="row">{% csrf_token %}
+                <label for="mq-{{ line.pk }}">Cantidad total ({{ line.get_unit_display }})</label>
+                <input id="mq-{{ line.pk }}" name="manual_quantity" type="number" step="any" min="0" inputmode="decimal" style="width:110px" value="{{ line.manual_quantity|default_if_none:''|input_num }}" placeholder="{{ row.scaled|num }}">
+                <button class="btn small" type="submit">Corregir</button>
+              </form>
+              <form method="post" action="{% url 'planning:line_substitute' meal.pk line.pk %}" class="row">{% csrf_token %}
+                <label for="sub-{{ line.pk }}">Sustituir por</label>
+                <select id="sub-{{ line.pk }}" name="ingredient" style="flex:1;min-width:10rem">
+                  {% for ing in ingredients %}<option value="{{ ing.pk }}" {% if ing.pk == line.ingredient_id %}selected{% endif %}>{{ ing.name }}</option>{% endfor %}
+                </select>
+                <button class="btn small" type="submit">Sustituir</button>
+              </form>
+            </li>
+            {% endwith %}
+          {% endfor %}
+        </ul>
+        <div class="row" style="margin-top:10px">
+          <form method="post" action="{% url 'planning:meal_recipe_servings' meal.pk mr.pk %}" class="row">{% csrf_token %}
+            <label for="srv-{{ mr.pk }}" class="small">Raciones fijas</label>
+            <input id="srv-{{ mr.pk }}" name="servings" type="number" step="0.5" min="0.5" inputmode="decimal" style="width:90px" value="{{ mr.servings_override|default_if_none:''|input_num }}" placeholder="auto">
+            <button class="btn small" type="submit">Aplicar</button>
+          </form>
+          <form method="post" action="{% url 'planning:meal_remove_recipe' meal.pk mr.pk %}">{% csrf_token %}<button class="btn small danger" type="submit">Quitar receta</button></form>
+        </div>
+      </details>
       {% endif %}
     </article>
     {% endwith %}
@@ -222,37 +236,43 @@
   {% if blocks %}<p class="muted small" style="margin-top:12px">{{ label_reminder }}</p>{% endif %}
 </section>
 
-<section class="panel">
-  <h2 class="mt-0">Modalidad, notas y lo que se comió</h2>
+<details class="panel more">
+  <summary>
+    <span>Más opciones
+      <span class="more-hint">{% if can_edit %}Cocinar en casa o comer fuera, notas, lo que se comió, mover o copiar{% else %}Modalidad, notas y lo que se comió{% endif %}</span>
+    </span>
+  </summary>
+  <section>
+    <h3>Modalidad, notas y lo que se comió</h3>
+    {% if can_edit %}
+    <form method="post" action="{% url 'planning:meal_update' meal.pk %}">
+      {% csrf_token %}
+      {% with form=details_form %}{% include "partials/form_fields.html" %}{% endwith %}
+      <button class="btn" type="submit">Guardar</button>
+    </form>
+    {% else %}
+      <p>{{ meal.get_mode_display }}. {{ meal.notes|default:"Sin notas." }}</p>
+      <p class="muted">Consumo: {{ meal.get_outcome_display }}{% if meal.outcome_notes %}, {{ meal.outcome_notes }}{% endif %}.</p>
+    {% endif %}
+  </section>
   {% if can_edit %}
-  <form method="post" action="{% url 'planning:meal_update' meal.pk %}">
-    {% csrf_token %}
-    {% with form=details_form %}{% include "partials/form_fields.html" %}{% endwith %}
-    <button class="btn" type="submit">Guardar</button>
-  </form>
-  {% else %}
-    <p>{{ meal.get_mode_display }}. {{ meal.notes|default:"Sin notas." }}</p>
-    <p class="muted">Consumo: {{ meal.get_outcome_display }}{% if meal.outcome_notes %}, {{ meal.outcome_notes }}{% endif %}.</p>
+  <section>
+    <h3>Mover o copiar</h3>
+    <form method="post" action="{% url 'planning:meal_move' meal.pk %}">
+      {% csrf_token %}
+      <div class="grid-2">{% include "partials/field.html" with field=move_form.target_date %}{% include "partials/field.html" with field=move_form.target_type %}</div>
+      {% include "partials/field.html" with field=move_form.copy %}
+      {% include "partials/field.html" with field=move_form.overwrite %}
+      <button class="btn" type="submit">Mover o copiar</button>
+    </form>
+  </section>
+  <section>
+    <form method="post" action="{% url 'planning:meal_delete' meal.pk %}" class="row between">
+      {% csrf_token %}
+      <span class="muted small">Vaciar quita asistentes, recetas y notas de esta comida.</span>
+      <button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para vaciar">Vaciar comida</button>
+    </form>
+  </section>
   {% endif %}
-</section>
-
-{% if can_edit %}
-<section class="panel">
-  <h2 class="mt-0">Mover o copiar</h2>
-  <form method="post" action="{% url 'planning:meal_move' meal.pk %}">
-    {% csrf_token %}
-    <div class="grid-2">{% include "partials/field.html" with field=move_form.target_date %}{% include "partials/field.html" with field=move_form.target_type %}</div>
-    {% include "partials/field.html" with field=move_form.copy %}
-    {% include "partials/field.html" with field=move_form.overwrite %}
-    <button class="btn" type="submit">Mover o copiar</button>
-  </form>
-</section>
-<section class="panel flat">
-  <form method="post" action="{% url 'planning:meal_delete' meal.pk %}" class="row between">
-    {% csrf_token %}
-    <span class="muted small">Vaciar quita asistentes, recetas y notas de esta comida.</span>
-    <button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para vaciar">Vaciar comida</button>
-  </form>
-</section>
-{% endif %}
+</details>
 {% endblock %}

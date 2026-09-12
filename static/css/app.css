@@ -207,6 +207,27 @@ fieldset.field legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
 .checklist label:has(input:checked) { background: var(--leaf-soft); font-weight: 650; }
 .checklist label[hidden] { display: none; }
 details.editor > summary { margin-top: 8px; }
+details.fold > summary { margin-top: 10px; width: fit-content; }
+.adjust-lines { list-style: none; margin: 4px 0 0; padding: 0; font-size: 0.9rem; }
+.adjust-lines > li { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.adjust-lines label { color: var(--muted); }
+
+/* Secondary actions of a page, folded so the default view stays short. */
+details.more > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-weight: 700; font-size: 1.05rem;
+}
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::after {
+  content: ""; flex: none; width: 9px; height: 9px; margin: 0 4px 4px 0;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg);
+}
+details.more[open] > summary::after { margin-bottom: -4px; transform: rotate(-135deg); }
+details.more .more-hint { display: block; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+details.more > section { border-top: 1px solid var(--line); margin-top: 16px; }
+details.more > section > h3 { margin-top: 14px; }
+details.more > section:last-child { padding-top: 14px; }
+details.more > section:has(h3):last-child { padding-top: 0; }
 .editor-form { margin-top: 14px; }
 
 /* Compact rows used in formsets */
