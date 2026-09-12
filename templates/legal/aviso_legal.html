@@ -1,0 +1,28 @@
+{% extends "legal/base.html" %}
+{% block legal %}
+<h2>1. Titular del sitio web</h2>
+<p>En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de servicios de la sociedad de la información y de comercio electrónico (LSSI-CE), se informa de que el sitio web {{ site }} y la aplicación menuamano son titularidad de:</p>
+{% include "legal/_owner.html" %}
+
+<h2>2. Objeto</h2>
+<p>menuamano es un servicio en línea para organizar la alimentación de un hogar: planificar desayunos, comidas, meriendas y cenas, tener en cuenta quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. Incluye un plan gratuito y un plan de pago (Premium) descritos en las <a href="{% url 'core:legal_page' 'condiciones' %}">condiciones de uso y contratación</a>.</p>
+
+<h2>3. Condiciones de uso del sitio</h2>
+<p>Acceder a este sitio implica aceptar este aviso legal. El uso de la aplicación con una cuenta se rige además por las <a href="{% url 'core:legal_page' 'condiciones' %}">condiciones de uso y contratación</a>, la <a href="{% url 'core:legal_page' 'privacidad' %}">política de privacidad</a> y la <a href="{% url 'core:legal_page' 'cookies' %}">política de cookies</a>.</p>
+<p>Te comprometes a usar el sitio de forma lícita, sin dañar su funcionamiento ni el de los sistemas que lo alojan, y sin intentar acceder a datos de otras personas u hogares.</p>
+
+<h2>4. Información alimentaria y de salud</h2>
+<p>menuamano ayuda a organizar comidas teniendo en cuenta las alergias, intolerancias y restricciones que registra cada hogar, pero <strong>no presta asesoramiento médico, nutricional ni dietético</strong>. Las comprobaciones de compatibilidad se basan exclusivamente en los datos introducidos en la aplicación y en la información disponible sobre los ingredientes; cuando falta información, se indica que requiere revisión.</p>
+<p>Ninguna receta, menú ni comprobación garantiza la ausencia de alérgenos, trazas o contaminación cruzada. Revisa siempre el etiquetado de los productos y las condiciones de preparación. Ante alergias graves u otras condiciones de salud, sigue las indicaciones de tu profesional sanitario. Las propuestas del asistente con inteligencia artificial deben revisarse antes de aplicarlas.</p>
+<p>El registro de peso es opcional y meramente informativo: menuamano no calcula objetivos, dietas ni recomendaciones a partir de él.</p>
+
+<h2>5. Propiedad intelectual e industrial</h2>
+<p>La marca menuamano, el diseño del sitio, su código y sus textos pertenecen a su titular o se usan con licencia. No se permite su reproducción, distribución o transformación sin autorización, salvo los usos permitidos por la ley.</p>
+<p>Las recetas, notas y demás contenidos que introduces siguen siendo tuyos. Nos concedes el permiso necesario para almacenarlos y mostrarlos a las personas de tu hogar con el único fin de prestar el servicio.</p>
+
+<h2>6. Responsabilidad</h2>
+<p>Trabajamos para que el servicio esté disponible y funcione correctamente, pero no podemos garantizar la ausencia de interrupciones o errores. No respondemos de los daños derivados de un uso contrario a este aviso o a las condiciones, ni de los contenidos de sitios de terceros enlazados desde menuamano.</p>
+
+<h2>7. Legislación y jurisdicción</h2>
+<p>Este aviso se rige por la legislación española. Si eres consumidor, podrás acudir a los juzgados de tu domicilio; en los demás casos, las partes se someten a los juzgados y tribunales del domicilio del titular.</p>
+{% endblock %}

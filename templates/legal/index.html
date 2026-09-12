@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Información legal · menuamano{% endblock %}
+{% block content %}
+<article class="legal">
+  <h1>Información legal</h1>
+  <p class="muted small">Última actualización: {{ updated|date:"j \d\e F \d\e Y" }}</p>
+  <ul class="list panel">
+    {% for slug, page in pages.items %}
+      <li><a href="{% url 'core:legal_page' slug %}">{{ page.1 }}</a></li>
+    {% endfor %}
+  </ul>
+</article>
+{% endblock %}

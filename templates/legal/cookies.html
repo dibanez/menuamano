@@ -1,0 +1,42 @@
+{% extends "legal/base.html" %}
+{% block legal %}
+<p>Las cookies son pequeños archivos que un sitio web guarda en tu navegador. Esta política explica cuáles usa menuamano, conforme al artículo 22.2 de la LSSI-CE y a la guía de la Agencia Española de Protección de Datos.</p>
+
+<h2>1. Cookies técnicas (siempre activas)</h2>
+<p>Son necesarias para que el servicio funcione y no requieren consentimiento.</p>
+<div class="table-wrap">
+<table class="simple">
+  <thead><tr><th>Nombre</th><th>Para qué sirve</th><th>Duración</th></tr></thead>
+  <tbody>
+    <tr><td><code>sessionid</code></td><td>Mantener tu sesión iniciada.</td><td>2 semanas o hasta que cierres sesión</td></tr>
+    <tr><td><code>csrftoken</code></td><td>Proteger los formularios frente a envíos fraudulentos.</td><td>1 año</td></tr>
+    <tr><td><code>menuamano-consent</code> (almacenamiento local)</td><td>Recordar si has aceptado o rechazado las cookies de analítica.</td><td>Hasta que borres los datos del sitio</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>2. Cookies de analítica (solo con tu consentimiento)</h2>
+{% if analytics_configured %}
+<p>En las páginas públicas (inicio, acceso, registro y recuperación de contraseña) usamos Google Tag Manager para cargar Google Analytics, que nos ayuda a saber cuántas personas visitan menuamano y qué partes les interesan. Estas cookies <strong>solo se instalan si las aceptas</strong> en el aviso de cookies; mientras no lo hagas, Google recibe como mucho señales sin cookies sobre el estado del consentimiento. Dentro de la aplicación, con la sesión iniciada, no se cargan.</p>
+<div class="table-wrap">
+<table class="simple">
+  <thead><tr><th>Nombre</th><th>Proveedor</th><th>Para qué sirve</th><th>Duración</th></tr></thead>
+  <tbody>
+    <tr><td><code>_ga</code></td><td>Google</td><td>Distinguir visitantes de forma anónima.</td><td>2 años</td></tr>
+    <tr><td><code>_ga_&lt;ID&gt;</code></td><td>Google</td><td>Mantener el estado de la visita.</td><td>2 años</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Actualmente no usamos cookies publicitarias. Si en el futuro se añadieran, solo se activarían con tu consentimiento.</p>
+{% else %}
+<p>Ahora mismo no usamos cookies de analítica ni de publicidad.</p>
+{% endif %}
+
+<h2>3. Cookies de terceros al pagar</h2>
+<p>Si contratas Premium, el pago se realiza en la página segura de Stripe (checkout.stripe.com), que usa sus propias cookies conforme a su política de privacidad y de cookies.</p>
+
+<h2>4. Cómo cambiar tu elección</h2>
+<p>Puedes cambiar tu elección en cualquier momento desde el enlace «Cookies» del pie de la página de inicio{% if analytics_configured %} o aquí mismo: <button class="link-btn" type="button" data-consent-reopen>configurar cookies</button>{% endif %}. También puedes borrar o bloquear las cookies desde la configuración de tu navegador; si bloqueas las técnicas, no podrás iniciar sesión.</p>
+
+<p>Más información sobre el tratamiento de datos en la <a href="{% url 'core:legal_page' 'privacidad' %}">política de privacidad</a>.</p>
+{% endblock %}

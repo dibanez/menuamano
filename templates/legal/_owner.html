@@ -1,0 +1,7 @@
+<ul>
+  <li><strong>Titular:</strong> {% if owner.name %}{{ owner.name }}{% else %}<mark>[nombre o razón social pendiente]</mark>{% endif %}</li>
+  <li><strong>NIF:</strong> {% if owner.tax_id %}{{ owner.tax_id }}{% else %}<mark>[NIF pendiente]</mark>{% endif %}</li>
+  <li><strong>Domicilio:</strong> {% if owner.address %}{{ owner.address }}{% else %}<mark>[domicilio pendiente]</mark>{% endif %}</li>
+  <li><strong>Correo electrónico:</strong> {% if owner.email %}<a href="mailto:{{ owner.email }}">{{ owner.email }}</a>{% else %}<mark>[correo de contacto pendiente]</mark>{% endif %}</li>
+  {% if owner.registry %}<li><strong>Datos registrales:</strong> {{ owner.registry }}</li>{% endif %}
+</ul>

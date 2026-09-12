@@ -104,8 +104,9 @@
     <span class="row">
       <a href="{% url 'accounts:login' %}">Entrar</a>
       <a href="{% url 'accounts:signup' %}">Crear cuenta</a>
-      {% if gtm_id and cookie_banner %}<a href="#" data-consent-reopen>Cookies</a>{% endif %}
+      {% if gtm_id and cookie_banner %}<a href="#" data-consent-reopen>Configurar cookies</a>{% endif %}
     </span>
+    {% include "partials/legal_links.html" %}
   </footer>
 </div>
 {% endblock %}

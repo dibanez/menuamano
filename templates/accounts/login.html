@@ -12,5 +12,6 @@
   </form>
   <p><a href="{% url 'accounts:password_reset' %}">¿Has olvidado la contraseña?</a></p>
   <p>¿Aún no tienes cuenta? <a href="{% url 'accounts:signup' %}">Crear una cuenta</a></p>
+  {% include "partials/legal_links.html" %}
 </div>
 {% endblock %}

@@ -133,8 +133,9 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 
 ### Pendiente o conocido
 
-- **Legal**: faltan aviso legal, política de privacidad (datos de salud) y condiciones de venta con
-  desistimiento. Son necesarios antes de cobrar.
+- **Legal**: los textos legales y los consentimientos están implementados (ver README). Falta que
+  los revise un profesional y rellenar los datos del titular. No hay baja de cuenta desde la app:
+  se pide por correo.
 - **Stripe sin probar en real**: los tests simulan las llamadas y firman webhooks de verdad, pero
   el primer paso es un pago en modo test contra la cuenta real.
 

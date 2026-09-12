@@ -1,9 +1,42 @@
 from datetime import timedelta
 
+from django.conf import settings
+from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from billing.plans import FREE, PREMIUM, get_plan, price_labels
+
+from .legal import LEGAL_UPDATED, owner
+
+LEGAL_PAGES = {
+    "aviso-legal": ("legal/aviso_legal.html", "Aviso legal"),
+    "privacidad": ("legal/privacidad.html", "Política de privacidad"),
+    "cookies": ("legal/cookies.html", "Política de cookies"),
+    "condiciones": ("legal/condiciones.html", "Condiciones de uso y contratación"),
+}
+
+
+def legal_index(request):
+    return render(request, "legal/index.html", {"pages": LEGAL_PAGES, "updated": LEGAL_UPDATED})
+
+
+def legal_page(request, slug):
+    if slug not in LEGAL_PAGES:
+        raise Http404("Unknown legal page")
+    template, title = LEGAL_PAGES[slug]
+    context = {
+        "title": title,
+        "updated": LEGAL_UPDATED,
+        "owner": owner(),
+        "site": request.get_host(),
+        "free": get_plan(FREE),
+        "premium": get_plan(PREMIUM),
+        "prices": price_labels(),
+        "analytics_configured": bool(settings.GTM_CONTAINER_ID),
+        "pages": LEGAL_PAGES,
+    }
+    return render(request, template, context)
 from planning.calendar import calendar_days
 from planning.models import Meal, SafetyStatus
 from shopping.models import ShoppingList

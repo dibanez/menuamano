@@ -3,6 +3,7 @@
 from decimal import Decimal
 
 from accounts.models import User
+from core.legal import record_consent
 from diners.models import Diner, DinerRestriction
 from foods.models import Ingredient
 from households.models import Household, Membership, Role
@@ -11,8 +12,11 @@ from recipes.models import Recipe, RecipeIngredient, RecipeStep
 PASSWORD = "a-strong-test-password"
 
 
-def make_user(email):
-    return User.objects.create_user(email=email, password=PASSWORD)
+def make_user(email, consented=True):
+    user = User.objects.create_user(email=email, password=PASSWORD)
+    if consented:
+        record_consent(user)
+    return user
 
 
 def make_household(name="Casa", admin=None, role=Role.ADMIN):

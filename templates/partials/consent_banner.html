@@ -1,6 +1,6 @@
 {% if gtm_id and cookie_banner %}
 <div class="consent" id="consent-banner" role="region" aria-label="Cookies" hidden>
-  <p>Usamos cookies de analítica y publicidad para saber cómo se usa menuamano y mejorarlo. Solo se activan si las aceptas.</p>
+  <p>Usamos cookies de analítica para saber cómo se usa menuamano y mejorarlo. Solo se activan si las aceptas. <a href="{% url 'core:legal_page' 'cookies' %}">Política de cookies</a></p>
   <div class="row">
     <button class="btn small primary" type="button" data-consent="granted">Aceptar</button>
     <button class="btn small" type="button" data-consent="denied">Rechazar</button>

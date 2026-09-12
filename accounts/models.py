@@ -30,6 +30,11 @@ class User(AbstractUser):
     username = None
     email = models.EmailField("correo electrónico", unique=True)
     display_name = models.CharField("nombre visible", max_length=80, blank=True)
+    # Consent records (GDPR): when the terms/privacy and the explicit health-data consent were given,
+    # and which version of the legal texts was accepted.
+    terms_accepted_at = models.DateTimeField("condiciones aceptadas", null=True, blank=True)
+    health_consent_at = models.DateTimeField("consentimiento de datos de salud", null=True, blank=True)
+    legal_version = models.CharField("versión de los textos legales aceptada", max_length=20, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

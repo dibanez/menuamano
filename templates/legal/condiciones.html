@@ -1,0 +1,54 @@
+{% extends "legal/base.html" %}
+{% block legal %}
+<p>Estas condiciones regulan el uso de menuamano y la contratación del plan Premium. Al crear una cuenta las aceptas. Si no estás de acuerdo, no uses el servicio.</p>
+
+<h2>1. Quién presta el servicio</h2>
+{% include "legal/_owner.html" %}
+
+<h2>2. El servicio</h2>
+<p>menuamano permite a un hogar planificar sus comidas, registrar quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. El plan Premium añade un asistente con inteligencia artificial y admite más personas con cuenta en el hogar.</p>
+
+<h2>3. Tu cuenta</h2>
+<ul>
+  <li>Para crear una cuenta debes tener al menos 14 años y facilitar datos veraces.</li>
+  <li>La cuenta es personal. Guarda tu contraseña con cuidado y avísanos si sospechas un uso no autorizado.</li>
+  <li>En cada hogar hay tres roles: administración (gestiona el hogar, sus miembros y el plan), edición (gestiona menús, recetas y compra) y lectura (consulta).</li>
+  <li>Si registras datos de otras personas (familia, invitados, menores), debes contar con su permiso o ser su representante legal, como se explica en la <a href="{% url 'core:legal_page' 'privacidad' %}">política de privacidad</a>.</li>
+</ul>
+
+<h2>4. Información alimentaria</h2>
+<p>menuamano comprueba la compatibilidad de las comidas con los datos que registras, pero no es un servicio médico ni nutricional y no garantiza la ausencia de alérgenos, trazas o contaminación cruzada. Eres responsable de revisar el etiquetado de los productos y cómo se preparan. Las propuestas del asistente con IA pueden contener errores y solo se aplican cuando tú las revisas y aceptas.</p>
+
+<h2>5. Planes y precios</h2>
+<ul>
+  <li><strong>{{ free.name }}:</strong> gratuito, con planificación manual completa y hasta {{ free.max_members }} personas con cuenta en el hogar.</li>
+  <li><strong>{{ premium.name }}:</strong> {{ prices.monthly }} al mes o {{ prices.yearly }} al año por hogar, impuestos incluidos. Incluye el asistente con IA (hasta {{ premium.ai_monthly_limit }} peticiones al mes por hogar) y hasta {{ premium.max_members }} personas con cuenta.</li>
+</ul>
+<p>Premium lo contrata una persona administradora del hogar y lo disfrutan todas sus personas miembro. El pago se realiza mediante Stripe. La suscripción se renueva automáticamente al final de cada periodo (mensual o anual) hasta que la canceles.</p>
+<p>Puedes cancelar en cualquier momento desde «Plan del hogar» → «Gestionar la suscripción». La cancelación tiene efecto al final del periodo ya pagado y hasta entonces se mantiene Premium; no se devuelven periodos parciales salvo en los casos previstos por la ley. Si un cobro falla, Stripe lo reintentará durante unos días; si no se completa, el hogar vuelve al plan gratuito sin perder sus datos.</p>
+<p>Si cambiamos el precio, te avisaremos con antelación y el nuevo precio se aplicará en la siguiente renovación. Podrás cancelar antes si no estás de acuerdo.</p>
+
+<h2>6. Derecho de desistimiento</h2>
+<p>Si eres consumidor, puedes desistir de la contratación de Premium en un plazo de 14 días naturales desde la fecha de contratación, sin necesidad de justificación, escribiéndonos al correo de contacto con una declaración clara de tu decisión. Al contratar solicitas que el servicio comience de inmediato; por eso, si desistes, abonarás la parte proporcional al tiempo en que el servicio se haya prestado hasta que nos comuniques tu desistimiento. Te devolveremos el resto en un plazo máximo de 14 días, por el mismo medio de pago.</p>
+
+<h2>7. Uso aceptable</h2>
+<p>No debes usar menuamano para fines ilícitos, intentar acceder a datos de otros hogares, sobrecargar el servicio o el asistente con IA de forma automatizada, ni introducir contenidos ilegales u ofensivos. Podemos suspender las cuentas que incumplan estas condiciones.</p>
+
+<h2>8. Tus contenidos</h2>
+<p>Las recetas, notas y demás contenidos que introduces son tuyos. Nos concedes el permiso necesario para almacenarlos, procesarlos y mostrarlos a las personas de tu hogar con el único fin de prestar el servicio.</p>
+
+<h2>9. Disponibilidad y cambios del servicio</h2>
+<p>Podemos mejorar, modificar o dejar de ofrecer funciones. Si una modificación afecta de forma importante a Premium, te avisaremos con antelación. Podemos interrumpir el servicio temporalmente por mantenimiento o causas técnicas.</p>
+
+<h2>10. Responsabilidad</h2>
+<p>Respondemos de los daños causados por incumplimiento de estas condiciones conforme a la ley aplicable. No respondemos de los daños derivados de datos incorrectos o incompletos introducidos en la aplicación, de no revisar el etiquetado de los productos ni de un uso contrario a estas condiciones. Nada de lo previsto aquí limita los derechos que te reconoce la normativa de consumidores.</p>
+
+<h2>11. Baja</h2>
+<p>Puedes dejar de usar menuamano cuando quieras. Para borrar tu cuenta y tus datos, escríbenos al correo de contacto. Si tienes Premium, cancélalo antes para evitar nuevas renovaciones.</p>
+
+<h2>12. Cambios en estas condiciones</h2>
+<p>Si cambiamos estas condiciones de forma relevante, te lo indicaremos en la aplicación y te pediremos que las aceptes de nuevo para seguir usándola.</p>
+
+<h2>13. Ley aplicable y jurisdicción</h2>
+<p>Estas condiciones se rigen por la legislación española. Si eres consumidor, podrás acudir a los juzgados de tu domicilio.</p>
+{% endblock %}

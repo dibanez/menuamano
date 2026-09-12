@@ -1,13 +1,15 @@
 from django.contrib import messages
 from django.contrib.auth import login, views as auth_views
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from core.emails import send_email
+from core.legal import needs_consent, record_consent
 
-from .forms import LoginForm, MenuPasswordResetForm, SignupForm
+from .forms import LegalConsentForm, LoginForm, MenuPasswordResetForm, SignupForm
 
 
 class MenuLoginView(LoginView):
@@ -41,6 +43,19 @@ def signup(request):
         messages.success(request, "Cuenta creada. Ahora crea tu hogar.")
         return redirect("households:onboarding")
     return render(request, "accounts/signup.html", {"form": form, "next": next_url})
+
+
+@login_required
+def legal_consent(request):
+    next_url = _safe_next(request) or reverse("core:home")
+    if not needs_consent(request.user):
+        return redirect(next_url)
+    form = LegalConsentForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        record_consent(request.user)
+        messages.success(request, "Gracias. Ya puedes seguir usando menuamano.")
+        return redirect(next_url)
+    return render(request, "accounts/legal_consent.html", {"form": form, "next": next_url})
 
 
 # --- Passwords ------------------------------------------------------------------------------

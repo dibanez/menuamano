@@ -39,6 +39,7 @@ def test_main_flow(client):
     # Sign up and create a household.
     response = client.post(reverse("accounts:signup"), {
         "email": "familia@example.com", "display_name": "Familia", "password1": "cocina-casera-2030", "password2": "cocina-casera-2030",
+        "accept_terms": "on", "health_consent": "on",
     })
     assert response.status_code == 302
     client.post(reverse("households:onboarding"), {"name": "Casa Pruebas"})

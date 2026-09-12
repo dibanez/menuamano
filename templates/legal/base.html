@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · menuamano{% endblock %}
+{% block content %}
+<article class="legal">
+  <h1>{{ title }}</h1>
+  <p class="muted small">Última actualización: {{ updated|date:"j \d\e F \d\e Y" }}</p>
+  {% block legal %}{% endblock %}
+</article>
+<footer class="landing-footer">
+  <a class="small" href="{% url 'core:legal' %}">Información legal</a>
+  {% include "partials/legal_links.html" %}
+</footer>
+{% endblock %}

@@ -188,6 +188,9 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
   border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; font-weight: 500;
 }
 .choices label:has(input:checked), .check:has(input:checked) { border-color: var(--leaf); background: var(--leaf-soft); }
+/* Standalone checkbox fields can carry long labels (consents): a card, not a pill. */
+.field > label.check { display: flex; align-items: flex-start; border-radius: var(--radius-m); line-height: 1.4; padding: 10px 12px; }
+.field > label.check input { flex: none; margin-top: 1px; }
 .choices div { display: contents; }
 fieldset.field { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
 fieldset.field legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
@@ -418,6 +421,16 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
 .landing-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 8px; border-top: 1px solid var(--line); }
 .landing-footer .wordmark { font-size: 1.1rem; }
+
+/* --- Legal pages --------------------------------------------------------------------- */
+
+.legal { max-width: 46rem; }
+.legal h2 { font-size: 1.15rem; margin-top: 1.6rem; }
+.legal ul { padding-left: 1.2rem; }
+.legal li { margin: 4px 0; }
+.legal mark { background: var(--unknown-soft); color: var(--unknown); padding: 0 4px; border-radius: 4px; }
+.legal code { font-size: 0.9em; }
+.legal-links { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.9rem; }
 
 /* --- Cookie consent ------------------------------------------------------------------ */
 

@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from accounts.models import User
 from core.choices import MealType
+from core.legal import record_consent
 from diners.models import AttendancePattern, Diner, DinerPreference, DinerRestriction, WeightMeasurement
 from foods.models import Ingredient, Trait
 from households.models import Household, Membership, Role
@@ -106,6 +107,7 @@ class Command(BaseCommand):
             if created:
                 user.set_password(PASSWORD)
                 user.save()
+            record_consent(user)  # demo accounts start with the legal texts accepted
             users[email] = user
         admin = users[USERS[0][0]]
 

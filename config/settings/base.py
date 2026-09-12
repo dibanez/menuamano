@@ -46,6 +46,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "households.middleware.ActiveHouseholdMiddleware",
+    "core.middleware.LegalConsentMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -141,6 +142,15 @@ ANYMAIL = {
 
 # Public base URL, for absolute links in emails sent outside a request (e.g. from webhooks).
 SITE_URL = env_str("SITE_URL", "")
+
+# --- Legal texts --------------------------------------------------------------
+# Owner details for the legal notice and privacy policy (LSSI-CE art. 10, GDPR art. 13).
+LEGAL_OWNER_NAME = env_str("LEGAL_OWNER_NAME", "")
+LEGAL_OWNER_TAX_ID = env_str("LEGAL_OWNER_TAX_ID", "")
+LEGAL_OWNER_ADDRESS = env_str("LEGAL_OWNER_ADDRESS", "")
+LEGAL_CONTACT_EMAIL = env_str("LEGAL_CONTACT_EMAIL", "")
+LEGAL_REGISTRY = env_str("LEGAL_REGISTRY", "")  # companies only, e.g. "Registro Mercantil de …"
+LEGAL_HOSTING_PROVIDER = env_str("LEGAL_HOSTING_PROVIDER", "")
 
 # --- Analytics (Google Tag Manager) -----------------------------------------
 # Empty = not loaded (local development and tests).

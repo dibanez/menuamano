@@ -1,0 +1,73 @@
+{% extends "legal/base.html" %}
+{% block legal %}
+<p>Esta política explica qué datos personales trata menuamano, para qué, con qué base legal y qué derechos tienes, conforme al Reglamento (UE) 2016/679 (RGPD) y a la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD).</p>
+
+<h2>1. Responsable del tratamiento</h2>
+{% include "legal/_owner.html" %}
+<p>Para cualquier cuestión sobre privacidad o para ejercer tus derechos, escríbenos a la dirección de correo indicada.</p>
+
+<h2>2. Qué datos tratamos</h2>
+<ul>
+  <li><strong>Cuenta:</strong> correo electrónico, nombre visible, contraseña (guardada cifrada: nadie puede leerla), fecha de alta y registro de tus consentimientos (fecha y versión de estos textos).</li>
+  <li><strong>Hogar:</strong> nombre del hogar, personas miembro y sus roles, e invitaciones (incluido el correo de la persona invitada si lo indicas).</li>
+  <li><strong>Comensales:</strong> nombre o alias, fecha de nacimiento (opcional, solo para calcular la edad), tamaño de ración, altura (opcional), asistencia habitual, observaciones, gustos y preferencias.</li>
+  <li><strong>Datos de salud (categoría especial):</strong> alergias, intolerancias, dietas y otras restricciones alimentarias de cada comensal y de los invitados que registres, y, solo si lo usas, el historial de peso.</li>
+  <li><strong>Planificación:</strong> comidas, asistentes, recetas, sustituciones, sobras, listas de la compra y compras marcadas.</li>
+  <li><strong>Asistente con IA:</strong> los mensajes que escribes en el chat y las propuestas generadas.</li>
+  <li><strong>Suscripción:</strong> plan, estado y fechas de la suscripción, e identificadores de cliente y suscripción de Stripe. No guardamos los datos de tu tarjeta: los trata Stripe.</li>
+  <li><strong>Correo:</strong> avisos de entrega que nos envía el proveedor de correo (por ejemplo, rebotes), para detectar direcciones que no funcionan.</li>
+  <li><strong>Datos técnicos:</strong> registros del servidor, datos de uso del asistente sin su contenido (tipo de operación, duración, consumo) y las cookies descritas en la <a href="{% url 'core:legal_page' 'cookies' %}">política de cookies</a>.</li>
+</ul>
+
+<h2>3. Datos de otras personas y de menores</h2>
+<p>En menuamano puedes registrar datos de otras personas (tu familia, personas con las que convives, invitados), incluidos menores. Al hacerlo declaras que tienes su permiso o que eres su representante legal, y que les has informado de esta política. Para crear una cuenta hay que tener al menos 14 años.</p>
+<p>El historial de peso de un comensal solo lo ven la persona vinculada a ese comensal y quien ella autorice (o, si no tiene cuenta, quien autorice la administración del hogar). Pertenecer a un hogar no da acceso a esos datos.</p>
+
+<h2>4. Para qué y con qué base legal</h2>
+<div class="table-wrap">
+<table class="simple">
+  <thead><tr><th>Finalidad</th><th>Base legal</th></tr></thead>
+  <tbody>
+    <tr><td>Crear y gestionar tu cuenta y tu hogar, y prestar el servicio (planificación, recetas, compra)</td><td>Ejecución del contrato (art. 6.1.b RGPD)</td></tr>
+    <tr><td>Tratar alergias, intolerancias, dietas y peso para comprobar la compatibilidad de las comidas</td><td>Tu consentimiento explícito (art. 9.2.a RGPD), que puedes retirar en cualquier momento</td></tr>
+    <tr><td>Generar propuestas con el asistente con IA cuando lo usas</td><td>Ejecución del contrato y, para los datos de salud, tu consentimiento explícito</td></tr>
+    <tr><td>Cobrar la suscripción Premium y emitir la documentación de pago</td><td>Ejecución del contrato y obligaciones legales (art. 6.1.b y 6.1.c RGPD)</td></tr>
+    <tr><td>Enviarte correos del servicio (recuperar contraseña, avisos de seguridad, invitaciones, cobros)</td><td>Ejecución del contrato</td></tr>
+    <tr><td>Mantener la seguridad, evitar abusos y resolver incidencias</td><td>Interés legítimo (art. 6.1.f RGPD)</td></tr>
+    <tr><td>Medir el uso de las páginas públicas (analítica)</td><td>Tu consentimiento (art. 6.1.a RGPD y art. 22.2 LSSI-CE)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>No tomamos decisiones con efectos jurídicos basadas únicamente en tratamientos automatizados. Las propuestas del asistente solo se aplican si tú las revisas y aceptas.</p>
+
+<h2>5. Con quién compartimos los datos</h2>
+<p>No vendemos tus datos. Solo los comparten con nosotros, como encargados del tratamiento y con las garantías del RGPD, estos proveedores:</p>
+<ul>
+  <li><strong>Alojamiento:</strong> {% if owner.hosting %}{{ owner.hosting }}{% else %}el proveedor del servidor donde se aloja menuamano{% endif %}, que guarda la base de datos y la aplicación.</li>
+  <li><strong>Mailgun</strong> (Sinch), para enviar los correos del servicio. Según la región configurada, los datos pueden tratarse en la UE o en EE. UU.</li>
+  <li><strong>Stripe</strong>, para gestionar los pagos de Premium. Stripe trata los datos de pago como responsable conforme a su propia política de privacidad.</li>
+  <li><strong>OpenAI</strong>, solo cuando usas el asistente con IA. Enviamos lo mínimo necesario: códigos en lugar de nombres (C1, C2…), grupos de edad, restricciones, gustos, recetas y el texto de tu petición, en el que sustituimos los nombres de los comensales por sus códigos. No enviamos nombres, fechas de nacimiento ni pesos, y pedimos que no se almacenen las respuestas. Según sus condiciones, OpenAI puede conservar temporalmente los datos de las peticiones para vigilar abusos.</li>
+  <li><strong>Google</strong> (Tag Manager y Analytics), solo en las páginas públicas y solo si aceptas las cookies de analítica. No se carga dentro de la aplicación.</li>
+</ul>
+<p>También podremos comunicar datos a autoridades cuando lo exija la ley.</p>
+
+<h2>6. Transferencias internacionales</h2>
+<p>Algunos de estos proveedores pueden tratar datos en Estados Unidos. En esos casos la transferencia se ampara en el Marco de Privacidad de Datos UE-EE. UU. o en las cláusulas contractuales tipo aprobadas por la Comisión Europea.</p>
+
+<h2>7. Cuánto tiempo los conservamos</h2>
+<ul>
+  <li>Los datos de tu cuenta y de tu hogar, mientras la cuenta siga activa. Puedes borrar comensales, restricciones, recetas o listas en cualquier momento desde la aplicación.</li>
+  <li>Si pides la baja o retiras el consentimiento para los datos de salud, los suprimimos en el plazo de un mes, salvo lo que debamos conservar por obligación legal (por ejemplo, la documentación de los pagos durante los plazos fiscales y mercantiles).</li>
+  <li>Los registros técnicos, el tiempo necesario para la seguridad y el funcionamiento del servicio.</li>
+</ul>
+
+<h2>8. Tus derechos</h2>
+<p>Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad, y retirar tus consentimientos en cualquier momento sin que afecte a la licitud del tratamiento anterior. Escríbenos al correo de contacto indicando qué derecho quieres ejercer; podremos pedirte que acredites tu identidad.</p>
+<p>Si consideras que no hemos tratado bien tus datos, puedes reclamar ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>).</p>
+
+<h2>9. Seguridad</h2>
+<p>Usamos conexiones cifradas (HTTPS), guardamos las contraseñas cifradas, limitamos el acceso de cada persona a los datos de sus hogares y protegemos los datos de peso con permisos específicos.</p>
+
+<h2>10. Cambios</h2>
+<p>Si cambiamos esta política de forma relevante, te lo indicaremos en la aplicación y, cuando sea necesario, te pediremos de nuevo tu consentimiento.</p>
+{% endblock %}

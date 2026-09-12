@@ -142,9 +142,24 @@ obligatorias salvo `BILLING_ENABLED=false`).
 4. Pon `STRIPE_SECRET_KEY` (empieza en modo test con `sk_test_…` y la tarjeta 4242 4242 4242 4242).
    Si usas Stripe Tax para el IVA, `STRIPE_AUTOMATIC_TAX=true`.
 
-Antes de cobrar de verdad necesitas publicar aviso legal, política de privacidad (la app trata
-datos de salud: alergias y peso) y condiciones de contratación con el derecho de desistimiento.
-No están incluidos en el repositorio.
+### Textos legales
+
+Hay cuatro páginas públicas en `/legal/`: aviso legal (LSSI-CE), política de privacidad (RGPD y
+LOPDGDD), política de cookies y condiciones de uso y contratación (precios, renovación, cancelación
+y derecho de desistimiento).
+
+- **Datos del titular**: se rellenan con `LEGAL_OWNER_NAME`, `LEGAL_OWNER_TAX_ID`,
+  `LEGAL_OWNER_ADDRESS` y `LEGAL_CONTACT_EMAIL` (y, si aplica, `LEGAL_REGISTRY` y
+  `LEGAL_HOSTING_PROVIDER`). Mientras falten, las páginas muestran huecos resaltados y
+  `manage.py check` avisa (`menuamano.W001`).
+- **Consentimiento al registrarse**: hay que aceptar las condiciones y la privacidad (a partir de
+  14 años) y dar el **consentimiento explícito para datos de salud** (alergias, intolerancias,
+  dietas y peso). Se guardan la fecha y la versión aceptada.
+- **Si cambian los textos**: al cambiar `core.legal.LEGAL_VERSION`, todas las personas tienen que
+  aceptarlos de nuevo antes de seguir usando la app.
+- **Revisión legal**: los textos describen lo que hace el código, pero conviene que los revise un
+  profesional antes de cobrar. Comprueba también que los precios de Stripe llevan los impuestos
+  incluidos, como indican las condiciones.
 
 ### Analítica (Google Tag Manager)
 
@@ -160,8 +175,7 @@ Con `GTM_CONTAINER_ID` se carga el contenedor de Tag Manager.
   nombres y datos de salud (peso, alergias), así que `GTM_SCOPE=all` solo si tienes base legal y
   configuras GTM para no enviarlos.
 - No se incluye el `<noscript>` de GTM, porque cargaría tags sin consentimiento.
-- La política de cookies no está incluida en el repositorio (ver «Pagos con Stripe»: textos
-  legales).
+- La política de cookies está en `/legal/cookies/` y el banner la enlaza.
 
 `EMAIL_PROVIDER=console` desactiva el envío real en producción. Úsalo solo de forma temporal: los
 correos se quedarían en los logs.

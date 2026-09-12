@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Condiciones y privacidad · menuamano{% endblock %}
+{% block content %}
+<div class="auth">
+  <h1>Antes de seguir</h1>
+  <p class="muted">Hemos publicado las condiciones de uso y la política de privacidad de menuamano. Como la app guarda alergias, intolerancias y, si lo usas, el peso, necesitamos también tu consentimiento explícito para esos datos de salud.</p>
+  <form method="post" class="panel">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% include "partials/form_fields.html" %}
+    <button class="btn primary block" type="submit">Aceptar y continuar</button>
+  </form>
+  <p class="muted small">Si no estás de acuerdo, puedes cerrar la sesión y pedirnos que borremos tu cuenta desde la <a href="{% url 'core:legal_page' 'privacidad' %}">política de privacidad</a>.</p>
+  <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn small ghost" type="submit">Cerrar sesión</button></form>
+</div>
+{% endblock %}

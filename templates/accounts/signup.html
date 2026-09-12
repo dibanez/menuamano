@@ -11,5 +11,6 @@
     <button class="btn primary block" type="submit">Crear cuenta</button>
   </form>
   <p>¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Entrar</a></p>
+  {% include "partials/legal_links.html" %}
 </div>
 {% endblock %}

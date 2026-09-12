@@ -39,6 +39,7 @@
           {% endif %}
           <a href="{% url 'households:onboarding' %}">Crear otro hogar</a>
           <a href="{% url 'accounts:password_change' %}">Cambiar la contraseña</a>
+          <a href="{% url 'core:legal' %}">Información legal y privacidad</a>
           <hr>
           <form method="post" action="{% url 'accounts:logout' %}">
             {% csrf_token %}

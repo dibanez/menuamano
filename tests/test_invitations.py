@@ -100,7 +100,7 @@ def test_new_person_signs_up_from_link_and_joins(client, household, admin_user):
 
     response = client.post(reverse("accounts:signup") + f"?next={path}", {
         "email": "nueva@example.com", "display_name": "Nueva", "password1": "cocina-casera-2030",
-        "password2": "cocina-casera-2030", "next": path,
+        "password2": "cocina-casera-2030", "next": path, "accept_terms": "on", "health_consent": "on",
     })
     assert response.status_code == 302 and response.url == path
     client.post(path)
@@ -110,6 +110,6 @@ def test_new_person_signs_up_from_link_and_joins(client, household, admin_user):
 def test_signup_ignores_external_next(client, db):
     response = client.post(reverse("accounts:signup"), {
         "email": "x@example.com", "display_name": "", "password1": "cocina-casera-2030",
-        "password2": "cocina-casera-2030", "next": "https://evil.example.com/",
+        "password2": "cocina-casera-2030", "next": "https://evil.example.com/", "accept_terms": "on", "health_consent": "on",
     })
     assert response.url == reverse("households:onboarding")

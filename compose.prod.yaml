@@ -46,6 +46,13 @@ services:
       OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-16000}
       OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-low}
       SITE_URL: ${SITE_URL:-}
+      # Owner details shown in the legal notice and privacy policy (placeholders if missing).
+      LEGAL_OWNER_NAME: ${LEGAL_OWNER_NAME:-}
+      LEGAL_OWNER_TAX_ID: ${LEGAL_OWNER_TAX_ID:-}
+      LEGAL_OWNER_ADDRESS: ${LEGAL_OWNER_ADDRESS:-}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+      LEGAL_REGISTRY: ${LEGAL_REGISTRY:-}
+      LEGAL_HOSTING_PROVIDER: ${LEGAL_HOSTING_PROVIDER:-}
       # Google Tag Manager: public pages only by default, with Consent Mode v2 and a consent banner.
       GTM_CONTAINER_ID: ${GTM_CONTAINER_ID:-GTM-WWR8DTN8}
       GTM_SCOPE: ${GTM_SCOPE:-public}
