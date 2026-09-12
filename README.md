@@ -97,12 +97,12 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
    | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
 
-3. En **Domains** añade el dominio para el servicio `web`, puerto `8000`, con HTTPS. Dokploy
+3. En **Domains** añade el dominio para el servicio `menuamano-web`, puerto `8000`, con HTTPS. Dokploy
    añade las etiquetas de Traefik y la red al desplegar; el compose no publica puertos.
 4. Despliega. Al arrancar se aplican las migraciones y se recogen los estáticos. El healthcheck
    usa `/healthz`, que comprueba la base de datos y no pasa por la redirección HTTPS.
 
-Para crear un superusuario: `python manage.py createsuperuser` en la terminal del contenedor `web`
+Para crear un superusuario: `python manage.py createsuperuser` en la terminal del contenedor `menuamano-web`
 desde Dokploy. No cargues `load_demo` en producción.
 
 ### Correo con Mailgun
@@ -122,7 +122,7 @@ En local los correos se escriben en los logs del contenedor `web`.
 Para usar la API HTTP de Mailgun en lugar de SMTP: `EMAIL_PROVIDER=mailgun`, `MAILGUN_API_KEY`,
 `MAILGUN_SENDER_DOMAIN` y, en la UE, `MAILGUN_API_URL=https://api.eu.mailgun.net/v3`.
 
-Para comprobar el envío, desde la terminal del contenedor `web`:
+Para comprobar el envío, desde la terminal del contenedor `menuamano-web`:
 `python manage.py send_test_email tu@correo.com`.
 
 La aplicación no tiene webhook de Mailgun: los rebotes y las quejas se consultan en el panel de

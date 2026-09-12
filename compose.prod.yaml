@@ -4,10 +4,13 @@
 # this compose file and Compose interpolates the ${VAR} references below; nothing else is read.
 # Required variables fail the deployment with a clear message when missing.
 #
-# Domain: add it in Dokploy's Domains tab for service "web", container port 8000, with HTTPS.
+# Domain: add it in Dokploy's Domains tab for service "menuamano-web", container port 8000, with HTTPS.
 # Dokploy adds the Traefik labels and the network at deploy time, so no ports are published here.
+#
+# Service names start with "menuamano-" so they are easy to find in shared logs.
+# The database volume keeps its name (pgdata), so renaming services never touches the data.
 services:
-  db:
+  menuamano-db:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
@@ -23,7 +26,7 @@ services:
       timeout: 5s
       retries: 20
 
-  web:
+  menuamano-web:
     build: .
     restart: unless-stopped
     environment:
@@ -33,7 +36,7 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
       DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
       DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-3600}
-      POSTGRES_HOST: db
+      POSTGRES_HOST: menuamano-db
       POSTGRES_PORT: "5432"
       POSTGRES_DB: ${POSTGRES_DB:-menuamano}
       POSTGRES_USER: ${POSTGRES_USER:-menuamano}
@@ -102,7 +105,7 @@ services:
       retries: 5
       start_period: 40s
     depends_on:
-      db:
+      menuamano-db:
         condition: service_healthy
 
 volumes:
