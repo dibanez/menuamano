@@ -22,6 +22,7 @@ urlpatterns = [
     path("comidas/<int:pk>/recetas/", views.meal_add_recipe, name="meal_add_recipe"),
     path("comidas/<int:pk>/recetas/<int:mrid>/quitar/", views.meal_remove_recipe, name="meal_remove_recipe"),
     path("comidas/<int:pk>/recetas/<int:mrid>/raciones/", views.meal_recipe_servings, name="meal_recipe_servings"),
+    path("comidas/<int:pk>/recetas/<int:mrid>/para-quien/", views.meal_recipe_eaters, name="meal_recipe_eaters"),
     path("comidas/<int:pk>/recetas/<int:mrid>/actualizar/", views.meal_recipe_refresh, name="meal_recipe_refresh"),
     path("comidas/<int:pk>/lineas/<int:lid>/cantidad/", views.line_quantity, name="line_quantity"),
     path("comidas/<int:pk>/lineas/<int:lid>/sustituir/", views.line_substitute, name="line_substitute"),

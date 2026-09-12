@@ -67,6 +67,11 @@ Dónde se aplican las reglas:
 - Hay una comida por hueco `(hogar, fecha, tipo)`. Cada comida tiene modalidad, asistentes
   (comensales o invitados con sus restricciones), recetas, notas, bloqueo y el registro de lo
   que se comió realmente (`outcome`).
+- **Platos por comensal**: cada receta de la comida puede ser solo para algunos asistentes
+  (`MealRecipe.eaters`; vacío = para todos). Así un desayuno puede tener tortilla para una
+  persona y porridge para otra. Cada receta se comprueba solo contra quien la come y la comida
+  toma el peor estado. Si se va el único que comía un plato, el plato pasa a ser para todos y
+  se vuelve a comprobar: nunca queda como compatible sin revisar.
 - **Snapshot**: al asignar una receta se copian nombre, ingredientes, pasos y versión
   (`MealRecipe`, `MealRecipeIngredient`). Editar la receta incrementa `Recipe.version`; las
   comidas muestran «hay una versión más reciente» y solo se actualizan con una acción explícita.
@@ -96,7 +101,8 @@ Dónde se aplican las reglas:
   las dos equivalencias. Si no, se queda como artículo aparte y nunca se inventa la conversión.
   Los artículos convertidos llevan `is_approximate` y se muestran con «≈».
 - Escalado: `cantidad × raciones previstas / raciones base`, donde las raciones previstas son
-  la suma de los factores de ración de los asistentes (o unas raciones fijadas a mano).
+  la suma de los factores de ración de los asistentes (o unas raciones fijadas a mano). Un plato
+  para algunos asistentes usa solo sus raciones.
 - La compra suma solo las comidas en modalidad «cocinar en casa». La clave de agregación es
   `ingrediente + unidad base`, con una restricción única parcial en la base de datos: recalcular
   es idempotente.

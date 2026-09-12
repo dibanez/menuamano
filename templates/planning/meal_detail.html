@@ -155,8 +155,9 @@
     <article style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px">
       <div class="row between">
         <h3 class="mt-0" style="margin:0">{% if mr.recipe %}<a href="{% url 'recipes:detail' mr.recipe_id %}">{{ mr.name }}</a>{% else %}{{ mr.name }}{% endif %}</h3>
-        <span class="muted small">{{ block.servings|num }} raciones (receta base: {{ mr.base_servings }})</span>
+        <span class="muted small">{{ block.servings|num }} {% if block.servings == 1 %}ración{% else %}raciones{% endif %} (receta base: {{ mr.base_servings }})</span>
       </div>
+      {% if block.eaters %}<p class="plate-for small">Para {% for a in block.eaters %}<strong>{{ a.short_label }}</strong>{% if not forloop.last %}{% if forloop.revcounter == 2 %} y {% else %}, {% endif %}{% endif %}{% endfor %}</p>{% endif %}
       {% if mr.is_outdated %}
         <div class="notice" style="margin-top:8px">
           Esta comida usa la versión {{ mr.recipe_version }} de la receta; hay una versión {{ mr.recipe.version }} más reciente.
@@ -182,6 +183,13 @@
       <details class="fold">
         <summary class="link-btn">Cambiar esta receta</summary>
         <p class="muted small" style="margin:10px 0 0">Los cambios solo afectan a esta comida, no a la receta guardada.</p>
+        {% if attendees|length > 1 %}
+        <form method="post" action="{% url 'planning:meal_recipe_eaters' meal.pk mr.pk %}" class="plate-eaters">{% csrf_token %}
+          <p class="small" style="margin:12px 0 6px"><strong>Para quién es</strong> <span class="muted">(sin marcar a nadie, para todos)</span></p>
+          <div class="choices">{% for a in attendees %}<label><input type="checkbox" name="eaters" value="{{ a.pk }}" {% if a.pk in block.eater_ids %}checked{% endif %}> {{ a.short_label }}</label>{% endfor %}</div>
+          <button class="btn small" type="submit" style="margin-top:8px">Guardar para quién</button>
+        </form>
+        {% endif %}
         <ul class="adjust-lines">
           {% for row in block.lines %}
             {% with line=row.line %}
@@ -227,9 +235,15 @@
       <option value="">Elige una receta…</option>
       {% if options.ok %}<optgroup label="Compatibles según los datos">{% for r in options.ok %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}</optgroup>{% endif %}
       {% if options.unknown %}<optgroup label="Requieren revisión">{% for r in options.unknown %}<option value="{{ r.pk }}">{{ r.name }}</option>{% endfor %}</optgroup>{% endif %}
-      {% if options.conflict %}<optgroup label="Incompatibles con los asistentes">{% for r in options.conflict %}<option value="{{ r.pk }}" disabled>{{ r.name }}</option>{% endfor %}</optgroup>{% endif %}
+      {% if options.conflict %}<optgroup label="{% if attendees|length > 1 %}Incompatibles con alguien: elige para quién{% else %}Incompatibles con los asistentes{% endif %}">{% for r in options.conflict %}<option value="{{ r.pk }}" {% if attendees|length < 2 %}disabled{% endif %}>{{ r.name }}</option>{% endfor %}</optgroup>{% endif %}
     </select>
     <button class="btn primary" type="submit">Añadir receta</button>
+    {% if attendees|length > 1 %}
+    <fieldset class="plate-pick">
+      <legend class="small"><strong>Para quién</strong> <span class="muted">(sin marcar a nadie, para todos)</span></legend>
+      <div class="choices">{% for a in attendees %}<label><input type="checkbox" name="eaters" value="{{ a.pk }}"> {{ a.short_label }}</label>{% endfor %}</div>
+    </fieldset>
+    {% endif %}
   </form>
   {% if ai_status.available and ai_allowed %}
     <form method="post" action="{% url 'assistant:replace_meal' meal.pk %}" class="ai-cta" hx-disabled-elt="find button">{% csrf_token %}

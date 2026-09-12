@@ -168,7 +168,11 @@ def meal_detail(request, pk):
             {"line": line, "scaled": scale(line.quantity, meal_recipe.base_servings, effective)}
             for line in meal_recipe.ingredients.all()
         ]
-        blocks.append({"mr": meal_recipe, "servings": effective, "lines": lines})
+        eaters = list(meal_recipe.eaters.all())
+        blocks.append({
+            "mr": meal_recipe, "servings": effective, "lines": lines,
+            "eaters": eaters, "eater_ids": {a.pk for a in eaters},
+        })
 
     people = services.people_for_meal(meal)
     reviews = reviews_for(household)
@@ -186,6 +190,7 @@ def meal_detail(request, pk):
     context = {
         "meal": meal,
         "diners": diners,
+        "attendees": attendees,
         "guests": [a for a in attendees if not a.diner_id],
         "servings": servings,
         "blocks": blocks,
@@ -308,9 +313,9 @@ def _report_safety(request, meal):
         messages.warning(request, "Hay ingredientes sin información suficiente para algún asistente. Revísalos.")
 
 
-def _add_recipe(request, meal, recipe):
+def _add_recipe(request, meal, recipe, eaters=()):
     try:
-        meal, result = services.add_recipe(meal, recipe, request.user)
+        meal, result = services.add_recipe(meal, recipe, request.user, eaters=eaters)
     except services.IncompatibleRecipe as exc:
         names = ", ".join(r.name for r in exc.alternatives[:3])
         detail = " ".join(i.message for i in exc.result.conflicts[:3])
@@ -332,7 +337,7 @@ def _add_recipe(request, meal, recipe):
 def meal_add_recipe(request, pk):
     meal = _meal(request, pk)
     recipe = get_object_or_404(Recipe, pk=request.POST.get("recipe") or 0, household=request.household)
-    _add_recipe(request, meal, recipe)
+    _add_recipe(request, meal, recipe, eaters=request.POST.getlist("eaters"))
     return redirect("planning:meal", meal.pk)
 
 
@@ -372,6 +377,21 @@ def meal_recipe_servings(request, pk, mrid):
     value = _decimal(request.POST.get("servings"))
     services.update_meal_recipe_servings(meal_recipe, request.user, value if value and value > 0 else None)
     messages.success(request, "Raciones actualizadas.")
+    return redirect("planning:meal", meal.pk)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def meal_recipe_eaters(request, pk, mrid):
+    meal, meal_recipe = _meal_recipe(request, pk, mrid)
+    try:
+        meal = services.set_recipe_eaters(meal_recipe, request.user, request.POST.getlist("eaters"))
+    except services.IncompatibleRecipe as exc:
+        detail = " ".join(i.message for i in exc.result.conflicts[:3])
+        messages.error(request, f"No se ha cambiado para quién es «{meal_recipe.name}». {detail}")
+        return redirect("planning:meal", meal.pk)
+    messages.success(request, f"Guardado para quién es «{meal_recipe.name}».")
+    _report_safety(request, meal)
     return redirect("planning:meal", meal.pk)
 
 

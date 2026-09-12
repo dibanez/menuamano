@@ -85,7 +85,8 @@ def meals_queryset(household):
                 Prefetch(
                     "ingredients",
                     queryset=MealRecipeIngredient.objects.select_related("ingredient", "substituted_for"),
-                )
+                ),
+                Prefetch("eaters", queryset=MealAttendee.objects.select_related("diner")),
             ),
         ),
         Prefetch("leftover_meals", queryset=Meal.objects.prefetch_related("attendees")),
@@ -170,16 +171,43 @@ def people_for_meal(meal):
     return [rules_for_attendee(a) for a in meal.attendees.all()]
 
 
+def meal_recipe_facts(meal_recipe, reviews):
+    return [
+        facts_for_ingredient(
+            line.ingredient, optional=line.optional, substituted_for=line.substituted_for,
+            review=reviews.get(line.ingredient_id),
+        )
+        for line in meal_recipe.ingredients.all()
+    ]
+
+
 def meal_ingredient_facts(meal):
     reviews = reviews_for(meal.household_id)
-    facts = []
+    return [fact for meal_recipe in meal.recipes.all() for fact in meal_recipe_facts(meal_recipe, reviews)]
+
+
+def people_for_recipe(meal, meal_recipe):
+    """Who eats a recipe of the meal: its chosen eaters, or every attendee when none is chosen."""
+    eater_ids = {a.pk for a in meal_recipe.eaters.all()}
+    return [rules_for_attendee(a) for a in meal.attendees.all() if not eater_ids or a.pk in eater_ids]
+
+
+def _worst(statuses):
+    for status in (compatibility.CONFLICT, compatibility.UNKNOWN):
+        if status in statuses:
+            return status
+    return compatibility.OK
+
+
+def evaluate_meal_recipes(meal):
+    """Check each recipe only against the people who eat it. Returns (status, issues)."""
+    reviews = reviews_for(meal.household_id)
+    statuses, issues = [], []
     for meal_recipe in meal.recipes.all():
-        for line in meal_recipe.ingredients.all():
-            facts.append(facts_for_ingredient(
-                line.ingredient, optional=line.optional, substituted_for=line.substituted_for,
-                review=reviews.get(line.ingredient_id),
-            ))
-    return facts
+        result = evaluate(meal_recipe_facts(meal_recipe, reviews), people_for_recipe(meal, meal_recipe))
+        statuses.append(result.status)
+        issues.extend(result.issues_as_dicts())
+    return _worst(statuses), issues
 
 
 def _issue(level, message):
@@ -209,8 +237,7 @@ def revalidate_meal(meal):
     if meal.mode == MealMode.LEFTOVERS and meal.leftovers_from_id:
         status, issues = _leftovers_check(meal)
     elif meal.mode in MODES_WITH_RECIPES and meal.recipes.all():
-        result = evaluate(meal_ingredient_facts(meal), people_for_meal(meal))
-        status, issues = result.status, result.issues_as_dicts()
+        status, issues = evaluate_meal_recipes(meal)
     else:
         status, issues = SafetyStatus.NOT_APPLICABLE, []
     Meal.objects.filter(pk=meal.pk).update(
@@ -423,18 +450,29 @@ def check_recipe_for_meal(meal, recipe):
     return recipe_services.check_recipe(recipe, people_for_meal(meal))
 
 
+def _chosen_eaters(meal, attendee_ids):
+    """Attendees picked for a recipe. Nobody or everybody picked means the whole meal (stored empty)."""
+    wanted = {int(i) for i in attendee_ids or () if str(i).isdigit()}
+    attendees = list(meal.attendees.all())
+    chosen = [a for a in attendees if a.pk in wanted]
+    return [] if len(chosen) == len(attendees) else chosen
+
+
 @transaction.atomic
-def add_recipe(meal, recipe, user, servings_override=None, lock=True):
-    """Add a recipe snapshot. Incompatible recipes are refused, never relaxed."""
+def add_recipe(meal, recipe, user, servings_override=None, lock=True, eaters=()):
+    """Add a recipe snapshot for everyone or for some attendees. Incompatible recipes are refused."""
     if recipe.household_id != meal.household_id:
         raise PlanningError("La receta no pertenece a este hogar.")
     meal = meals_queryset(meal.household).get(pk=meal.pk)
-    people = people_for_meal(meal)
+    chosen = _chosen_eaters(meal, eaters)
+    people = [rules_for_attendee(a) for a in chosen] if chosen else people_for_meal(meal)
     result = recipe_services.check_recipe(recipe, people)
     if result.status == compatibility.CONFLICT:
         alternatives = compatible_alternatives(meal.household, people, meal.meal_type, exclude_ids={recipe.pk})
         raise IncompatibleRecipe(result, alternatives)
-    recipe_services.snapshot_into_meal(meal, recipe, servings_override=servings_override)
+    meal_recipe = recipe_services.snapshot_into_meal(meal, recipe, servings_override=servings_override)
+    if chosen:
+        meal_recipe.eaters.set(chosen)
     if meal.mode not in MODES_WITH_RECIPES:
         Meal.objects.filter(pk=meal.pk).update(mode=MealMode.COOK)
     _touch(meal, user, lock=lock)
@@ -447,6 +485,23 @@ def add_recipe(meal, recipe, user, servings_override=None, lock=True):
 def remove_recipe(meal_recipe, user):
     meal = meal_recipe.meal
     meal_recipe.delete()
+    _touch(meal, user)
+    meal = revalidate_meal(meal)
+    _changed(meal.household, meal.date)
+    return meal
+
+
+@transaction.atomic
+def set_recipe_eaters(meal_recipe, user, attendee_ids):
+    """Choose who eats a recipe of the meal. Refused if the recipe is incompatible with any of them."""
+    meal = meals_queryset(meal_recipe.meal.household).get(pk=meal_recipe.meal_id)
+    meal_recipe = next(mr for mr in meal.recipes.all() if mr.pk == meal_recipe.pk)
+    chosen = _chosen_eaters(meal, attendee_ids)
+    people = [rules_for_attendee(a) for a in chosen] if chosen else people_for_meal(meal)
+    result = evaluate(meal_recipe_facts(meal_recipe, reviews_for(meal.household_id)), people)
+    if result.status == compatibility.CONFLICT:
+        raise IncompatibleRecipe(result)
+    meal_recipe.eaters.set(chosen)
     _touch(meal, user)
     meal = revalidate_meal(meal)
     _changed(meal.household, meal.date)
@@ -528,8 +583,9 @@ def move_or_copy(meal, user, target_date, target_type, copy=False, overwrite=Fal
     if not copy:
         # Leftovers planned from the moved meal keep pointing at it.
         Meal.objects.filter(leftovers_from=meal).update(leftovers_from=new_meal)
+    copies = {}  # source attendee id → its copy, to keep who eats each recipe
     for attendee in source.attendees.all():
-        MealAttendee.objects.create(
+        copies[attendee.pk] = MealAttendee.objects.create(
             meal=new_meal, diner=attendee.diner, guest_name=attendee.guest_name,
             guest_traits=attendee.guest_traits, guest_notes=attendee.guest_notes, portion=attendee.portion,
         )
@@ -548,6 +604,7 @@ def move_or_copy(meal, user, target_date, target_type, copy=False, overwrite=Fal
             )
             for line in meal_recipe.ingredients.all()
         )
+        copy_recipe.eaters.set([copies[a.pk] for a in meal_recipe.eaters.all() if a.pk in copies])
     if not copy:
         meal.delete()
     new_meal = revalidate_meal(new_meal)

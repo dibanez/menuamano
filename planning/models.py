@@ -116,6 +116,10 @@ class MealAttendee(models.Model):
     def label(self):
         return self.diner.alias if self.diner_id else f"{self.guest_name} (invitado)"
 
+    @property
+    def short_label(self):
+        return self.diner.alias if self.diner_id else self.guest_name
+
 
 class MealRecipe(models.Model):
     """Copy of a recipe as used in a meal. Editing the recipe never changes it silently."""
@@ -134,6 +138,9 @@ class MealRecipe(models.Model):
     cook_minutes = models.PositiveSmallIntegerField(default=0)
     steps = models.JSONField(default=list, blank=True)
     order = models.PositiveSmallIntegerField(default=0)
+    # Who eats this recipe when the meal has different plates for different people.
+    # Empty = every attendee of the meal (and whoever joins it later).
+    eaters = models.ManyToManyField(MealAttendee, blank=True, related_name="plates", verbose_name="para quién")
 
     class Meta:
         ordering = ["order", "id"]
@@ -142,8 +149,12 @@ class MealRecipe(models.Model):
         return self.name
 
     def effective_servings(self, meal_servings=None):
+        """Servings to cook: fixed ones, the portions of its eaters, or the whole meal's."""
         if self.servings_override is not None:
             return self.servings_override
+        eaters = list(self.eaters.all())
+        if eaters:
+            return sum((a.portion for a in eaters), Decimal("0"))
         return meal_servings if meal_servings is not None else self.meal.servings
 
     @property
