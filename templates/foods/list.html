@@ -9,20 +9,20 @@
 </div>
 <form method="get" class="row" style="margin-bottom:16px">
   <label class="sr-only" for="q">Buscar</label>
-  <input id="q" type="search" name="q" value="{{ q }}" placeholder="Buscar ingrediente" style="flex:1">
+  <input id="q" type="search" name="q" value="{{ q }}" placeholder="Buscar ingrediente" style="flex:1 1 12rem;min-width:0">
   <button class="btn" type="submit">Buscar</button>
   <a class="btn ghost small" href="?revisar=1">Solo sin revisar</a>
 </form>
 <ul class="list panel">
   {% for ing in ingredients %}
-    <li class="row between">
-      <span>
+    <li class="ingredient-row">
+      <span class="ingredient-info">
         <strong>{{ ing.name }}</strong> <span class="muted small">{{ ing.get_category_display }}</span><br>
         {% for t in ing.traits %}<span class="badge">{{ t|trait_label }}</span> {% endfor %}
         {% if not ing.trait_info_complete %}<span class="badge unknown">Sin revisar</span>{% endif %}
         {% if ing.is_processed %}<span class="badge info">Revisar etiqueta</span>{% endif %}
       </span>
-      <span class="row">
+      <span class="ingredient-actions">
         <a class="btn small ghost" href="{% url 'foods:equivalences' ing.pk %}">Equivalencias</a>
         {% if ing.household_id and can_edit %}<a class="btn small" href="{% url 'foods:edit' ing.pk %}">Editar</a>{% elif not ing.household_id %}<span class="muted small">Catálogo</span>{% endif %}
       </span>

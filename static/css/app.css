@@ -298,6 +298,18 @@ details.editor > summary { margin-top: 8px; }
 .list { list-style: none; padding: 0; margin: 0; }
 .list > li { padding: 12px 0; border-top: 1px solid var(--line); }
 .list > li:first-child { border-top: 0; }
+/* `.list` resets padding; when a list is also a card, keep the card's inner side padding. */
+.list.panel { padding: 4px 16px; }
+
+/* Ingredient catalogue rows: details first, actions underneath on phones, beside on wide screens. */
+.ingredient-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 12px; align-items: center; }
+.ingredient-info { min-width: 0; overflow-wrap: anywhere; }
+.ingredient-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.ingredient-actions .btn.ghost { padding-left: 0; padding-right: 0; }
+@media (min-width: 640px) {
+  .ingredient-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .ingredient-actions { justify-content: flex-end; }
+}
 
 .card-link { display: block; text-decoration: none; color: var(--ink); }
 .recipe-card {
@@ -310,7 +322,8 @@ details.editor > summary { margin-top: 8px; }
 @media (min-width: 640px) { .recipes-grid { grid-template-columns: 1fr 1fr; } }
 
 .ingredients-list { list-style: none; margin: 0; padding: 0; }
-.ingredients-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dotted var(--line); }
+.ingredients-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px dotted var(--line); }
+.ingredients-list li > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .ingredients-list .qty { font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
 
 ol.steps { padding-left: 1.4rem; margin: 0; }
@@ -320,18 +333,23 @@ ol.steps li::marker { font-weight: 800; color: var(--leaf); }
 /* --- Shopping ------------------------------------------------------------------------ */
 
 .shop-group h2 { margin: 18px 0 6px; font-size: 0.95rem; color: var(--muted); }
-.shop-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.shop-item .name { font-weight: 650; }
+/* Each group is a card, so rows keep inner side padding like the panels around them. */
+.shop-group .list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 0 14px; }
+.shop-item { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.shop-group .list > .shop-item { border-top: 0; }
+.shop-group .list > .shop-item:last-child { border-bottom: 0; }
+.shop-item > div { min-width: 0; }
+.shop-item .name { font-weight: 650; overflow-wrap: anywhere; }
 .shop-item.done .name { text-decoration: line-through; color: var(--muted); }
-.shop-item .amounts { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.shop-item details { grid-column: 2 / -1; font-size: 0.85rem; color: var(--muted); }
+.shop-item .amounts { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.shop-item details { grid-column: 2 / -1; min-width: 0; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
 .shop-item details summary { cursor: pointer; }
 .tick {
   width: 36px; height: 36px; border-radius: 50%; border: 2px solid #b9c3b5; background: var(--surface);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: transparent;
 }
 .tick.on { background: var(--leaf); border-color: var(--leaf); color: #fff; }
-.qty-form { display: flex; gap: 6px; align-items: center; }
+.qty-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 .qty-form input { width: 96px; min-height: 36px; padding: 6px 8px; }
 
 .progress { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
