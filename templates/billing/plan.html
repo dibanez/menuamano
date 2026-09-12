@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Plan · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Plan del hogar</h1>
+  <span class="badge {% if plan.code == 'premium' %}ok{% endif %}">{{ plan.name }}</span>
+  <p class="lead">La suscripción es por hogar: la paga una persona administradora y la disfruta toda la casa.</p>
+</div>
+
+{% if not billing_enabled %}
+  <div class="notice">La facturación está desactivada en este entorno: todas las funciones de Premium están disponibles.</div>
+{% endif %}
+
+<section class="panel">
+  <h2 class="mt-0">Uso de este mes</h2>
+  <p class="mt-0">Personas con cuenta: <strong>{{ usage.members }} de {{ usage.max_members }}</strong></p>
+  {% if usage.ai_limit %}
+    <p class="mt-0">Peticiones al asistente con IA: <strong>{{ usage.ai_calls }} de {{ usage.ai_limit }}</strong>. El cupo se renueva el día 1.</p>
+    <div class="progress" role="progressbar" aria-label="Uso del asistente este mes" aria-valuemin="0" aria-valuemax="{{ usage.ai_limit }}" aria-valuenow="{{ usage.ai_calls }}"><span style="width:{% widthratio usage.ai_calls usage.ai_limit 100 %}%"></span></div>
+  {% else %}
+    <p class="mt-0 muted">El asistente con IA está incluido en Premium.</p>
+  {% endif %}
+</section>
+
+{% if subscription and subscription.status %}
+<section class="panel">
+  <h2 class="mt-0">Suscripción</h2>
+  <p class="mt-0">
+    {% if subscription.is_premium %}Premium {% if subscription.interval == "year" %}anual{% else %}mensual{% endif %}.{% else %}Sin Premium activo ({{ subscription.status }}).{% endif %}
+    {% if subscription.current_period_end %}
+      {% if subscription.cancel_at_period_end %}Se cancela el {{ subscription.current_period_end|date:"j \d\e F \d\e Y" }}; hasta entonces mantenéis Premium.
+      {% elif subscription.is_premium %}Se renueva el {{ subscription.current_period_end|date:"j \d\e F \d\e Y" }}.{% endif %}
+    {% endif %}
+  </p>
+  {% if subscription.status == "past_due" %}<div class="notice unknown">No se ha podido cobrar la última cuota. Revisa el método de pago para no perder Premium.</div>{% endif %}
+  {% if is_household_admin and subscription.stripe_customer_id and billing_enabled %}
+    <form method="post" action="{% url 'billing:portal' %}">{% csrf_token %}<button class="btn" type="submit">Gestionar la suscripción</button></form>
+    <p class="muted small" style="margin:6px 0 0">Método de pago, facturas, cambio de periodo o cancelación, en el portal seguro de Stripe.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if plan.code != "premium" %}
+<section class="panel">
+  <h2 class="mt-0">Premium</h2>
+  <ul class="plan-features">
+    <li>Asistente con IA: propone menús, reemplazos y recetas que revisas antes de aplicar</li>
+    <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
+    <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar (ahora {{ free.max_members }})</li>
+  </ul>
+  {% if is_household_admin and billing_enabled %}
+    <div class="grid-2">
+      <form method="post" action="{% url 'billing:checkout' %}">{% csrf_token %}<input type="hidden" name="interval" value="month"><button class="btn primary block" type="submit">{{ prices.monthly }} al mes</button></form>
+      <form method="post" action="{% url 'billing:checkout' %}">{% csrf_token %}<input type="hidden" name="interval" value="year"><button class="btn block" type="submit">{{ prices.yearly }} al año</button></form>
+    </div>
+    <p class="muted small" style="margin:8px 0 0">El pago se hace en la página segura de Stripe. Puedes cancelar cuando quieras y mantienes Premium hasta el final del periodo pagado.</p>
+  {% elif billing_enabled %}
+    <p class="muted">Solo una persona administradora del hogar puede contratar Premium.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

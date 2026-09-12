@@ -1,16 +1,25 @@
 from datetime import timedelta
 
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from households.permissions import household_required
+from billing.plans import FREE, PREMIUM, get_plan, price_labels
 from planning.calendar import calendar_days
 from planning.models import Meal, SafetyStatus
 from shopping.models import ShoppingList
 
 
-@household_required()
+def landing(request):
+    context = {"free": get_plan(FREE), "premium": get_plan(PREMIUM), "prices": price_labels()}
+    return render(request, "core/landing.html", context)
+
+
 def home(request):
+    """Public landing for visitors; today's meals for signed-in members."""
+    if not request.user.is_authenticated:
+        return landing(request)
+    if request.membership is None:
+        return redirect("households:onboarding")
     household = request.household
     today = timezone.localdate()
     tomorrow = today + timedelta(days=1)

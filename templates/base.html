@@ -31,6 +31,7 @@
           {% endfor %}
           {% if household %}
             <a href="{% url 'households:settings' %}">Configuración del hogar</a>
+            <a href="{% url 'billing:plan' %}">Plan{% if billing_plan %}: {{ billing_plan.name }}{% endif %}</a>
             <a href="{% url 'diners:list' %}">Comensales</a>
             <a href="{% url 'foods:list' %}">Ingredientes</a>
             <a href="{% url 'planning:rules' %}">Reglas y excepciones</a>
@@ -44,6 +45,8 @@
           </form>
         </div>
       </details>
+    {% elif request.resolver_match.url_name != "login" %}
+      <a class="btn small" href="{% url 'accounts:login' %}">Entrar</a>
     {% endif %}
   </header>
 

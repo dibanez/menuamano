@@ -87,7 +87,11 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `MAILGUN_API_URL` | No | Por defecto la región US; en la UE, `https://api.eu.mailgun.net/v3` |
    | `MAILGUN_WEBHOOK_SIGNING_KEY` | Recomendada | Activa el webhook de rebotes y quejas |
    | `DJANGO_ADMINS` | Recomendada | Quién recibe los errores del servidor, p. ej. `Ana <ana@example.com>` |
+   | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Sí* | Clave secreta y secreto del webhook de Stripe |
+   | `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Sí* | Ids de precio de Premium (`price_…`) |
+   | `SITE_URL` | Recomendada | `https://tu-dominio`, para enlaces en correos enviados desde webhooks |
    | `AI_PROVIDER` | No | `demo` (por defecto) u `openai` |
+   | `OPENAI_REASONING_EFFORT` | No | `low` por defecto; vacío si el modelo no razona |
    | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
    | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
 
@@ -116,6 +120,29 @@ remitente. En local los correos se escriben en los logs del contenedor `web`.
    el admin de Django («Eventos de correo»). Sin esa clave, la ruta del webhook no existe.
 4. Comprueba el envío desde la terminal del contenedor `web`:
    `python manage.py send_test_email tu@correo.com`.
+
+### Pagos con Stripe
+
+Planes: **Gratis** (planificación manual completa, hasta 2 personas con cuenta) y **Premium**
+(4,99 €/mes o 49 €/año por hogar: asistente con IA con 150 peticiones al mes y hasta 8 personas
+con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `PREMIUM_MAX_MEMBERS` y
+`PREMIUM_AI_MONTHLY_LIMIT`. En producción la facturación está activa por defecto (`*` en la tabla:
+obligatorias salvo `BILLING_ENABLED=false`).
+
+1. En Stripe crea el producto «menuamano Premium» con dos precios recurrentes en EUR: 4,99 € al mes
+   y 49 € al año. Copia sus ids en `STRIPE_PRICE_MONTHLY` y `STRIPE_PRICE_YEARLY`.
+2. Activa el **portal de cliente** (Settings → Billing → Customer portal): cancelar, cambiar de
+   precio entre esos dos y actualizar el método de pago.
+3. Crea un endpoint de webhook a `https://<tu-dominio>/plan/stripe/webhook/` con los eventos
+   `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
+   `customer.subscription.deleted` e `invoice.payment_failed`. Copia su secreto en
+   `STRIPE_WEBHOOK_SECRET`.
+4. Pon `STRIPE_SECRET_KEY` (empieza en modo test con `sk_test_…` y la tarjeta 4242 4242 4242 4242).
+   Si usas Stripe Tax para el IVA, `STRIPE_AUTOMATIC_TAX=true`.
+
+Antes de cobrar de verdad necesitas publicar aviso legal, política de privacidad (la app trata
+datos de salud: alergias y peso) y condiciones de contratación con el derecho de desistimiento.
+No están incluidos en el repositorio.
 
 `EMAIL_PROVIDER=console` desactiva el envío real en producción. Úsalo solo de forma temporal: los
 correos se quedarían en los logs.

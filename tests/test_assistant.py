@@ -252,6 +252,22 @@ def test_openai_success_path_parses_structured_output(home):
     assert captured["model"] == "test-model"
 
 
+def test_reasoning_effort_is_sent_when_configured(home):
+    captured = {}
+
+    def parse(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(status="completed", incomplete_details=None, output=[], model="gpt-5.6-luna", usage=None,
+                               output_parsed=AssistantOutput(summary="", changes=[], new_recipes=[], warnings=[]))
+
+    client = SimpleNamespace(responses=SimpleNamespace(parse=parse))
+    OpenAIProvider("sk-test", "gpt-5.6-luna", 1, 0, 16000, client=client, reasoning_effort="low").generate({})
+    assert captured["reasoning"] == {"effort": "low"} and captured["max_output_tokens"] == 16000
+    captured.clear()
+    OpenAIProvider("sk-test", "other-model", 1, 0, 100, client=client).generate({})
+    assert "reasoning" not in captured
+
+
 @override_settings(AI_PROVIDER="openai", OPENAI_API_KEY="", OPENAI_MODEL="")
 def test_missing_credentials_disable_assistant_without_breaking_pages(client, home):
     assert client.login(email=home.user.email, password=PASSWORD)

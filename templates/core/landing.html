@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}menuamano · qué comemos, quién come y qué hay que comprar{% endblock %}
+{% block content %}
+<div class="landing">
+
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">Qué comemos, quién come y qué hay que comprar.</h1>
+      <p class="hero-lead">menuamano organiza las comidas de la semana en tu casa, tiene en cuenta las alergias de cada persona y prepara la lista de la compra con las cantidades justas.</p>
+      <div class="form-actions">
+        <a class="btn primary" href="{% url 'accounts:signup' %}">Crear cuenta gratis</a>
+        <a class="btn" href="{% url 'accounts:login' %}">Entrar</a>
+      </div>
+      <p class="muted small">Gratis para planificar a mano. Sin tarjeta para empezar.</p>
+    </div>
+
+    <div class="hero-visual" aria-label="Ejemplo de un día planificado en menuamano">
+      <p class="hero-day">Jueves 17</p>
+      <div class="meal breakfast" role="presentation"><span></span><span><span class="meal-type">Desayuno</span><br><span class="meal-title">Fruta de temporada</span><br><span class="meal-meta">4 personas</span></span><span class="meal-side"><span class="badge ok">Compatible</span></span></div>
+      <div class="meal lunch" role="presentation"><span></span><span><span class="meal-type">Comida</span><br><span class="meal-title">Lentejas estofadas</span><br><span class="meal-meta">1 persona, más 3 raciones para sobras</span></span><span class="meal-side"><span class="badge ok">Compatible</span></span></div>
+      <div class="meal snack" role="presentation"><span></span><span><span class="meal-type">Merienda</span><br><span class="meal-title">Yogur con fresas</span><br><span class="meal-meta">Leo no puede: lactosa</span></span><span class="meal-side"><span class="badge conflict">Incompatible</span></span></div>
+      <div class="meal dinner" role="presentation"><span></span><span><span class="meal-type">Cena</span><br><span class="meal-title">Salmón con brócoli</span><br><span class="meal-meta">4 personas</span></span><span class="meal-side"><span class="badge ok">Compatible</span></span></div>
+      <div class="hero-list">
+        <strong>Compra de la semana</strong>
+        <ul>
+          <li><span>Salmón</span><span>600 g</span></li>
+          <li><span>Lentejas</span><span>300 g</span></li>
+          <li><span>Huevo</span><span>≈ 4 unidades</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="how-title">
+    <h2 id="how-title">Así se organiza una semana</h2>
+    <ol class="how">
+      <li>
+        <h3>Di quién come en casa</h3>
+        <p>Cada persona con sus alergias, intolerancias, gustos y ración. También quién suele comer fuera algunos días.</p>
+      </li>
+      <li>
+        <h3>Planifica la semana</h3>
+        <p>Elige tus recetas o deja que menuamano rellene la semana con las que encajan. Cambia una cena en dos toques.</p>
+      </li>
+      <li>
+        <h3>Compra lo justo</h3>
+        <p>La lista suma las cantidades de cada receta según quién come, se ordena por secciones y se actualiza sola si cambias el menú.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="landing-section safety" aria-labelledby="safety-title">
+    <h2 id="safety-title">Las alergias no se negocian</h2>
+    <p>Cada comida se comprueba con las restricciones de quienes la comen, invitados incluidos. Si algo no encaja, menuamano no lo añade y te propone alternativas. Si falta información de un ingrediente, lo marca como pendiente de revisión en vez de darlo por seguro.</p>
+    <div class="row">
+      <span class="badge ok">Compatible según los datos</span>
+      <span class="badge unknown">Requiere revisión</span>
+      <span class="badge conflict">Incompatible</span>
+    </div>
+    <p class="muted small">menuamano trabaja con los datos que registras. No garantiza la ausencia de trazas: revisa siempre el etiquetado y cómo se prepara cada plato.</p>
+  </section>
+
+  <section class="landing-section" id="precios" aria-labelledby="pricing-title">
+    <h2 id="pricing-title">Precios</h2>
+    <p class="muted">La suscripción es por hogar: la paga una persona y la disfruta toda la casa.</p>
+    <div class="plans">
+      <article class="plan">
+        <h3>{{ free.name }}</h3>
+        <p class="plan-price">0 €</p>
+        <ul class="plan-features">
+          <li>Calendario de desayunos, comidas, meriendas y cenas</li>
+          <li>Comensales ilimitados, con alergias y gustos</li>
+          <li>Recetario, sobras y lista de la compra automática</li>
+          <li>Hasta {{ free.max_members }} personas con cuenta en el hogar</li>
+        </ul>
+        <a class="btn block" href="{% url 'accounts:signup' %}">Empezar gratis</a>
+      </article>
+      <article class="plan featured">
+        <h3>{{ premium.name }}</h3>
+        <p class="plan-price">{{ prices.monthly }}<span>/mes</span></p>
+        <p class="muted small plan-alt">o {{ prices.yearly }} al año</p>
+        <ul class="plan-features">
+          <li>Todo lo del plan gratuito</li>
+          <li>Asistente con IA: propone menús y cambios que revisas antes de aplicar</li>
+          <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
+          <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar</li>
+        </ul>
+        <a class="btn primary block" href="{% url 'accounts:signup' %}">Probar menuamano</a>
+        <p class="muted small">Te suscribes desde tu hogar cuando quieras. Cancelas cuando quieras.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="landing-section" aria-labelledby="faq-title">
+    <h2 id="faq-title">Preguntas frecuentes</h2>
+    <details class="faq"><summary>¿Tienen que tener cuenta todas las personas de casa?</summary><p>No. Los comensales son perfiles sin cuenta. Solo necesitan cuenta quienes vayan a consultar o editar el menú.</p></details>
+    <details class="faq"><summary>¿Qué datos ve la inteligencia artificial?</summary><p>Solo lo necesario para proponer el menú: códigos en lugar de nombres, grupos de edad, restricciones y recetas. Nunca nombres, fechas de nacimiento ni pesos.</p></details>
+    <details class="faq"><summary>¿Y el registro de peso?</summary><p>Es opcional y privado. Solo lo ve la propia persona y quien ella autorice. menuamano no calcula dietas ni objetivos.</p></details>
+    <details class="faq"><summary>¿Puedo cancelar Premium?</summary><p>Sí, desde la página del plan de tu hogar, en cualquier momento. Mantienes Premium hasta el final del periodo pagado.</p></details>
+  </section>
+
+  <footer class="landing-footer">
+    <span class="wordmark">menuamano</span>
+    <span class="row">
+      <a href="{% url 'accounts:login' %}">Entrar</a>
+      <a href="{% url 'accounts:signup' %}">Crear cuenta</a>
+    </span>
+  </footer>
+</div>
+{% endblock %}

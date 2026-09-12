@@ -3,7 +3,7 @@
 from email.utils import getaddresses
 from pathlib import Path
 
-from config.env import env_float, env_int, env_list, env_str
+from config.env import env_bool, env_float, env_int, env_list, env_str
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "planning",
     "shopping",
     "assistant",
+    "billing",
 ]
 
 MIDDLEWARE = [
@@ -62,6 +63,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "households.context_processors.household",
                 "assistant.context_processors.ai_mode",
+                "billing.context_processors.billing",
             ],
         },
     },
@@ -136,6 +138,23 @@ ANYMAIL = {
     if value not in ("", None)
 }
 
+# Public base URL, for absolute links in emails sent outside a request (e.g. from webhooks).
+SITE_URL = env_str("SITE_URL", "")
+
+# --- Billing (Stripe) -------------------------------------------------------
+STRIPE_SECRET_KEY = env_str("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = env_str("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_MONTHLY = env_str("STRIPE_PRICE_MONTHLY", "")
+STRIPE_PRICE_YEARLY = env_str("STRIPE_PRICE_YEARLY", "")
+STRIPE_AUTOMATIC_TAX = env_bool("STRIPE_AUTOMATIC_TAX", False)
+# Without billing (local development) every household gets Premium features.
+BILLING_ENABLED = env_bool("BILLING_ENABLED", bool(STRIPE_SECRET_KEY))
+FREE_MAX_MEMBERS = env_int("FREE_MAX_MEMBERS", 2)
+PREMIUM_MAX_MEMBERS = env_int("PREMIUM_MAX_MEMBERS", 8)
+PREMIUM_AI_MONTHLY_LIMIT = env_int("PREMIUM_AI_MONTHLY_LIMIT", 150)
+PREMIUM_PRICE_MONTHLY_LABEL = env_str("PREMIUM_PRICE_MONTHLY_LABEL", "4,99 €")
+PREMIUM_PRICE_YEARLY_LABEL = env_str("PREMIUM_PRICE_YEARLY_LABEL", "49 €")
+
 # --- AI assistant -----------------------------------------------------------
 # "demo" runs a deterministic local provider; "openai" calls the OpenAI API from the backend.
 AI_PROVIDER = env_str("AI_PROVIDER", "demo")
@@ -143,7 +162,10 @@ OPENAI_API_KEY = env_str("OPENAI_API_KEY", "")
 OPENAI_MODEL = env_str("OPENAI_MODEL", "")
 OPENAI_TIMEOUT_SECONDS = env_float("OPENAI_TIMEOUT_SECONDS", 45.0)
 OPENAI_MAX_RETRIES = env_int("OPENAI_MAX_RETRIES", 2)
-OPENAI_MAX_OUTPUT_TOKENS = env_int("OPENAI_MAX_OUTPUT_TOKENS", 6000)
+# Reasoning tokens count against the output budget: keep effort low and the budget roomy.
+OPENAI_MAX_OUTPUT_TOKENS = env_int("OPENAI_MAX_OUTPUT_TOKENS", 16000)
+# none, low, medium, high… Empty = do not send the parameter (for models without reasoning).
+OPENAI_REASONING_EFFORT = env_str("OPENAI_REASONING_EFFORT", "low")
 
 LOGGING = {
     "version": 1,

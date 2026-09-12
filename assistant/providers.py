@@ -91,12 +91,13 @@ class ProviderResult:
 class OpenAIProvider:
     name = MODE_OPENAI
 
-    def __init__(self, api_key, model, timeout, max_retries, max_output_tokens, client=None):
+    def __init__(self, api_key, model, timeout, max_retries, max_output_tokens, client=None, reasoning_effort=""):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
         self.max_retries = max_retries
         self.max_output_tokens = max_output_tokens
+        self.reasoning_effort = reasoning_effort
         self._client = client
 
     def _get_client(self):
@@ -119,6 +120,8 @@ class OpenAIProvider:
             "max_output_tokens": self.max_output_tokens,
             "store": False,
         }
+        if self.reasoning_effort:
+            kwargs["reasoning"] = {"effort": self.reasoning_effort}
         if user_id is not None:
             kwargs["safety_identifier"] = hashlib.sha256(f"{settings.SECRET_KEY}:{user_id}".encode()).hexdigest()[:32]
         try:
@@ -374,5 +377,6 @@ def get_provider():
             timeout=settings.OPENAI_TIMEOUT_SECONDS,
             max_retries=settings.OPENAI_MAX_RETRIES,
             max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,
+            reasoning_effort=settings.OPENAI_REASONING_EFFORT,
         )
     raise ProviderNotConfigured("not_configured", status.detail)

@@ -28,6 +28,14 @@ EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "mailgun")
 if EMAIL_PROVIDER not in EMAIL_BACKENDS:
     raise ImproperlyConfigured(f"Unknown EMAIL_PROVIDER {EMAIL_PROVIDER!r}; use 'mailgun' or 'console'")
 EMAIL_BACKEND = EMAIL_BACKENDS[EMAIL_PROVIDER]
+# Billing: on by default. Without Stripe every household would get paid features for free.
+BILLING_ENABLED = env_bool("BILLING_ENABLED", True)
+if BILLING_ENABLED:
+    STRIPE_SECRET_KEY = env_str("STRIPE_SECRET_KEY", required=True)
+    STRIPE_WEBHOOK_SECRET = env_str("STRIPE_WEBHOOK_SECRET", required=True)
+    STRIPE_PRICE_MONTHLY = env_str("STRIPE_PRICE_MONTHLY", required=True)
+    STRIPE_PRICE_YEARLY = env_str("STRIPE_PRICE_YEARLY", required=True)
+
 if EMAIL_PROVIDER == "mailgun":
     ANYMAIL["MAILGUN_API_KEY"] = env_str("MAILGUN_API_KEY", required=True)
     ANYMAIL["MAILGUN_SENDER_DOMAIN"] = env_str("MAILGUN_SENDER_DOMAIN", required=True)

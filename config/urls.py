@@ -12,6 +12,7 @@ urlpatterns = [
     path("calendario/", include("planning.urls")),
     path("compra/", include("shopping.urls")),
     path("asistente/", include("assistant.urls")),
+    path("plan/", include("billing.urls")),
     path("", include("core.urls")),
 ]
 

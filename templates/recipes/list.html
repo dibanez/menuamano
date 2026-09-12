@@ -18,7 +18,7 @@
   </div>
 </div>
 
-{% if can_edit and ai_status.available %}
+{% if can_edit and ai_status.available and ai_allowed %}
 <details class="panel">
   <summary class="link-btn">Pedir una receta al asistente{% if ai_status.is_demo %} <span class="badge demo">Modo demostración</span>{% endif %}</summary>
   <form method="post" action="{% url 'assistant:generate_recipe' %}" class="row" style="margin-top:10px" hx-disabled-elt="find button">

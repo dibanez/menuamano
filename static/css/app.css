@@ -358,6 +358,55 @@ table.simple th { font-size: 0.85rem; color: var(--muted); }
 .auth { max-width: 26rem; margin: 6vh auto 0; }
 .auth .wordmark { font-size: 2rem; display: inline-block; margin-bottom: 8px; }
 
+/* --- Landing ------------------------------------------------------------------------- */
+
+body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
+.landing h1 {
+  font-size: clamp(2.1rem, 6.5vw, 3.4rem); font-weight: 850; letter-spacing: -0.035em; line-height: 1.05;
+  max-width: 14em; margin: 0 0 16px;
+}
+.landing h2 { font-size: clamp(1.4rem, 3.6vw, 1.9rem); font-weight: 800; letter-spacing: -0.02em; margin: 0 0 12px; }
+.hero { display: grid; gap: 28px; align-items: center; padding: 24px 0 40px; }
+@media (min-width: 900px) { .hero { grid-template-columns: 1.1fr 0.9fr; gap: 48px; padding: 56px 0 72px; } }
+.hero-lead { font-size: 1.15rem; max-width: 34rem; color: #33443a; }
+.hero-visual {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px;
+  box-shadow: var(--shadow); max-width: 30rem; width: 100%; justify-self: center;
+}
+.hero-day { font-weight: 800; margin: 0 0 10px; padding-bottom: 4px; display: inline-block; background: var(--stroke) left bottom / 100% 6px no-repeat; }
+.hero-list { margin-top: 14px; padding: 12px 14px; background: var(--paper); border-radius: var(--radius-m); font-size: 0.92rem; }
+.hero-list ul { list-style: none; margin: 6px 0 0; padding: 0; }
+.hero-list li { display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px dotted var(--line); }
+.hero-list li span:last-child { font-variant-numeric: tabular-nums; font-weight: 650; }
+
+.landing-section { padding: 36px 0; border-top: 1px solid var(--line); }
+.landing-section > p { max-width: 42rem; }
+.how { list-style: none; counter-reset: step; display: grid; gap: 14px; padding: 0; margin: 16px 0 0; }
+@media (min-width: 760px) { .how { grid-template-columns: repeat(3, 1fr); } }
+.how li { counter-increment: step; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 18px; }
+.how li::before { content: counter(step); display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--leaf-soft); color: var(--leaf-strong); font-weight: 800; margin-bottom: 8px; }
+.how h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.how p { margin: 0; color: var(--muted); }
+.safety .row { margin: 12px 0; }
+
+.plans { display: grid; gap: 16px; margin-top: 18px; }
+@media (min-width: 700px) { .plans { grid-template-columns: 1fr 1fr; } }
+.plan { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 22px; display: flex; flex-direction: column; gap: 8px; }
+.plan.featured { border: 2px solid var(--leaf); }
+.plan h3 { margin: 0; font-size: 1.15rem; }
+.plan-price { font-size: 2.2rem; font-weight: 850; letter-spacing: -0.03em; margin: 0; line-height: 1.1; }
+.plan-price span { font-size: 1rem; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.plan-alt { margin: 0; }
+.plan-features { list-style: none; padding: 0; margin: 8px 0 12px; flex: 1; }
+.plan-features li { padding: 6px 0 6px 26px; position: relative; }
+.plan-features li::before { content: ""; position: absolute; left: 2px; top: 11px; width: 12px; height: 7px; border-left: 2.5px solid var(--leaf); border-bottom: 2.5px solid var(--leaf); transform: rotate(-45deg); }
+
+.faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
+.faq summary { cursor: pointer; font-weight: 650; }
+.faq p { margin: 8px 0 0; color: var(--muted); }
+.landing-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 8px; border-top: 1px solid var(--line); }
+.landing-footer .wordmark { font-size: 1.1rem; }
+
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 .nowrap { white-space: nowrap; }
 .mt-0 { margin-top: 0; }

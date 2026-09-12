@@ -2,6 +2,7 @@ Django==5.2.17
 psycopg[binary]==3.3.5
 django-htmx==1.29.0
 django-anymail[mailgun]==15.2
+stripe==15.6.1
 openai==3.13.0
 pydantic==2.13.5
 gunicorn==26.2.0

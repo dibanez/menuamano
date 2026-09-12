@@ -1,0 +1,5 @@
+Hola:
+
+No hemos podido cobrar la suscripción Premium del hogar «{{ household.name }}».
+Stripe volverá a intentarlo en los próximos días. Para no perder Premium, revisa el método de pago{% if plan_url %}:
+{{ plan_url }}{% else %} desde la página del plan del hogar en {{ brand }}.{% endif %}

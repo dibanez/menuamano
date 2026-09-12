@@ -212,7 +212,7 @@
     </select>
     <button class="btn primary" type="submit">Añadir receta</button>
   </form>
-  {% if ai_status.available %}
+  {% if ai_status.available and ai_allowed %}
     <form method="post" action="{% url 'assistant:replace_meal' meal.pk %}" style="margin-top:10px" hx-disabled-elt="find button">{% csrf_token %}
       <button class="btn small" type="submit"><span class="hide-on-request">Pedir una alternativa al asistente</span><span class="htmx-indicator spinner"></span></button>
       {% if ai_status.is_demo %}<span class="badge demo">Modo demostración</span>{% endif %}

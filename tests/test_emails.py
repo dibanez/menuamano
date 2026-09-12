@@ -128,7 +128,7 @@ PRINT_SETTINGS = (
 def run_production_settings(**extra):
     env = {k: v for k, v in os.environ.items() if k not in EMAIL_VARS}
     env.update(DJANGO_SETTINGS_MODULE="config.settings.production", DJANGO_SECRET_KEY="s" * 50,
-               DJANGO_ALLOWED_HOSTS="menuamano.example.com", **extra)
+               DJANGO_ALLOWED_HOSTS="menuamano.example.com", BILLING_ENABLED="false", **extra)
     return subprocess.run([sys.executable, "-c", PRINT_SETTINGS], env=env, cwd=BASE_DIR, capture_output=True, text=True)
 
 

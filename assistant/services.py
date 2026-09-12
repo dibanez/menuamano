@@ -17,6 +17,7 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
+from billing import entitlements
 from diners.models import Diner
 from foods import compatibility
 from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attendee, rules_for_diner
@@ -65,6 +66,9 @@ def _log(household, user, provider_name, operation, status, started, result=None
 
 def request_proposal(household, user, operation, start, end, text="", focus=None, history=()):
     """Ask the provider for changes and store them as a pending proposal. Never edits meals."""
+    allowed, message = entitlements.check_ai(household)
+    if not allowed:
+        raise AssistantError(message)  # enforced here too, not only by hiding buttons
     started = time.monotonic()
     try:
         provider = get_provider()

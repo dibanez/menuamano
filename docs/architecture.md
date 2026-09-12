@@ -161,6 +161,27 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   evento en `EmailEvent`. El id del evento evita duplicar los reintentos, y un fallo al guardarlo
   se registra sin devolver error, para que Mailgun no reintente sin fin.
 
+## Planes y pagos (Stripe)
+
+- La suscripción es **por hogar**: `billing.Subscription`, uno por hogar. La paga una persona
+  administradora con Stripe Checkout alojado y se gestiona en el Customer Portal de Stripe.
+- `billing/entitlements.py` decide qué puede usar cada hogar. Premium se activa con los estados
+  `active`, `trialing` y `past_due` (este último da margen mientras Stripe reintenta el cobro).
+  Límites que se comprueban en el backend, no solo ocultando botones:
+  - asistente con IA solo en Premium y con cupo mensual. Cuentan las llamadas que llegan al
+    proveedor de pago; la demo y los errores de red no;
+  - personas con cuenta por hogar, al añadir, invitar y aceptar una invitación. Si se baja de
+    plan, nadie pierde el acceso; solo no se pueden añadir más;
+  - sin facturación (`BILLING_ENABLED=false`, lo normal en local) todo está desbloqueado.
+    Producción la exige por defecto.
+- Sincronización: Stripe manda. Los webhooks firmados se procesan una sola vez (`StripeEvent`)
+  dentro de una transacción; si algo falla se deshace y se devuelve 500 para que Stripe
+  reintente. Al volver de Checkout se consulta la sesión, comprobando que pertenece al hogar,
+  para mostrar Premium sin esperar al webhook.
+- Con la versión de API que fija el SDK, el fin del periodo se lee de
+  `items.data[0].current_period_end`.
+- `invoice.payment_failed` avisa por correo a las personas administradoras del hogar.
+
 ## Configuración por entorno
 
 `config/settings/base.py` define lo común; `local.py`, `production.py` y `test.py` lo

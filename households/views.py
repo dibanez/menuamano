@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from billing import entitlements
 from core.emails import send_email
 
 from . import invitations
@@ -65,6 +66,9 @@ def settings_view(request):
 @household_required(Role.ADMIN)
 @require_POST
 def add_member(request):
+    if not entitlements.can_add_member(request.household):
+        messages.error(request, entitlements.member_limit_message(request.household))
+        return redirect("households:settings")
     form = AddMemberForm(request.POST, household=request.household, prefix="m")
     if form.is_valid():
         Membership.objects.create(user=form.user, household=request.household, role=form.cleaned_data["role"])
@@ -118,6 +122,9 @@ def invitation_create(request):
     email = request.POST.get("email", "").strip().lower()
     if role not in Role.values:
         messages.error(request, "Elige un rol válido para la invitación.")
+        return redirect("households:settings")
+    if not entitlements.can_add_member(request.household):
+        messages.error(request, entitlements.member_limit_message(request.household))
         return redirect("households:settings")
     if email:
         try:

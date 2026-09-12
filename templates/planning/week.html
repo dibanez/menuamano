@@ -27,7 +27,7 @@
     {% with form=range_form %}{% include "partials/form_fields.html" %}{% endwith %}
     <div><button class="btn primary" type="submit">Regenerar</button></div>
   </form>
-  {% if ai_status.available %}
+  {% if ai_status.available and ai_allowed %}
   <form method="post" action="{% url 'assistant:plan_range' %}" style="margin-top:12px" hx-disabled-elt="find button">
     {% csrf_token %}
     <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">

@@ -122,7 +122,21 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 - [x] Comando `send_test_email` para comprobar la configuración desde Dokploy.
 - [x] Healthcheck `/healthz` y `compose.prod.yaml` para Dokploy.
 
+### Iteración 5 — landing y plan de pagos
+
+- [x] Landing pública en `/` (quien ha entrado ve «Hoy»), con precios y preguntas frecuentes.
+- [x] Planes Gratis y Premium (4,99 €/mes o 49 €/año por hogar) con Stripe: Checkout, portal,
+      webhooks idempotentes, aviso de cobro fallido y página «Plan del hogar» con el uso del mes.
+- [x] Límites en el backend: IA solo en Premium con cupo mensual; personas con cuenta por plan.
+- [x] OpenAI: esfuerzo de razonamiento configurable (`low` por defecto) y más margen de salida
+      para modelos que razonan como `gpt-5.6-luna`.
+
 ### Pendiente o conocido
+
+- **Legal**: faltan aviso legal, política de privacidad (datos de salud) y condiciones de venta con
+  desistimiento. Son necesarios antes de cobrar.
+- **Stripe sin probar en real**: los tests simulan las llamadas y firman webhooks de verdad, pero
+  el primer paso es un pago en modo test contra la cuenta real.
 
 - **Integración real con OpenAI sin probar contra la API**: el cliente se ha verificado con el
   SDK 3.13 instalado (firmas, excepciones y tipos) y con dobles de prueba, pero no con una clave

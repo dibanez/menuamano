@@ -1,0 +1,7 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:20px">No hemos podido cobrar Premium</h1>
+<p style="margin:0 0 8px">El cobro de la suscripción Premium del hogar «{{ household.name }}» ha fallado. Stripe volverá a intentarlo en los próximos días.</p>
+<p style="margin:0">Para no perder Premium, revisa el método de pago.</p>
+{% if plan_url %}{% with url=plan_url label="Revisar el método de pago" %}{% include "emails/_button.html" %}{% endwith %}{% else %}<p style="margin:12px 0 0">Hazlo desde la página «Plan del hogar» en {{ brand }}.</p>{% endif %}
+{% endblock %}
