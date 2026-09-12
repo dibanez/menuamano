@@ -55,9 +55,9 @@ def use_provider(monkeypatch, provider):
     monkeypatch.setattr(services, "get_provider", lambda: provider)
 
 
-def change(day, recipe_ids=(), mode="cook", attendees=None, refs=()):
+def change(day, recipe_ids=(), mode="cook", attendees=None, refs=(), plates=()):
     return MealChange(date=day.isoformat(), meal_type="dinner", mode=mode, recipe_ids=list(recipe_ids),
-                      new_recipe_refs=list(refs), attendee_codes=attendees, notes="", reason="")
+                      new_recipe_refs=list(refs), attendee_codes=attendees, plates=list(plates), notes="", reason="")
 
 
 def snapshot_meals(household):

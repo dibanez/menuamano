@@ -94,12 +94,19 @@ def build_context(household, start, end, operation, user_request="", focus=None,
                     "recipe_ids": [mr.recipe_id for mr in meal.recipes.all() if mr.recipe_id],
                     "recipe_names": [mr.name for mr in meal.recipes.all()],
                     "attendee_codes": attendees, "guests": guests,
+                    "plates": [
+                        {
+                            "recipe_id": mr.recipe_id, "recipe_name": mr.name,
+                            "eater_codes": [diner_to_code[a.diner_id] for a in mr.eaters.all() if a.diner_id in diner_to_code],
+                        }
+                        for mr in meal.recipes.all() if mr.eaters.all()
+                    ],
                 }
             else:
                 slot = {
                     "exists": False, "mode": defaults.mode if defaults.mode_is_explicit else "pending", "locked": False,
                     "recipe_ids": [], "recipe_names": [],
-                    "attendee_codes": [diner_to_code[d.pk] for d in defaults.diners], "guests": 0,
+                    "attendee_codes": [diner_to_code[d.pk] for d in defaults.diners], "guests": 0, "plates": [],
                 }
             slot.update(
                 {

@@ -32,7 +32,13 @@ Rules:
 - People are identified only by codes (C1, C2…), also inside `user_request` and `conversation`.
   Refer to them by code in your texts. Use `attendee_codes: null` to keep the usual attendees.
 - `conversation` holds the previous chat turns (oldest first) for context; act on `user_request`.
-- Mandatory restrictions can never be relaxed. Never assign a recipe whose `blocked_for` contains an attendee.
+- Different people can eat different recipes in the same slot (e.g. one breakfast for C1 and another
+  for C2): put every recipe in the change and use `plates` to say who eats each one, with its
+  `recipe_id` or `new_recipe_ref` and `eater_codes`. Recipes without a plate are for every attendee;
+  `plates: []` means everyone eats everything. Slots show their current plates in `plates`; keep them
+  when you only change part of the meal.
+- Mandatory restrictions can never be relaxed. Never give a recipe to anyone in its `blocked_for`: it
+  may only be a plate for the other attendees.
   Avoid recipes whose `review_for` contains an attendee when an alternative exists.
   If no compatible option exists, use mode "pending", no recipes, and explain it in `warnings`.
 - Prefer the household's existing recipes (by id). Respect `dislikes` and `likes` when possible.
@@ -307,7 +313,7 @@ class DemoProvider:
             if slot["rule"] and slot["rule"] not in ("cook", "leftovers") and not slot["exists"]:
                 changes.append(MealChange(
                     date=slot["date"], meal_type=slot["meal_type"], mode=slot["rule"], recipe_ids=[],
-                    new_recipe_refs=[], attendee_codes=attendees, notes="", reason="Se mantiene la regla del hogar.",
+                    new_recipe_refs=[], attendee_codes=attendees, plates=[], notes="", reason="Se mantiene la regla del hogar.",
                 ))
                 continue
             people = attendees if attendees is not None else slot["attendee_codes"]
@@ -323,7 +329,7 @@ class DemoProvider:
                 warnings.append(f"No hay recetas compatibles para {slot['weekday'].lower()} ({slot['meal_type']}).")
                 changes.append(MealChange(
                     date=slot["date"], meal_type=slot["meal_type"], mode="pending", recipe_ids=[], new_recipe_refs=[],
-                    attendee_codes=attendees, notes="", reason="Sin opciones compatibles con todos los asistentes.",
+                    attendee_codes=attendees, plates=[], notes="", reason="Sin opciones compatibles con todos los asistentes.",
                 ))
                 continue
             recipe = candidates[0]
@@ -331,7 +337,7 @@ class DemoProvider:
             reason = f"{recipe['name']}: {recipe['minutes']} minutos, compatible con los asistentes según los datos."
             changes.append(MealChange(
                 date=slot["date"], meal_type=slot["meal_type"], mode="cook", recipe_ids=[recipe["id"]],
-                new_recipe_refs=[], attendee_codes=attendees, notes="", reason=reason,
+                new_recipe_refs=[], attendee_codes=attendees, plates=[], notes="", reason=reason,
             ))
         summary = f"Modo demostración: propuesta generada con reglas simples, sin IA, para {len(changes)} comida(s)."
         return AssistantOutput(summary=summary, changes=changes, new_recipes=[], warnings=warnings)

@@ -33,7 +33,7 @@ def test_codes_in_provider_output_are_shown_as_names(monkeypatch, home):  # noqa
     output = AssistantOutput(
         summary=f"{nora_code} no cenará huevo.", warnings=[f"Revisa la cena de {nora_code}."], new_recipes=[],
         changes=[MealChange(date=tuesday.isoformat(), meal_type="dinner", mode="cook", recipe_ids=[home.arroz.pk],
-                            new_recipe_refs=[], attendee_codes=None, notes="", reason=f"Apta para {nora_code}.")],
+                            new_recipe_refs=[], attendee_codes=None, plates=[], notes="", reason=f"Apta para {nora_code}.")],
     )
     use_provider(monkeypatch, FakeProvider(output))
     proposal = services.request_proposal(home.household, home.user, "chat", home.monday, home.monday + timedelta(days=6))

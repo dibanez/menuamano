@@ -41,6 +41,14 @@ class NewRecipe(StrictModel):
     steps: list[str]
 
 
+class Plate(StrictModel):
+    """Who eats one recipe of a change: an existing recipe id or a new recipe ref, and diner codes."""
+
+    recipe_id: int | None
+    new_recipe_ref: str | None
+    eater_codes: list[str]
+
+
 class MealChange(StrictModel):
     date: str
     meal_type: MealTypeLiteral
@@ -48,6 +56,7 @@ class MealChange(StrictModel):
     recipe_ids: list[int]
     new_recipe_refs: list[str]
     attendee_codes: list[str] | None
+    plates: list[Plate]  # empty = every attendee eats every recipe
     notes: str
     reason: str
 

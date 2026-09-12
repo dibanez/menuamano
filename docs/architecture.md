@@ -71,7 +71,10 @@ Dónde se aplican las reglas:
   (`MealRecipe.eaters`; vacío = para todos). Así un desayuno puede tener tortilla para una
   persona y porridge para otra. Cada receta se comprueba solo contra quien la come y la comida
   toma el peor estado. Si se va el único que comía un plato, el plato pasa a ser para todos y
-  se vuelve a comprobar: nunca queda como compatible sin revisar.
+  se vuelve a comprobar: nunca queda como compatible sin revisar. El asistente también puede
+  repartir platos (`plates` en cada cambio, con códigos de comensal); el servidor comprueba que
+  cada plato sea de una receta del cambio y de personas de esa comida, y valida cada receta
+  solo contra quien la come.
 - **Snapshot**: al asignar una receta se copian nombre, ingredientes, pasos y versión
   (`MealRecipe`, `MealRecipeIngredient`). Editar la receta incrementa `Recipe.version`; las
   comidas muestran «hay una versión más reciente» y solo se actualizan con una acción explícita.

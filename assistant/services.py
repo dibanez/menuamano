@@ -24,7 +24,7 @@ from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attend
 from foods.models import Category, Ingredient, Unit, normalize_name
 from foods.reviews import reviews_for
 from planning import services as planning
-from planning.models import MODES_WITH_RECIPES, Meal, MealMode
+from planning.models import MODES_WITH_RECIPES, Meal, MealAttendee, MealMode
 from recipes import services as recipe_services
 from recipes.models import Recipe, RecipeIngredient, RecipeStep
 
@@ -220,8 +220,51 @@ def _link_new_recipes_to_focus(changes, new_recipes, focus):
             return changes
     return [*changes, MealChange(
         date=key[0], meal_type=key[1], mode=MealMode.COOK, recipe_ids=[], new_recipe_refs=unlinked[:1],
-        attendee_codes=None, notes="", reason="Receta nueva para esta comida.",
+        attendee_codes=None, plates=[], notes="", reason="Receta nueva para esta comida.",
     )]
+
+
+def _plate_key(plate):
+    """("id", recipe id) or ("ref", new recipe ref), from a schema Plate or a stored item plate."""
+    recipe_id = plate["recipe_id"] if isinstance(plate, dict) else plate.recipe_id
+    ref = plate["new_recipe_ref"] if isinstance(plate, dict) else plate.new_recipe_ref
+    return ("id", recipe_id) if recipe_id is not None else ("ref", ref)
+
+
+def _validate_plates(change, item, context, slot_diners):
+    """Who eats each recipe of a change. Returns ({key: [diners]}, error message or None)."""
+    keys = {("id", rid) for rid in item["recipe_ids"]} | {("ref", ref) for ref in item["new_recipe_refs"]}
+    allowed = {d.pk for d in slot_diners}
+    plates = {}
+    for plate in change.plates:
+        key = _plate_key(plate)
+        if key not in keys or key in plates:
+            return {}, "La propuesta reparte una receta que no está en esa comida."
+        diners = [context.diner_for_code(code) for code in dict.fromkeys(plate.eater_codes)]
+        if not diners or any(d is None or d.pk not in allowed for d in diners):
+            return {}, "La propuesta reparte platos entre personas que no están en esa comida."
+        if len(diners) < len(allowed):  # a plate for everyone is just a recipe for the whole meal
+            plates[key] = diners
+    return plates, None
+
+
+def _describe_plates(item, plates, existing, new_recipes):
+    """Store who eats what on the item and show it next to each recipe name."""
+    item["plates"] = [
+        {
+            "recipe_id": key[1] if key[0] == "id" else None, "new_recipe_ref": key[1] if key[0] == "ref" else None,
+            "eater_ids": [d.pk for d in diners], "eater_labels": [d.alias for d in diners],
+        }
+        for key, diners in plates.items()
+    ]
+
+    def label(key, name):
+        diners = plates.get(key)
+        return f"{name} ({', '.join(d.alias for d in diners)})" if diners else name
+
+    item["recipe_names"] = [label(("id", rid), existing[rid].name) for rid in item["recipe_ids"]] + [
+        label(("ref", ref), new_recipes[ref]["name"]) for ref in item["new_recipe_refs"]
+    ]
 
 
 def validate_output(household, context, output, start, end):
@@ -250,7 +293,7 @@ def validate_output(household, context, output, start, end):
             "recipe_names": [], "new_recipe_refs": [], "attendee_ids": None, "attendee_labels": [],
             "notes": context.humanize(change.notes.strip())[:300], "reason": context.humanize(change.reason.strip())[:300],
             "status": ITEM_OK,
-            "issues": [], "current": None,
+            "issues": [], "current": None, "plates": [],
         }
         items.append(item)
         try:
@@ -320,21 +363,42 @@ def validate_output(household, context, output, start, end):
         elif change.recipe_ids or change.new_recipe_refs:
             item["issues"].append("Esta modalidad no lleva recetas; se ignoran las propuestas.")
 
-        # Dietary rules are applied here, whatever the provider claimed.
         defaults = planning_context.defaults(the_date, change.meal_type)
+        plates = {}
+        if change.mode in MODES_WITH_RECIPES and change.plates:
+            if attendee_diners is not None:
+                slot_diners = attendee_diners
+            elif meal is not None:
+                slot_diners = [a.diner for a in meal.attendees.all() if a.diner_id]
+            else:
+                slot_diners = list(defaults.diners)
+            plates, error = _validate_plates(change, item, context, slot_diners)
+            if error:
+                _reject(item, error)
+                continue
+            _describe_plates(item, plates, existing, new_recipes)
+
+        # Dietary rules are applied here, whatever the provider claimed: each recipe against its eaters.
         people = _people_for_slot(meal, attendee_diners, defaults.diners)
-        facts = []
+        results = []
         for rid in item["recipe_ids"]:
-            facts.extend(recipe_services.recipe_facts(existing[rid], reviews))
+            eaters = plates.get(("id", rid))
+            results.append(evaluate(
+                recipe_services.recipe_facts(existing[rid], reviews), [rules_for_diner(d) for d in eaters] if eaters else people,
+            ))
         for ref in item["new_recipe_refs"]:
-            facts.extend(_new_recipe_facts(new_recipes[ref], reviews))
-        result = evaluate(facts, people)
-        if result.status == compatibility.CONFLICT:
+            eaters = plates.get(("ref", ref))
+            results.append(evaluate(
+                _new_recipe_facts(new_recipes[ref], reviews), [rules_for_diner(d) for d in eaters] if eaters else people,
+            ))
+        conflicts = [i for result in results for i in result.conflicts]
+        unknowns = [i for result in results for i in result.unknowns]
+        if conflicts:
             item["status"] = ITEM_CONFLICT
-            item["issues"].extend(i.message for i in result.conflicts)
-        elif result.status == compatibility.UNKNOWN:
+            item["issues"].extend(i.message for i in conflicts)
+        elif unknowns:
             item["status"] = ITEM_REVIEW
-            item["issues"].extend(i.message for i in result.unknowns)
+            item["issues"].extend(i.message for i in unknowns)
         if change.mode in MODES_WITH_RECIPES and not (item["recipe_ids"] or item["new_recipe_refs"]):
             item["issues"].append("Sin receta asignada.")
 
@@ -474,20 +538,26 @@ def _apply_item(household, user, item, created, accepted_review):
     diners = None
     if item["attendee_ids"] is not None:
         diners = list(Diner.objects.filter(household=household, is_active=True, pk__in=item["attendee_ids"]))
-    recipes = list(Recipe.objects.filter(household=household, pk__in=item["recipe_ids"]))
-    recipes += [created[ref] for ref in item["new_recipe_refs"] if ref in created]
+    by_id = Recipe.objects.filter(household=household).in_bulk(item["recipe_ids"])
+    recipes = [(("id", rid), by_id[rid]) for rid in item["recipe_ids"] if rid in by_id]
+    recipes += [(("ref", ref), created[ref]) for ref in item["new_recipe_refs"] if ref in created]
     if item["mode"] in MODES_WITH_RECIPES and len(recipes) != len(item["recipe_ids"]) + len(item["new_recipe_refs"]):
         return "alguna receta ya no existe."
+    plate_eaters = {_plate_key(p): p["eater_ids"] for p in item.get("plates", [])}
 
     # Revalidate with current restrictions: they may have changed since the proposal.
     meal = planning.meals_queryset(household).get(pk=meal.pk)
     people = _people_for_slot(meal, diners, [a.diner for a in meal.attendees.all() if a.diner_id])
     reviews = reviews_for(household)
-    facts = [f for recipe in recipes for f in recipe_services.recipe_facts(recipe, reviews)] if item["mode"] in MODES_WITH_RECIPES else []
-    check = evaluate(facts, people)
-    if check.status == compatibility.CONFLICT:
+    statuses = set()
+    if item["mode"] in MODES_WITH_RECIPES:
+        for key, recipe in recipes:
+            eater_ids = plate_eaters.get(key)
+            eaters = [rules_for_diner(d) for d in Diner.objects.filter(household=household, pk__in=eater_ids)] if eater_ids else people
+            statuses.add(evaluate(recipe_services.recipe_facts(recipe, reviews), eaters).status)
+    if compatibility.CONFLICT in statuses:
         return "ahora es incompatible con algún asistente."
-    if check.status == compatibility.UNKNOWN and item.get("slot") not in accepted_review:
+    if compatibility.UNKNOWN in statuses and item.get("slot") not in accepted_review:
         return "requiere revisión y no se ha confirmado."
 
     with transaction.atomic():
@@ -495,8 +565,10 @@ def _apply_item(household, user, item, created, accepted_review):
             planning.set_attendees(meal, user, diners, lock=False)
         meal.recipes.all().delete()
         if item["mode"] in MODES_WITH_RECIPES:
-            for recipe in recipes:
-                recipe_services.snapshot_into_meal(meal, recipe)
+            for key, recipe in recipes:
+                meal_recipe = recipe_services.snapshot_into_meal(meal, recipe)
+                if plate_eaters.get(key):
+                    meal_recipe.eaters.set(MealAttendee.objects.filter(meal=meal, diner_id__in=plate_eaters[key]))
         Meal.objects.filter(pk=meal.pk).update(
             mode=item["mode"] if item["mode"] in MealMode.values else MealMode.PENDING,
             notes=item["notes"] or meal.notes, source=Meal.Source.AI, version=F("version") + 1,
