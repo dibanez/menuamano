@@ -92,6 +92,8 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `SITE_URL` | Recomendada | `https://tu-dominio`, para enlaces en correos enviados desde webhooks |
    | `AI_PROVIDER` | No | `demo` (por defecto) u `openai` |
    | `OPENAI_REASONING_EFFORT` | No | `low` por defecto; vacío si el modelo no razona |
+   | `GTM_CONTAINER_ID` | No | `GTM-WWR8DTN8` por defecto; vacío para no cargar Tag Manager |
+   | `GTM_SCOPE`, `COOKIE_CONSENT_BANNER` | No | `public` y `true`: ver «Analítica» |
    | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
    | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
 
@@ -143,6 +145,23 @@ obligatorias salvo `BILLING_ENABLED=false`).
 Antes de cobrar de verdad necesitas publicar aviso legal, política de privacidad (la app trata
 datos de salud: alergias y peso) y condiciones de contratación con el derecho de desistimiento.
 No están incluidos en el repositorio.
+
+### Analítica (Google Tag Manager)
+
+Con `GTM_CONTAINER_ID` se carga el contenedor de Tag Manager.
+
+- **Consentimiento**: el Consent Mode v2 empieza con analítica y publicidad **denegadas** y un
+  banner propio pide permiso. La elección se guarda en el navegador y se puede cambiar desde el
+  enlace «Cookies» del pie de la landing. Configura en GTM los tags de Google con la comprobación
+  de consentimiento integrada. Si prefieres un CMP (Cookiebot, etc.) dentro de GTM, pon
+  `COOKIE_CONSENT_BANNER=false`.
+- **Alcance**: por defecto (`GTM_SCOPE=public`) solo se carga para visitantes sin sesión: landing,
+  acceso, registro y recuperación de contraseña. Dentro de la app los títulos y las rutas contienen
+  nombres y datos de salud (peso, alergias), así que `GTM_SCOPE=all` solo si tienes base legal y
+  configuras GTM para no enviarlos.
+- No se incluye el `<noscript>` de GTM, porque cargaría tags sin consentimiento.
+- La política de cookies no está incluida en el repositorio (ver «Pagos con Stripe»: textos
+  legales).
 
 `EMAIL_PROVIDER=console` desactiva el envío real en producción. Úsalo solo de forma temporal: los
 correos se quedarían en los logs.

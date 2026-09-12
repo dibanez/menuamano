@@ -50,6 +50,36 @@ document.addEventListener("input", (event) => {
   }
 });
 
+// Cookie consent for Google Tag Manager (Consent Mode v2). The choice is kept in this browser.
+const CONSENT_KEY = "menuamano-consent";
+const readConsent = () => { try { return localStorage.getItem(CONSENT_KEY); } catch { return null; } };
+
+document.addEventListener("DOMContentLoaded", () => {
+  const banner = document.getElementById("consent-banner");
+  if (banner && !readConsent()) banner.hidden = false;
+});
+
+document.addEventListener("click", (event) => {
+  const reopen = event.target.closest("[data-consent-reopen]");
+  const banner = document.getElementById("consent-banner");
+  if (reopen && banner) {
+    event.preventDefault();
+    banner.hidden = false;
+    return;
+  }
+  const button = event.target.closest("[data-consent]");
+  if (!button) return;
+  const choice = button.dataset.consent;
+  try { localStorage.setItem(CONSENT_KEY, choice); } catch {}
+  const value = choice === "granted" ? "granted" : "denied";
+  if (typeof window.gtag === "function") {
+    window.gtag("consent", "update", {
+      ad_storage: value, ad_user_data: value, ad_personalization: value, analytics_storage: value,
+    });
+  }
+  if (banner) banner.hidden = true;
+});
+
 // Copy the value of an input to the clipboard.
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-copy]");

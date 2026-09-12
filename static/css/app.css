@@ -419,6 +419,16 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .landing-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 8px; border-top: 1px solid var(--line); }
 .landing-footer .wordmark { font-size: 1.1rem; }
 
+/* --- Cookie consent ------------------------------------------------------------------ */
+
+.consent {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40;
+  max-width: 34rem; margin: 0 auto; padding: 14px 16px; border-radius: var(--radius-l);
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.consent p { margin: 0 0 10px; font-size: 0.92rem; }
+body:has(.tabbar) .consent { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 12px); }
+
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 .nowrap { white-space: nowrap; }
 .mt-0 { margin-top: 0; }

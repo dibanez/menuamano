@@ -64,6 +64,7 @@ TEMPLATES = [
                 "households.context_processors.household",
                 "assistant.context_processors.ai_mode",
                 "billing.context_processors.billing",
+                "core.context_processors.analytics",
             ],
         },
     },
@@ -140,6 +141,15 @@ ANYMAIL = {
 
 # Public base URL, for absolute links in emails sent outside a request (e.g. from webhooks).
 SITE_URL = env_str("SITE_URL", "")
+
+# --- Analytics (Google Tag Manager) -----------------------------------------
+# Empty = not loaded (local development and tests).
+GTM_CONTAINER_ID = env_str("GTM_CONTAINER_ID", "")
+# "public": only for visitors who are not signed in (the app shows names and health data);
+# "all": every page.
+GTM_SCOPE = env_str("GTM_SCOPE", "public")
+# Own consent banner (Consent Mode v2). Disable it if a CMP is configured inside GTM.
+COOKIE_CONSENT_BANNER = env_bool("COOKIE_CONSENT_BANNER", True)
 
 # --- Billing (Stripe) -------------------------------------------------------
 STRIPE_SECRET_KEY = env_str("STRIPE_SECRET_KEY", "")

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#2c7a4b">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232c7a4b'/%3E%3Cpath d='M7 20c5-2 10 1 18-3' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
   <title>{% block title %}menuamano{% endblock %}</title>
+  {% include "partials/gtm_head.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
@@ -81,5 +82,6 @@
     </nav>
   {% endif %}
   {% endwith %}
+  {% include "partials/consent_banner.html" %}
 </body>
 </html>
