@@ -28,6 +28,8 @@ class Trait(models.TextChoices):
     SULPHITES = "sulphites", "Sulfitos"
     LUPIN = "lupin", "Altramuces"
     MOLLUSCS = "molluscs", "Moluscos"
+    # Not one of the 14 EU labelled allergens: packaged products may not declare it.
+    LEGUMES = "legumes", "Legumbres"
     LACTOSE = "lactose", "Lactosa"
     MEAT = "meat", "Carne"
     PORK = "pork", "Cerdo"
@@ -45,6 +47,10 @@ ALLERGEN_TRAITS = frozenset(
 
 # Traits that imply other traits. Applied on save so the catalogue stays consistent.
 IMPLIED_TRAITS = {
+    # Soy, peanut and lupin are legumes: a legume restriction must also catch them.
+    Trait.SOY: {Trait.LEGUMES},
+    Trait.PEANUT: {Trait.LEGUMES},
+    Trait.LUPIN: {Trait.LEGUMES},
     Trait.PORK: {Trait.MEAT},
     Trait.LACTOSE: {Trait.MILK},
     Trait.MEAT: {Trait.ANIMAL_ORIGIN},
