@@ -1,5 +1,6 @@
 """Settings shared by every environment. Environment-specific modules extend this one."""
 
+from email.utils import getaddresses
 from pathlib import Path
 
 from config.env import env_float, env_int, env_list, env_str
@@ -19,6 +20,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "django_htmx",
+    "anymail",
     "core",
     "accounts",
     "households",
@@ -104,6 +106,35 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
+# --- Email ------------------------------------------------------------------
+# "console" prints emails to the logs (development); "mailgun" sends them through the Mailgun API.
+EMAIL_BACKENDS = {
+    "console": "django.core.mail.backends.console.EmailBackend",
+    "mailgun": "anymail.backends.mailgun.EmailBackend",
+}
+EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "console")
+EMAIL_BACKEND = EMAIL_BACKENDS.get(EMAIL_PROVIDER, EMAIL_BACKENDS["console"])
+DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "menuamano <no-reply@localhost>")
+SERVER_EMAIL = env_str("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+EMAIL_SUBJECT_PREFIX = "[menuamano] "
+# Server error reports (DEBUG=False). Format: "Name <email>, other@example.com".
+ADMINS = [(name or address, address) for name, address in getaddresses(env_list("DJANGO_ADMINS")) if address]
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 24  # reset links expire after one day
+
+ANYMAIL = {
+    key: value
+    for key, value in {
+        "MAILGUN_API_KEY": env_str("MAILGUN_API_KEY", ""),
+        "MAILGUN_SENDER_DOMAIN": env_str("MAILGUN_SENDER_DOMAIN", ""),
+        # EU accounts: https://api.eu.mailgun.net/v3
+        "MAILGUN_API_URL": env_str("MAILGUN_API_URL", "https://api.mailgun.net/v3"),
+        "MAILGUN_WEBHOOK_SIGNING_KEY": env_str("MAILGUN_WEBHOOK_SIGNING_KEY", ""),
+        "WEBHOOK_SECRET": env_str("ANYMAIL_WEBHOOK_SECRET", ""),
+        "REQUESTS_TIMEOUT": env_float("EMAIL_TIMEOUT_SECONDS", 15.0),
+    }.items()
+    if value not in ("", None)
+}
 
 # --- AI assistant -----------------------------------------------------------
 # "demo" runs a deterministic local provider; "openai" calls the OpenAI API from the backend.

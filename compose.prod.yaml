@@ -44,6 +44,17 @@ services:
       OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
       OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-2}
       OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-6000}
+      # Email through Mailgun (password resets, invitations, error reports).
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mailgun}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:?Set MAILGUN_API_KEY in Dokploy}
+      MAILGUN_SENDER_DOMAIN: ${MAILGUN_SENDER_DOMAIN:?Set MAILGUN_SENDER_DOMAIN in Dokploy (e.g. mg.example.com)}
+      MAILGUN_API_URL: ${MAILGUN_API_URL:-https://api.mailgun.net/v3}
+      MAILGUN_WEBHOOK_SIGNING_KEY: ${MAILGUN_WEBHOOK_SIGNING_KEY:-}
+      ANYMAIL_WEBHOOK_SECRET: ${ANYMAIL_WEBHOOK_SECRET:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:?Set DEFAULT_FROM_EMAIL in Dokploy (e.g. menuamano <no-reply@mg.example.com>)}
+      SERVER_EMAIL: ${SERVER_EMAIL:-}
+      DJANGO_ADMINS: ${DJANGO_ADMINS:-}
+      EMAIL_TIMEOUT_SECONDS: ${EMAIL_TIMEOUT_SECONDS:-15}
     command: >-
       sh -c "python manage.py migrate --noinput
       && python manage.py collectstatic --noinput

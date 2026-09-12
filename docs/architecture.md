@@ -140,6 +140,27 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   registra el proveedor, el modelo, la operación, el estado, la latencia y los tokens, sin el
   contenido.
 
+## Correo
+
+- `core/emails.send_email(plantilla, destinatario, asunto, contexto)` envía texto y HTML
+  (`templates/emails/`) con la etiqueta de la plantilla. **Nunca lanza excepciones**: si el
+  proveedor falla, lo registra en el log (solo con el dominio del destinatario) y devuelve `False`,
+  y quien lo llama avisa a la persona. Por ejemplo, la invitación sigue mostrando el enlace para
+  copiarlo.
+- Proveedor por entorno: consola en local, memoria (`mail.outbox`) en los tests y Mailgun con
+  Anymail en producción. `production.py` exige `MAILGUN_API_KEY`, `MAILGUN_SENDER_DOMAIN` y
+  `DEFAULT_FROM_EMAIL`, salvo que se elija `EMAIL_PROVIDER=console` a propósito.
+- Correos que se envían:
+  - recuperación de contraseña, con enlace de 24 h y un solo uso, y sin revelar si la dirección
+    existe;
+  - aviso de contraseña cambiada, tanto al restablecerla como al cambiarla;
+  - invitación al hogar, opcional y con el mismo enlace de un solo uso;
+  - errores del servidor a `ADMINS`.
+- Webhook de Mailgun (`/anymail/mailgun/tracking/`), que solo existe si hay
+  `MAILGUN_WEBHOOK_SIGNING_KEY`. Anymail verifica la firma HMAC y `core.signals` guarda cada
+  evento en `EmailEvent`. El id del evento evita duplicar los reintentos, y un fallo al guardarlo
+  se registra sin devolver error, para que Mailgun no reintente sin fin.
+
 ## Configuración por entorno
 
 `config/settings/base.py` define lo común; `local.py`, `production.py` y `test.py` lo

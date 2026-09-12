@@ -112,13 +112,25 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
       unidad habitual solo si hay equivalencia, y marca la cantidad con «≈». Cada origen muestra la
       cantidad tal como aparece en la receta.
 
+### Iteración 4 — correo con Mailgun
+
+- [x] Envío con Mailgun (Anymail, API HTTP, región configurable) en producción; consola en local.
+- [x] Recuperación y cambio de contraseña, con aviso por correo cuando cambia.
+- [x] Invitaciones por correo (opcional), manteniendo el enlace para copiar si falla el envío.
+- [x] Errores del servidor a `DJANGO_ADMINS`.
+- [x] Webhook de Mailgun con firma verificada: rebotes, quejas y fallos en `EmailEvent`.
+- [x] Comando `send_test_email` para comprobar la configuración desde Dokploy.
+- [x] Healthcheck `/healthz` y `compose.prod.yaml` para Dokploy.
+
 ### Pendiente o conocido
 
 - **Integración real con OpenAI sin probar contra la API**: el cliente se ha verificado con el
   SDK 3.13 instalado (firmas, excepciones y tipos) y con dobles de prueba, pero no con una clave
   real. Primer paso para continuar: fijar `AI_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL`
   en `.env`, pedir una propuesta semanal y revisar `AIRequestLog`.
-- **Invitaciones**: el enlace se comparte a mano (no se envían correos).
+- **Invitaciones**: el correo de destino es informativo; el enlace sirve a quien lo abra primero.
+- **Correo**: sin verificación de la dirección al registrarse y sin bajas automáticas cuando una
+  dirección rebota (los rebotes solo se registran). No se ha probado contra Mailgun real.
 - **Equivalencias**: solo se usan en la lista de compra. Las cantidades de cada comida se muestran en
   la unidad de la receta. El catálogo cubre las piezas y los líquidos más comunes; el resto hay que
   añadirlo por hogar.

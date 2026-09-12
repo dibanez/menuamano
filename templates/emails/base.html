@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{ brand }}</title></head>
+<body style="margin:0;padding:24px 12px;background:#f5f7f1;color:#1d2b23;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5">
+  <div style="max-width:520px;margin:0 auto">
+    <p style="margin:0 0 16px;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#1d2b23">{{ brand }}</p>
+    <div style="background:#ffffff;border:1px solid #d8ded3;border-radius:16px;padding:24px">
+      {% block content %}{% endblock %}
+    </div>
+    <p style="margin:16px 4px 0;font-size:13px;color:#56655b">{% block footer %}Has recibido este correo por tu cuenta en {{ brand }}. Si no esperabas este mensaje, puedes ignorarlo.{% endblock %}</p>
+  </div>
+</body>
+</html>

@@ -77,6 +77,7 @@ class Invitation(models.Model):
 
     household = models.ForeignKey(Household, on_delete=models.CASCADE, related_name="invitations")
     role = models.CharField("rol", max_length=10, choices=Role.choices, default=Role.EDITOR)
+    email = models.EmailField("enviada a", blank=True)
     token_hash = models.CharField(max_length=64, unique=True, editable=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -93,11 +94,11 @@ class Invitation(models.Model):
         ordering = ["-created_at"]
 
     @classmethod
-    def issue(cls, household, role, user, days=INVITATION_DAYS):
+    def issue(cls, household, role, user, email="", days=INVITATION_DAYS):
         """Create an invitation and return it with the raw token (never stored)."""
         token = secrets.token_urlsafe(32)
         invitation = cls.objects.create(
-            household=household, role=role, created_by=user, token_hash=hash_token(token),
+            household=household, role=role, created_by=user, email=email, token_hash=hash_token(token),
             expires_at=timezone.now() + timedelta(days=days),
         )
         return invitation, token

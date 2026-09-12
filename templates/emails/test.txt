@@ -1,0 +1,4 @@
+Correo de prueba de {{ brand }}.
+
+Si lo estás leyendo, el envío de correos funciona.
+Sistema de envío: {{ backend }}

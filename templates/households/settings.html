@@ -48,19 +48,28 @@
       </div>
     </div>
   {% endif %}
-  <form method="post" action="{% url 'households:invitation_create' %}" class="row">
+  <form method="post" action="{% url 'households:invitation_create' %}">
     {% csrf_token %}
-    <label for="invite-role">Rol</label>
-    <select id="invite-role" name="role" style="width:auto">
-      {% for value, label in roles %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{{ label }}</option>{% endfor %}
-    </select>
-    <button class="btn" type="submit">Crear enlace</button>
+    <div class="grid-2">
+      <div class="field">
+        <label for="invite-email">Correo (opcional)</label>
+        <input id="invite-email" type="email" name="email" autocomplete="off" placeholder="nombre@ejemplo.com">
+        <div class="help">Si lo escribes, le enviamos el enlace por correo.</div>
+      </div>
+      <div class="field">
+        <label for="invite-role">Rol</label>
+        <select id="invite-role" name="role">
+          {% for value, label in roles %}<option value="{{ value }}" {% if value == "editor" %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="btn" type="submit">Crear invitación</button>
   </form>
   {% if invitations %}
     <ul class="list" style="margin-top:8px">
       {% for inv in invitations %}
         <li class="row between">
-          <span class="small">{{ inv.get_role_display }}, caduca el {{ inv.expires_at|date:"j M, H:i" }}</span>
+          <span class="small">{% if inv.email %}{{ inv.email }}, {% endif %}{{ inv.get_role_display|lower }}, caduca el {{ inv.expires_at|date:"j M, H:i" }}</span>
           <form method="post" action="{% url 'households:invitation_revoke' inv.pk %}">{% csrf_token %}<button class="btn small ghost danger" type="submit">Anular</button></form>
         </li>
       {% endfor %}

@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<h1 style="margin:0 0 12px;font-size:20px">Te han invitado a «{{ household.name }}»</h1>
+<p style="margin:0 0 8px">{{ inviter }} te invita a unirte a su hogar en {{ brand }}, con el rol de {{ role|lower }}. Allí organizáis qué coméis, quién come en casa y qué hay que comprar.</p>
+<p style="margin:0">Si no tienes cuenta, podrás crearla al abrir el enlace.</p>
+{% with url=link label="Unirme al hogar" %}{% include "emails/_button.html" %}{% endwith %}
+<p style="margin:0;font-size:14px;color:#56655b">La invitación sirve una sola vez y caduca el {{ expires_at|date:"j \d\e F \a \l\a\s H:i" }}.</p>
+{% endblock %}
+{% block footer %}Recibes este correo porque alguien ha escrito tu dirección al invitarte a {{ brand }}. Si no conoces a quien te invita, ignóralo.{% endblock %}

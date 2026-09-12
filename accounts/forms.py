@@ -1,5 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, UserCreationForm
+
+from core.emails import send_email
 
 from .models import User
 
@@ -24,3 +26,15 @@ class LoginForm(AuthenticationForm):
         "invalid_login": "Correo o contraseña incorrectos.",
         "inactive": "Esta cuenta está desactivada.",
     }
+
+
+class MenuPasswordResetForm(PasswordResetForm):
+    email = forms.EmailField(
+        label="Correo electrónico", max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email", "autofocus": True}),
+    )
+
+    def send_mail(self, subject_template_name, email_template_name, context, from_email, to_email,
+                  html_email_template_name=None):
+        # Same page whether or not the address exists; send failures are only logged.
+        send_email("password_reset", to_email, "Restablece tu contraseña de menuamano", context)

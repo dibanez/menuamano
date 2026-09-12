@@ -1,0 +1,9 @@
+Hola:
+
+{{ inviter }} te invita a unirte al hogar «{{ household.name }}» en {{ brand }}, con el rol de {{ role|lower }}.
+En {{ brand }} organizáis qué coméis, quién come en casa y qué hay que comprar.
+
+Abre este enlace para unirte (si no tienes cuenta, podrás crearla):
+{{ link }}
+
+La invitación sirve una sola vez y caduca el {{ expires_at|date:"j \d\e F \a \l\a\s H:i" }}.

@@ -1,9 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+
+from core.emails import send_email
 
 from . import invitations
 from .forms import AddMemberForm, HouseholdForm, NewHouseholdForm
@@ -111,12 +115,29 @@ def remove_member(request, pk):
 @require_POST
 def invitation_create(request):
     role = request.POST.get("role")
+    email = request.POST.get("email", "").strip().lower()
     if role not in Role.values:
         messages.error(request, "Elige un rol válido para la invitación.")
         return redirect("households:settings")
-    _, token = Invitation.issue(request.household, role, request.user)
-    request.session[NEW_LINK_SESSION_KEY] = request.build_absolute_uri(reverse("households:invitation", args=[token]))
-    messages.success(request, f"Invitación creada. Copia el enlace y compártelo: sirve una vez y caduca en {INVITATION_DAYS} días.")
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            messages.error(request, "El correo no es válido. Revísalo o deja el campo vacío para copiar el enlace.")
+            return redirect("households:settings")
+    invitation, token = Invitation.issue(request.household, role, request.user, email=email)
+    link = request.build_absolute_uri(reverse("households:invitation", args=[token]))
+    request.session[NEW_LINK_SESSION_KEY] = link
+    if not email:
+        messages.success(request, f"Invitación creada. Copia el enlace y compártelo: sirve una vez y caduca en {INVITATION_DAYS} días.")
+    elif send_email(
+        "invitation", email, f"Te han invitado a «{request.household.name}» en menuamano",
+        {"household": request.household, "inviter": request.user, "role": invitation.get_role_display(),
+         "link": link, "expires_at": invitation.expires_at},
+    ):
+        messages.success(request, f"Invitación enviada a {email}. También puedes copiar el enlace.")
+    else:
+        messages.warning(request, f"No se ha podido enviar el correo a {email}. Copia el enlace y compártelo tú.")
     return redirect("households:settings")
 
 

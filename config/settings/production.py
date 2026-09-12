@@ -1,6 +1,9 @@
+from django.core.exceptions import ImproperlyConfigured
+
 from config.env import env_bool, env_int, env_list, env_str
 
 from .base import *  # noqa: F401,F403
+from .base import ANYMAIL, EMAIL_BACKENDS
 
 DEBUG = False
 SECRET_KEY = env_str("DJANGO_SECRET_KEY", required=True)
@@ -19,3 +22,14 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
+
+# Email: Mailgun by default. Missing credentials stop the deployment instead of losing emails.
+EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "mailgun")
+if EMAIL_PROVIDER not in EMAIL_BACKENDS:
+    raise ImproperlyConfigured(f"Unknown EMAIL_PROVIDER {EMAIL_PROVIDER!r}; use 'mailgun' or 'console'")
+EMAIL_BACKEND = EMAIL_BACKENDS[EMAIL_PROVIDER]
+if EMAIL_PROVIDER == "mailgun":
+    ANYMAIL["MAILGUN_API_KEY"] = env_str("MAILGUN_API_KEY", required=True)
+    ANYMAIL["MAILGUN_SENDER_DOMAIN"] = env_str("MAILGUN_SENDER_DOMAIN", required=True)
+    DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", required=True)
+    SERVER_EMAIL = env_str("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
