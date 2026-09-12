@@ -147,9 +147,11 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   proveedor falla, lo registra en el log (solo con el dominio del destinatario) y devuelve `False`,
   y quien lo llama avisa a la persona. Por ejemplo, la invitación sigue mostrando el enlace para
   copiarlo.
-- Proveedor por entorno: consola en local, memoria (`mail.outbox`) en los tests y Mailgun con
-  Anymail en producción. `production.py` exige `MAILGUN_API_KEY`, `MAILGUN_SENDER_DOMAIN` y
-  `DEFAULT_FROM_EMAIL`, salvo que se elija `EMAIL_PROVIDER=console` a propósito.
+- Proveedor por entorno: consola en local, memoria (`mail.outbox`) en los tests y SMTP de
+  Mailgun en producción (`EMAIL_PROVIDER=smtp`). `production.py` exige `EMAIL_HOST_USER`,
+  `EMAIL_HOST_PASSWORD` y `DEFAULT_FROM_EMAIL`. La API HTTP de Mailgun (Anymail) sigue disponible
+  con `EMAIL_PROVIDER=mailgun`, que exige `MAILGUN_API_KEY` y `MAILGUN_SENDER_DOMAIN`.
+  `EMAIL_PROVIDER=console` desactiva el envío a propósito.
 - Correos que se envían:
   - recuperación de contraseña, con enlace de 24 h y un solo uso, y sin revelar si la dirección
     existe;

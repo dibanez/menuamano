@@ -59,8 +59,8 @@ Toda la configuración llega por variables de entorno (ver `.env.example`).
 | `OPENAI_API_KEY` | Solo la lee el servidor. Nunca llega al navegador ni al repositorio |
 | `OPENAI_MODEL` | Cualquier modelo compatible con salidas estructuradas en la Responses API. No hay valor fijo en el código |
 | `OPENAI_TIMEOUT_SECONDS`, `OPENAI_MAX_RETRIES`, `OPENAI_MAX_OUTPUT_TOKENS` | Límites de cada llamada |
-| `EMAIL_PROVIDER` | `console` (local, por defecto) o `mailgun` (producción, por defecto) |
-| `MAILGUN_*`, `DEFAULT_FROM_EMAIL`, `DJANGO_ADMINS` | Correo: ver «Correo con Mailgun» |
+| `EMAIL_PROVIDER` | `console` (local, por defecto), `smtp` (producción, por defecto) o `mailgun` (API HTTP) |
+| `EMAIL_*`, `MAILGUN_*`, `DEFAULT_FROM_EMAIL`, `DJANGO_ADMINS` | Correo: ver «Correo con Mailgun» |
 
 Si `AI_PROVIDER=openai` y falta la clave o el modelo, el asistente aparece como «IA sin
 configurar» y el resto de la aplicación funciona igual.
@@ -81,10 +81,11 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `POSTGRES_PASSWORD` | Sí | Contraseña de la base de datos |
    | `POSTGRES_DB`, `POSTGRES_USER` | No | `menuamano` por defecto |
    | `DJANGO_CSRF_TRUSTED_ORIGINS` | No | `https://tu-dominio` si usas otro origen |
-   | `MAILGUN_API_KEY` | Sí | Clave de envío de Mailgun (mejor una *sending key* del dominio) |
-   | `MAILGUN_SENDER_DOMAIN` | Sí | Dominio verificado en Mailgun, p. ej. `mg.example.com` |
+   | `EMAIL_HOST_USER` | Sí | Usuario SMTP de Mailgun, p. ej. `postmaster@mg.example.com` |
+   | `EMAIL_HOST_PASSWORD` | Sí | Contraseña SMTP de ese usuario |
    | `DEFAULT_FROM_EMAIL` | Sí | Remitente, p. ej. `menuamano <no-reply@mg.example.com>` |
-   | `MAILGUN_API_URL` | No | Por defecto la región US; en la UE, `https://api.eu.mailgun.net/v3` |
+   | `EMAIL_HOST` | No | `smtp.mailgun.org` por defecto; en la UE, `smtp.eu.mailgun.org` |
+   | `EMAIL_PORT` | No | `587` (STARTTLS) por defecto; `465` activa SSL; `2525` si el 587 está bloqueado |
    | `MAILGUN_WEBHOOK_SIGNING_KEY` | Recomendada | Activa el webhook de rebotes y quejas |
    | `DJANGO_ADMINS` | Recomendada | Quién recibe los errores del servidor, p. ej. `Ana <ana@example.com>` |
    | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Sí* | Clave secreta y secreto del webhook de Stripe |
@@ -109,18 +110,25 @@ desde Dokploy. No cargues `load_demo` en producción.
 
 La aplicación envía la recuperación de contraseña, el aviso de contraseña cambiada, las
 invitaciones al hogar y los errores del servidor a `DJANGO_ADMINS`. En producción el correo va por
-la API de Mailgun (Anymail), y el despliegue no arranca si faltan la clave, el dominio o el
-remitente. En local los correos se escriben en los logs del contenedor `web`.
+el SMTP de Mailgun, y el despliegue no arranca si faltan el usuario, la contraseña o el remitente.
+En local los correos se escriben en los logs del contenedor `web`.
 
 1. En Mailgun, añade y verifica el dominio de envío (registros SPF, DKIM y, si quieres, el CNAME
-   de seguimiento) y crea una *sending API key* para ese dominio.
-2. Pon en Dokploy `MAILGUN_API_KEY`, `MAILGUN_SENDER_DOMAIN`, `DEFAULT_FROM_EMAIL` (con una
-   dirección de ese dominio) y, si la cuenta es de la UE, `MAILGUN_API_URL`.
-3. Webhooks (recomendado): en Mailgun → *Webhooks* apunta los eventos *Permanent failure*,
+   de seguimiento).
+2. En *Sending → Domain settings → SMTP credentials* usa `postmaster@<dominio>` o crea otro
+   usuario, y genera su contraseña (Mailgun solo la enseña una vez).
+3. Pon en Dokploy `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` y `DEFAULT_FROM_EMAIL` (con una
+   dirección de ese dominio). Si la cuenta es de la UE, `EMAIL_HOST=smtp.eu.mailgun.org`.
+
+Para usar la API HTTP de Mailgun en lugar de SMTP: `EMAIL_PROVIDER=mailgun`, `MAILGUN_API_KEY`,
+`MAILGUN_SENDER_DOMAIN` y, en la UE, `MAILGUN_API_URL=https://api.eu.mailgun.net/v3`.
+
+Además, en los dos casos:
+1. Webhooks (recomendado): en Mailgun → *Webhooks* apunta los eventos *Permanent failure*,
    *Temporary failure* y *Spam complaints* a `https://<tu-dominio>/anymail/mailgun/tracking/`, y
    copia la *HTTP webhook signing key* en `MAILGUN_WEBHOOK_SIGNING_KEY`. Los eventos se ven en
    el admin de Django («Eventos de correo»). Sin esa clave, la ruta del webhook no existe.
-4. Comprueba el envío desde la terminal del contenedor `web`:
+2. Comprueba el envío desde la terminal del contenedor `web`:
    `python manage.py send_test_email tu@correo.com`.
 
 ### Pagos con Stripe

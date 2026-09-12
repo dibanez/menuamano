@@ -112,13 +112,24 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
 # --- Email ------------------------------------------------------------------
-# "console" prints emails to the logs (development); "mailgun" sends them through the Mailgun API.
+# "console" prints emails to the logs (development); "smtp" sends them through an SMTP server
+# (Mailgun SMTP by default); "mailgun" sends them through the Mailgun HTTP API.
 EMAIL_BACKENDS = {
     "console": "django.core.mail.backends.console.EmailBackend",
+    "smtp": "django.core.mail.backends.smtp.EmailBackend",
     "mailgun": "anymail.backends.mailgun.EmailBackend",
 }
 EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "console")
 EMAIL_BACKEND = EMAIL_BACKENDS.get(EMAIL_PROVIDER, EMAIL_BACKENDS["console"])
+# SMTP. Mailgun: smtp.mailgun.org (EU accounts: smtp.eu.mailgun.org), port 587 with STARTTLS,
+# or 465 with implicit TLS. The user and password are the domain's SMTP credentials.
+EMAIL_HOST = env_str("EMAIL_HOST", "smtp.mailgun.org")
+EMAIL_PORT = env_int("EMAIL_PORT", 587)
+EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", EMAIL_PORT == 465)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", not EMAIL_USE_SSL)
+EMAIL_TIMEOUT = env_float("EMAIL_TIMEOUT_SECONDS", 15.0)
 DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", "menuamano <no-reply@localhost>")
 SERVER_EMAIL = env_str("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 EMAIL_SUBJECT_PREFIX = "[menuamano] "

@@ -117,7 +117,8 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 
 ### Iteración 4 — correo con Mailgun
 
-- [x] Envío con Mailgun (Anymail, API HTTP, región configurable) en producción; consola en local.
+- [x] Envío con Mailgun en producción por SMTP (por defecto) o por la API HTTP (Anymail, región
+  configurable); consola en local.
 - [x] Recuperación y cambio de contraseña, con aviso por correo cuando cambia.
 - [x] Invitaciones por correo (opcional), manteniendo el enlace para copiar si falla el envío.
 - [x] Errores del servidor a `DJANGO_ADMINS`.

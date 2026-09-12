@@ -118,24 +118,75 @@ def test_send_test_email_command(db):
 # --- Production settings ----------------------------------------------------------------------------
 
 EMAIL_VARS = ["EMAIL_PROVIDER", "MAILGUN_API_KEY", "MAILGUN_SENDER_DOMAIN", "MAILGUN_API_URL", "DEFAULT_FROM_EMAIL",
-              "MAILGUN_WEBHOOK_SIGNING_KEY", "ANYMAIL_WEBHOOK_SECRET", "DJANGO_ADMINS", "SERVER_EMAIL"]
+              "MAILGUN_WEBHOOK_SIGNING_KEY", "ANYMAIL_WEBHOOK_SECRET", "DJANGO_ADMINS", "SERVER_EMAIL",
+              "EMAIL_HOST", "EMAIL_PORT", "EMAIL_HOST_USER", "EMAIL_HOST_PASSWORD", "EMAIL_USE_TLS", "EMAIL_USE_SSL"]
 PRINT_SETTINGS = (
     "import django; from django.conf import settings; django.setup(); "
     "print(settings.EMAIL_BACKEND); print(sorted(settings.ANYMAIL)); print(settings.DEFAULT_FROM_EMAIL); print(settings.ADMINS)"
 )
+PRINT_SMTP = (
+    "import django; from django.conf import settings as s; django.setup(); "
+    "print(s.EMAIL_BACKEND, s.EMAIL_HOST, s.EMAIL_PORT, s.EMAIL_HOST_USER, s.EMAIL_USE_TLS, s.EMAIL_USE_SSL, s.DEFAULT_FROM_EMAIL)"
+)
+SMTP_CREDENTIALS = {
+    "EMAIL_HOST_USER": "postmaster@mg.example.com", "EMAIL_HOST_PASSWORD": "smtp-secret",
+    "DEFAULT_FROM_EMAIL": "menuamano <no-reply@mg.example.com>",
+}
 
 
-def run_production_settings(**extra):
+def run_production_settings(script=PRINT_SETTINGS, **extra):
     env = {k: v for k, v in os.environ.items() if k not in EMAIL_VARS}
     env.update(DJANGO_SETTINGS_MODULE="config.settings.production", DJANGO_SECRET_KEY="s" * 50,
                DJANGO_ALLOWED_HOSTS="menuamano.example.com", BILLING_ENABLED="false", **extra)
-    return subprocess.run([sys.executable, "-c", PRINT_SETTINGS], env=env, cwd=BASE_DIR, capture_output=True, text=True)
+    return subprocess.run([sys.executable, "-c", script], env=env, cwd=BASE_DIR, capture_output=True, text=True)
 
 
-def test_production_uses_mailgun_with_required_settings():
+def test_production_uses_mailgun_smtp_by_default():
+    result = run_production_settings(PRINT_SMTP, **SMTP_CREDENTIALS)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split(" ", 6) == [
+        "django.core.mail.backends.smtp.EmailBackend", "smtp.mailgun.org", "587", "postmaster@mg.example.com",
+        "True", "False", "menuamano <no-reply@mg.example.com>\n",
+    ]
+
+
+def test_smtp_port_465_uses_implicit_tls():
+    result = run_production_settings(PRINT_SMTP, EMAIL_HOST="smtp.eu.mailgun.org", EMAIL_PORT="465", **SMTP_CREDENTIALS)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split()[1:6] == ["smtp.eu.mailgun.org", "465", "postmaster@mg.example.com", "False", "True"]
+
+
+def test_production_refuses_to_start_without_smtp_credentials():
+    result = run_production_settings(EMAIL_HOST_USER="postmaster@mg.example.com", DEFAULT_FROM_EMAIL="x@mg.example.com")
+    assert result.returncode != 0
+    assert "EMAIL_HOST_PASSWORD" in result.stderr
+
+
+def test_production_refuses_tls_and_ssl_together():
+    result = run_production_settings(EMAIL_USE_TLS="true", EMAIL_USE_SSL="true", **SMTP_CREDENTIALS)
+    assert result.returncode != 0
+    assert "exclusive" in result.stderr
+
+
+def test_smtp_backend_logs_in_over_starttls(settings):
+    settings.EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    settings.EMAIL_HOST, settings.EMAIL_PORT = "smtp.mailgun.org", 587
+    settings.EMAIL_HOST_USER, settings.EMAIL_HOST_PASSWORD = "postmaster@mg.example.com", "smtp-secret"
+    settings.EMAIL_USE_TLS, settings.EMAIL_USE_SSL = True, False
+    with mock.patch("django.core.mail.backends.smtp.smtplib.SMTP") as smtp:
+        assert send_email("test", "ops@example.com", "Prueba", {"backend": "smtp"}) is True
+    smtp.assert_called_once_with("smtp.mailgun.org", 587, local_hostname=mock.ANY, timeout=mock.ANY)
+    connection = smtp.return_value
+    connection.starttls.assert_called_once()
+    connection.login.assert_called_once_with("postmaster@mg.example.com", "smtp-secret")
+    assert connection.sendmail.call_args.args[1] == ["ops@example.com"]
+
+
+def test_production_uses_mailgun_api_when_chosen():
     result = run_production_settings(
-        MAILGUN_API_KEY="key-123", MAILGUN_SENDER_DOMAIN="mg.example.com", MAILGUN_API_URL="https://api.eu.mailgun.net/v3",
-        DEFAULT_FROM_EMAIL="menuamano <no-reply@mg.example.com>", DJANGO_ADMINS="Ana <ana@example.com>, ops@example.com",
+        EMAIL_PROVIDER="mailgun", MAILGUN_API_KEY="key-123", MAILGUN_SENDER_DOMAIN="mg.example.com",
+        MAILGUN_API_URL="https://api.eu.mailgun.net/v3", DEFAULT_FROM_EMAIL="menuamano <no-reply@mg.example.com>",
+        DJANGO_ADMINS="Ana <ana@example.com>, ops@example.com",
     )
     assert result.returncode == 0, result.stderr
     backend, keys, sender, admins = result.stdout.strip().splitlines()
@@ -146,7 +197,9 @@ def test_production_uses_mailgun_with_required_settings():
 
 
 def test_production_refuses_to_start_without_mailgun_credentials():
-    result = run_production_settings(MAILGUN_SENDER_DOMAIN="mg.example.com", DEFAULT_FROM_EMAIL="x@mg.example.com")
+    result = run_production_settings(
+        EMAIL_PROVIDER="mailgun", MAILGUN_SENDER_DOMAIN="mg.example.com", DEFAULT_FROM_EMAIL="x@mg.example.com"
+    )
     assert result.returncode != 0
     assert "MAILGUN_API_KEY" in result.stderr
 

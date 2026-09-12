@@ -70,10 +70,18 @@ services:
       PREMIUM_AI_MONTHLY_LIMIT: ${PREMIUM_AI_MONTHLY_LIMIT:-150}
       PREMIUM_PRICE_MONTHLY_LABEL: ${PREMIUM_PRICE_MONTHLY_LABEL:-4,99 €}
       PREMIUM_PRICE_YEARLY_LABEL: ${PREMIUM_PRICE_YEARLY_LABEL:-49 €}
-      # Email through Mailgun (password resets, invitations, error reports).
-      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-mailgun}
-      MAILGUN_API_KEY: ${MAILGUN_API_KEY:?Set MAILGUN_API_KEY in Dokploy}
-      MAILGUN_SENDER_DOMAIN: ${MAILGUN_SENDER_DOMAIN:?Set MAILGUN_SENDER_DOMAIN in Dokploy (e.g. mg.example.com)}
+      # Email (password resets, invitations, error reports): Mailgun SMTP by default.
+      # Django refuses to start if the chosen provider lacks its credentials.
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-smtp}
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.mailgun.org}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-}
+      # Only with EMAIL_PROVIDER=mailgun (HTTP API).
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_SENDER_DOMAIN: ${MAILGUN_SENDER_DOMAIN:-}
       MAILGUN_API_URL: ${MAILGUN_API_URL:-https://api.mailgun.net/v3}
       MAILGUN_WEBHOOK_SIGNING_KEY: ${MAILGUN_WEBHOOK_SIGNING_KEY:-}
       ANYMAIL_WEBHOOK_SECRET: ${ANYMAIL_WEBHOOK_SECRET:-}

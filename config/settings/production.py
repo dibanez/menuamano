@@ -23,10 +23,10 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
-# Email: Mailgun by default. Missing credentials stop the deployment instead of losing emails.
-EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "mailgun")
+# Email: SMTP (Mailgun SMTP) by default. Missing credentials stop the deployment instead of losing emails.
+EMAIL_PROVIDER = env_str("EMAIL_PROVIDER", "smtp")
 if EMAIL_PROVIDER not in EMAIL_BACKENDS:
-    raise ImproperlyConfigured(f"Unknown EMAIL_PROVIDER {EMAIL_PROVIDER!r}; use 'mailgun' or 'console'")
+    raise ImproperlyConfigured(f"Unknown EMAIL_PROVIDER {EMAIL_PROVIDER!r}; use 'smtp', 'mailgun' or 'console'")
 EMAIL_BACKEND = EMAIL_BACKENDS[EMAIL_PROVIDER]
 # Billing: on by default. Without Stripe every household would get paid features for free.
 BILLING_ENABLED = env_bool("BILLING_ENABLED", True)
@@ -36,8 +36,14 @@ if BILLING_ENABLED:
     STRIPE_PRICE_MONTHLY = env_str("STRIPE_PRICE_MONTHLY", required=True)
     STRIPE_PRICE_YEARLY = env_str("STRIPE_PRICE_YEARLY", required=True)
 
+if EMAIL_PROVIDER == "smtp":
+    EMAIL_HOST_USER = env_str("EMAIL_HOST_USER", required=True)
+    EMAIL_HOST_PASSWORD = env_str("EMAIL_HOST_PASSWORD", required=True)
+    if EMAIL_USE_TLS and EMAIL_USE_SSL:  # noqa: F405
+        raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL are exclusive: use TLS with port 587, SSL with 465")
 if EMAIL_PROVIDER == "mailgun":
     ANYMAIL["MAILGUN_API_KEY"] = env_str("MAILGUN_API_KEY", required=True)
     ANYMAIL["MAILGUN_SENDER_DOMAIN"] = env_str("MAILGUN_SENDER_DOMAIN", required=True)
+if EMAIL_PROVIDER != "console":
     DEFAULT_FROM_EMAIL = env_str("DEFAULT_FROM_EMAIL", required=True)
     SERVER_EMAIL = env_str("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
