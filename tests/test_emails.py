@@ -242,3 +242,13 @@ def test_webhook_with_wrong_signature_is_rejected(client, db):
     response = client.post("/anymail/mailgun/tracking/", payload, content_type="application/json")
     assert response.status_code == 400
     assert not EmailEvent.objects.exists()
+
+
+def test_rejected_webhooks_are_logged_without_emailing_admins(client, db, settings, caplog):
+    # Anyone can call the public webhook URL, and Mailgun retries for hours: never mail admins for it.
+    settings.ADMINS = [("Ops", "ops@example.com")]
+    payload = mailgun_payload("token-3", key="not-the-key")
+    response = client.post("/anymail/mailgun/tracking/", payload, content_type="application/json")
+    assert response.status_code == 400
+    assert mail.outbox == []
+    assert any(r.name == "django.security.AnymailWebhookValidationFailure" for r in caplog.records)

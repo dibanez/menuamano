@@ -208,5 +208,10 @@ LOGGING = {
         # The SDK may log request details at DEBUG; keep it quiet.
         "openai": {"level": "WARNING"},
         "httpx2": {"level": "WARNING"},
+        # The email webhook URL is public and Mailgun retries for hours: log rejected calls,
+        # never email them to DJANGO_ADMINS.
+        "django.security.AnymailWebhookValidationFailure": {
+            "handlers": ["console"], "level": "WARNING", "propagate": False,
+        },
     },
 }

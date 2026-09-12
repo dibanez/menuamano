@@ -126,7 +126,9 @@ Para usar la API HTTP de Mailgun en lugar de SMTP: `EMAIL_PROVIDER=mailgun`, `MA
 Además, en los dos casos:
 1. Webhooks (recomendado): en Mailgun → *Webhooks* apunta los eventos *Permanent failure*,
    *Temporary failure* y *Spam complaints* a `https://<tu-dominio>/anymail/mailgun/tracking/`, y
-   copia la *HTTP webhook signing key* en `MAILGUN_WEBHOOK_SIGNING_KEY`. Los eventos se ven en
+   copia la *HTTP webhook signing key* en `MAILGUN_WEBHOOK_SIGNING_KEY`. Deja vacía
+   `ANYMAIL_WEBHOOK_SECRET`, salvo que pongas ese usuario y contraseña en la URL del webhook
+   (`https://usuario:contraseña@<tu-dominio>/…`); si no, se rechazan todos los eventos. Los eventos se ven en
    el admin de Django («Eventos de correo»). Sin esa clave, la ruta del webhook no existe.
 2. Comprueba el envío desde la terminal del contenedor `web`:
    `python manage.py send_test_email tu@correo.com`.
