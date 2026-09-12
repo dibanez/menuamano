@@ -53,6 +53,7 @@
   {% if can_manage and grant_form.fields.user.queryset.exists %}
     <form method="post" action="{% url 'diners:grant_add' diner.pk %}" class="row" style="margin-top:12px">
       {% csrf_token %}
+      <label class="sr-only" for="{{ grant_form.user.id_for_label }}">Persona del hogar a la que dar acceso</label>
       <span style="flex:1;min-width:12rem">{{ grant_form.user }}</span>
       <button class="btn" type="submit">Dar acceso</button>
     </form>

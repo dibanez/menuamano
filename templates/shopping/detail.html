@@ -13,13 +13,13 @@
     <form method="post" action="{% url 'shopping:recalculate' shopping_list.pk %}">{% csrf_token %}<button class="btn small" type="submit">Recalcular</button></form>
     {% endif %}
   </div>
-  <div class="progress" style="margin-top:8px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span style="width:{{ percent }}%"></span></div>
+  <div class="progress" style="margin-top:8px" role="progressbar" aria-label="Progreso de la compra" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span style="width:{{ percent }}%"></span></div>
   <p class="muted small" style="margin:8px 0 0">menuamano todavía no gestiona la despensa: la lista no descuenta lo que ya tengáis en casa. Los ingredientes «al gusto» no aparecen.</p>
 </div>
 
 {% for label, items in groups %}
   <section class="shop-group">
-    <h3>{{ label }}</h3>
+    <h2>{{ label }}</h2>
     <ul class="list">{% for item in items %}{% include "shopping/_item.html" %}{% endfor %}</ul>
   </section>
 {% empty %}
@@ -31,7 +31,7 @@
 
 {% if surplus %}
   <section class="shop-group">
-    <h3>Comprado y ya no necesario</h3>
+    <h2>Comprado y ya no necesario</h2>
     <p class="muted small">El menú cambió después de comprar. Se mantiene el registro; no se da por consumido.</p>
     <ul class="list">{% for item in surplus %}{% include "shopping/_item.html" %}{% endfor %}</ul>
   </section>

@@ -270,7 +270,7 @@ fieldset.field legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
   display: flex; flex-direction: column; gap: 3px; min-height: 64px; padding: 6px; border-radius: var(--radius-s);
   background: var(--surface); border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-size: 0.85rem;
 }
-.month a.cell.other { opacity: 0.45; }
+.month a.cell.other { background: var(--paper); color: var(--muted); border-style: dashed; }
 .month a.cell.today { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); }
 .dots { display: flex; gap: 3px; flex-wrap: wrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
@@ -304,7 +304,7 @@ ol.steps li::marker { font-weight: 800; color: var(--leaf); }
 
 /* --- Shopping ------------------------------------------------------------------------ */
 
-.shop-group h3 { margin: 18px 0 6px; font-size: 0.95rem; color: var(--muted); }
+.shop-group h2 { margin: 18px 0 6px; font-size: 0.95rem; color: var(--muted); }
 .shop-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .shop-item .name { font-weight: 650; }
 .shop-item.done .name { text-decoration: line-through; color: var(--muted); }

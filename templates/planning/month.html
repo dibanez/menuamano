@@ -3,18 +3,20 @@
 {% block content %}
 {% include "planning/_period_nav.html" %}
 <div class="period-nav">
-  <a class="btn small" href="?fecha={{ prev|date:'Y-m-d' }}" aria-label="Mes anterior"><svg class="icon icon-s"><use href="#i-left"/></svg></a>
+  <a class="btn small" href="?fecha={{ prev|date:'Y-m-d' }}" aria-label="Mes anterior"><svg class="icon icon-s" aria-hidden="true"><use href="#i-left"/></svg></a>
   <h1 class="title" style="margin:0;font-size:1.25rem">{{ title|capfirst }}</h1>
-  <a class="btn small" href="?fecha={{ next|date:'Y-m-d' }}" aria-label="Mes siguiente"><svg class="icon icon-s"><use href="#i-right"/></svg></a>
+  <a class="btn small" href="?fecha={{ next|date:'Y-m-d' }}" aria-label="Mes siguiente"><svg class="icon icon-s" aria-hidden="true"><use href="#i-right"/></svg></a>
 </div>
-<div class="month" role="grid">
-  {% for d in dows %}<div class="dow" role="columnheader">{{ d }}</div>{% endfor %}
+<div class="month">
+  {% for d in dows %}<div class="dow" aria-hidden="true">{{ d }}</div>{% endfor %}
   {% for week in weeks %}
     {% for day in week %}
-      <a class="cell{% if day.date.month != month %} other{% endif %}{% if day.date == today %} today{% endif %}" href="{% url 'planning:day' day.date|date:'Y-m-d' %}" role="gridcell">
+      <a class="cell{% if day.date.month != month %} other{% endif %}{% if day.date == today %} today{% endif %}" href="{% url 'planning:day' day.date|date:'Y-m-d' %}"
+         aria-label="{{ day.date|date:'l j \d\e F' }}{% for slot in day.slots %}{% if slot.meal %}, {{ slot.label|lower }}: {{ slot.meal.get_mode_display|lower }}{% if slot.meal.safety_status == 'conflict' %} (conflicto){% elif slot.meal.safety_status == 'unknown' %} (revisar){% endif %}{% endif %}{% endfor %}"
+         {% if day.date == today %}aria-current="date"{% endif %}>
         <strong>{{ day.date.day }}</strong>
-        <span class="dots">
-          {% for slot in day.slots %}{% if slot.meal %}<span class="dot {{ slot.meal_type }}{% if slot.meal.safety_status == 'conflict' %} conflict{% endif %}" title="{{ slot.label }}: {{ slot.meal.get_mode_display }}"></span>{% endif %}{% endfor %}
+        <span class="dots" aria-hidden="true">
+          {% for slot in day.slots %}{% if slot.meal %}<span class="dot {{ slot.meal_type }}{% if slot.meal.safety_status == 'conflict' %} conflict{% endif %}"></span>{% endif %}{% endfor %}
         </span>
       </a>
     {% endfor %}
