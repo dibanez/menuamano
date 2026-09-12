@@ -202,16 +202,20 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
-    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "filters": {"no_traceback": {"()": "core.log_filters.DropTraceback"}},
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "plain"},
+        "console_brief": {"class": "logging.StreamHandler", "formatter": "plain", "filters": ["no_traceback"]},
+    },
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         # The SDK may log request details at DEBUG; keep it quiet.
         "openai": {"level": "WARNING"},
         "httpx2": {"level": "WARNING"},
-        # The email webhook URL is public and Mailgun retries for hours: log rejected calls,
-        # never email them to DJANGO_ADMINS.
+        # The email webhook URL is public and Mailgun retries for hours: log rejected calls in one
+        # line, never email them to DJANGO_ADMINS.
         "django.security.AnymailWebhookValidationFailure": {
-            "handlers": ["console"], "level": "WARNING", "propagate": False,
+            "handlers": ["console_brief"], "level": "WARNING", "propagate": False,
         },
     },
 }

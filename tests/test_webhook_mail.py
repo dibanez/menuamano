@@ -59,6 +59,32 @@ def test_signed_events_are_stored_without_emailing_anyone(client, db, admins, ev
     assert mail.outbox == []
 
 
+def test_rejections_are_logged_in_one_line():
+    import io
+    import logging
+
+    from django.conf import settings
+
+    from core.log_filters import DropTraceback
+
+    logger_conf = settings.LOGGING["loggers"]["django.security.AnymailWebhookValidationFailure"]
+    handler_conf = settings.LOGGING["handlers"][logger_conf["handlers"][0]]
+    assert "no_traceback" in handler_conf["filters"] and logger_conf["propagate"] is False
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.addFilter(DropTraceback())
+    logger = logging.getLogger("test.drop_traceback")
+    logger.addHandler(handler)
+    try:
+        raise ValueError("Mailgun webhook called with incorrect signature")
+    except ValueError as exc:
+        logger.error(str(exc), exc_info=exc)
+    finally:
+        logger.removeHandler(handler)
+    assert stream.getvalue() == "Mailgun webhook called with incorrect signature\n"
+
+
 def test_signed_but_malformed_event_sends_nothing(client, db, admins):
     payload = json.loads(mailgun_payload("t-bad"))
     payload["event-data"] = {"event": "failed"}  # valid signature, almost no data
