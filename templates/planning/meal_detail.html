@@ -14,7 +14,7 @@
       </form>
     {% endif %}
   </span>
-  <p class="lead">{{ meal.get_mode_display }}. {{ attendee_servings|num }} ración{{ attendee_servings|pluralize:"es" }} para {{ meal.attendees.all|length }} persona{{ meal.attendees.all|length|pluralize }}{% if leftovers_extra %}, más {{ leftovers_extra|num }} para sobras{% endif %}.{% if meal.locked %} Protegida frente a regeneraciones.{% endif %}</p>
+  <p class="lead">{{ meal.get_mode_display }}. {{ attendee_servings|num }} {% if attendee_servings == 1 %}ración{% else %}raciones{% endif %} para {{ meal.attendees.all|length }} persona{{ meal.attendees.all|length|pluralize }}{% if leftovers_extra %}, más {{ leftovers_extra|num }} para sobras{% endif %}.{% if meal.locked %} Protegida frente a regeneraciones.{% endif %}</p>
 </div>
 
 {% if dependents %}
@@ -78,20 +78,26 @@
   <div class="notice"><ul style="margin:0">{% for i in warnings %}<li>{{ i.message }}</li>{% endfor %}</ul></div>
 {% endif %}
 
-<section class="panel">
-  <h2 class="mt-0">Quién come</h2>
+<section class="panel attendees">
+  <div class="row between">
+    <h2 class="mt-0">Quién come</h2>
+    {% if can_edit %}<span class="htmx-indicator small muted" id="att-saving"><span class="spinner"></span> Guardando…</span>{% endif %}
+  </div>
   {% if can_edit %}
-  <form method="post" action="{% url 'planning:meal_attendees' meal.pk %}">
+  {# Saves on every change and swaps in the refreshed page, so notices and quantities follow. #}
+  <form method="post" action="{% url 'planning:meal_attendees' meal.pk %}" class="att-form"
+        hx-post="{% url 'planning:meal_attendees' meal.pk %}" hx-trigger="change" hx-select="#main" hx-target="#main"
+        hx-swap="outerHTML" hx-sync="this:replace" hx-indicator="#att-saving">
     {% csrf_token %}
-    <div class="choices">
+    <div class="choices att-people">
       {% for row in diners %}
-        <label><input type="checkbox" name="diners" value="{{ row.diner.pk }}" {% if row.attendee %}checked{% endif %}> {{ row.diner.alias }}</label>
+        <label for="att-{{ row.diner.pk }}"><input id="att-{{ row.diner.pk }}" type="checkbox" name="diners" value="{{ row.diner.pk }}" {% if row.attendee %}checked{% endif %}> {{ row.diner.alias }}</label>
       {% empty %}
         <p class="muted">No hay comensales. <a href="{% url 'diners:create' %}">Añade uno</a>.</p>
       {% endfor %}
     </div>
     {% if diners %}
-    <details class="fold">
+    <details class="fold att-portions" id="att-portions" hx-preserve>
       <summary class="link-btn">Ajustar raciones</summary>
       <ul class="list">
         {% for row in diners %}
@@ -104,28 +110,25 @@
       </ul>
     </details>
     {% endif %}
-    <div class="form-actions"><button class="btn" type="submit">Guardar asistentes</button></div>
+    <noscript><div class="form-actions"><button class="btn" type="submit">Guardar asistentes</button></div></noscript>
   </form>
   {% else %}
-    <p>{% for a in meal.attendees.all %}{{ a.label }}{% if not forloop.last %}, {% endif %}{% empty %}Nadie.{% endfor %}</p>
+    <p>{% for a in meal.attendees.all %}{% if a.diner_id %}{{ a.label }}{% if not forloop.last %}, {% endif %}{% endif %}{% empty %}Nadie.{% endfor %}</p>
   {% endif %}
 
-  {% if guests %}
-    <h3>Invitados</h3>
-    <ul class="list">
-      {% for g in guests %}
-        <li class="row between">
-          <span>{{ g.guest_name }} <span class="muted small">ración {{ g.portion|num }}</span>
-            {% for t in g.guest_traits %}<span class="badge conflict">{{ t|trait_label }}</span>{% endfor %}
-            {% if g.guest_notes %}<span class="badge unknown">{{ g.guest_notes }}</span>{% endif %}</span>
-          {% if can_edit %}<form method="post" action="{% url 'planning:meal_remove_attendee' meal.pk g.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>{% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  {% if can_edit %}
-  <details style="margin-top:12px">
-    <summary class="btn small">Añadir invitado</summary>
+  {% if guests or can_edit %}
+  <div class="att-guests">
+    {% for g in guests %}
+      <span class="chip guest">
+        <span>{{ g.guest_name }} <span class="muted small">invitado{% if g.portion != 1 %}, ración {{ g.portion|num }}{% endif %}</span>
+          {% for t in g.guest_traits %}<span class="badge conflict">{{ t|trait_label }}</span>{% endfor %}
+          {% if g.guest_notes %}<span class="badge unknown">{{ g.guest_notes }}</span>{% endif %}</span>
+        {% if can_edit %}<form method="post" action="{% url 'planning:meal_remove_attendee' meal.pk g.pk %}">{% csrf_token %}<button class="chip-x" type="submit" aria-label="Quitar a {{ g.guest_name }}">×</button></form>{% endif %}
+      </span>
+    {% endfor %}
+    {% if can_edit %}
+  <details class="guest-add">
+    <summary class="chip-add">+ Añadir invitado</summary>
     <form method="post" action="{% url 'planning:meal_add_guest' meal.pk %}" style="margin-top:12px">
       {% csrf_token %}
       <div class="grid-2">
@@ -139,6 +142,8 @@
       <button class="btn primary" type="submit">Añadir invitado</button>
     </form>
   </details>
+    {% endif %}
+  </div>
   {% endif %}
 </section>
 

@@ -201,6 +201,33 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
 .field > label.check { display: flex; align-items: flex-start; border-radius: var(--radius-m); line-height: 1.4; padding: 10px 12px; }
 .field > label.check input { flex: none; margin-top: 1px; }
 .choices div { display: contents; }
+
+/* «Quién come»: people, then guests ending with «+ Añadir invitado», then portions. Saved on change. */
+.attendees { display: flex; flex-direction: column; gap: 12px; }
+.attendees > .row h2 { margin: 0; }
+.att-form { display: contents; }
+.att-people { order: 1; }
+.att-guests { order: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.att-portions { order: 3; }
+.att-portions > summary { margin-top: 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 6px 6px 12px;
+  border: 1px solid var(--leaf); border-radius: 999px; background: var(--leaf-soft); font-weight: 500;
+}
+.chip form { display: flex; }
+.chip-x {
+  width: 32px; height: 32px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.chip-x:hover { background: var(--surface); color: var(--conflict); }
+.guest-add > summary { list-style: none; }
+.guest-add > summary::-webkit-details-marker { display: none; }
+.chip-add {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; cursor: pointer;
+  border: 1.5px dashed var(--leaf); border-radius: 999px; color: var(--leaf-strong); font-weight: 600;
+}
+.chip-add:hover, .guest-add[open] > .chip-add { background: var(--leaf-soft); }
+.guest-add[open] { flex-basis: 100%; }
 fieldset.field { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
 fieldset.field legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
 
