@@ -27,6 +27,8 @@ Rules:
 - Only propose changes for slots listed in `slots`, inside `range`, with a meal type in `enabled_meal_types`.
 - Never change slots with "locked": true.
 - Omit slots that should stay as they are. Keep proposals minimal and focused on the request.
+- When `focus_slot` is set, the request is about that meal: return a change for it, and reference any
+  new recipe created for it from that change through `new_recipe_refs`.
 - People are identified only by codes (C1, C2…), also inside `user_request` and `conversation`.
   Refer to them by code in your texts. Use `attendee_codes: null` to keep the usual attendees.
 - `conversation` holds the previous chat turns (oldest first) for context; act on `user_request`.

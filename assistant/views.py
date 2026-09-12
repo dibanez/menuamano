@@ -146,6 +146,9 @@ def proposal_apply(request, pk):
         messages.warning(request, f"Omitido: {skipped}")
     if result.recipes_created and not result.applied:
         return redirect("recipes:detail", result.recipes_created[0].pk)
+    if proposal.operation == "replace_meal" and result.applied and proposal.items:
+        # Back to the meal the person was planning, now with the accepted recipe.
+        return redirect("planning:slot", proposal.items[0]["date"], proposal.items[0]["meal_type"])
     start = proposal.start_date or timezone.localdate()
     return redirect(f"{reverse('planning:week')}?fecha={start.isoformat()}")
 

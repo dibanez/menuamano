@@ -31,6 +31,7 @@ from recipes.models import Recipe, RecipeIngredient, RecipeStep
 from .context import build_context
 from .models import AIRequestLog, Proposal
 from .providers import ProviderError, get_provider
+from .schemas import MealChange
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +201,29 @@ def _people_for_slot(meal, attendee_diners, default_diners):
     return people + [rules_for_attendee(g) for g in guests]
 
 
+def _link_new_recipes_to_focus(changes, new_recipes, focus):
+    """A request about one meal that returns a new recipe means that recipe is for that meal.
+
+    Models sometimes return the recipe without referencing it from the meal change; applying
+    would then only save it in the recipe book. Link the first unreferenced recipe to the focus
+    meal, unless the model already chose recipes for it.
+    """
+    referenced = {ref for change in changes for ref in change.new_recipe_refs}
+    unlinked = [ref for ref in new_recipes if ref not in referenced]
+    if not unlinked:
+        return changes
+    key = (focus["date"], focus["meal_type"])
+    for index, change in enumerate(changes):
+        if (change.date, change.meal_type) == key:
+            if change.mode in MODES_WITH_RECIPES and not change.recipe_ids and not change.new_recipe_refs:
+                changes[index] = change.model_copy(update={"new_recipe_refs": unlinked[:1]})
+            return changes
+    return [*changes, MealChange(
+        date=key[0], meal_type=key[1], mode=MealMode.COOK, recipe_ids=[], new_recipe_refs=unlinked[:1],
+        attendee_codes=None, notes="", reason="Receta nueva para esta comida.",
+    )]
+
+
 def validate_output(household, context, output, start, end):
     """Turn provider output into reviewable items. Invalid parts are rejected, never applied."""
     notes = [context.humanize(w.strip())[:300] for w in output.warnings if w.strip()]
@@ -214,10 +238,13 @@ def validate_output(household, context, output, start, end):
     }
     reviews = reviews_for(household)
     focus = context.data.get("focus_slot") or {}
+    changes = list(output.changes[:MAX_CHANGES])
+    if focus:
+        changes = _link_new_recipes_to_focus(changes, new_recipes, focus)
     meals = planning.meals_by_slot(household, start, end)
     planning_context = planning.PlanningContext.load(household, start, end)
     items, seen = [], set()
-    for change in output.changes[:MAX_CHANGES]:
+    for change in changes:
         item = {
             "date": change.date, "meal_type": change.meal_type, "mode": change.mode, "recipe_ids": [],
             "recipe_names": [], "new_recipe_refs": [], "attendee_ids": None, "attendee_labels": [],
