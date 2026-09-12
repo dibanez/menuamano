@@ -77,6 +77,12 @@ Dónde se aplican las reglas:
   → excepción de fecha. La excepción siempre prevalece.
 - `Meal.version` se incrementa en cada cambio y sirve como control de concurrencia optimista
   para las propuestas de la IA.
+- **Sobras** (`Meal.leftovers_from`): una comida «aprovechar sobras» puede apuntar a una comida
+  cocinada, con recetas, de los 4 días anteriores. `planned_servings()` suma a esa comida las
+  raciones de sus sobras, y así se escalan sus cantidades y la compra. La comida de sobras no
+  genera compra y se valida contra los ingredientes de la comida de origen. Revalidar la comida de
+  origen revalida también sus sobras. Si deja de cocinarse en casa, las sobras pasan a «requiere
+  revisión».
 
 ## Unidades y compra
 

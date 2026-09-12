@@ -83,7 +83,7 @@ propuesto.
 
 ## Estado (12/09/2026)
 
-Las tres fases están implementadas y la aplicación arranca con Docker. 76 pruebas automáticas
+Las tres fases están implementadas y la aplicación arranca con Docker. 87 pruebas automáticas
 pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a 400 px de ancho.
 
 ### Iteración 2 (rama `iteration-2`)
@@ -94,6 +94,13 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 - [x] Chat: los nombres que se escriben se sustituyen por códigos antes de salir del servidor y
       los códigos de la respuesta se muestran como nombres. Se envían los 6 últimos mensajes.
 - [x] Compra: para piezas se sugiere comprar el entero superior (p. ej. «falta 1,9 unidades. Compra 2»).
+- [x] Sobras enlazadas: una comida «aprovechar sobras» apunta a una comida cocinada de los 4 días
+      anteriores. Esa comida cocina las raciones de más (cantidades y compra incluidas) y las sobras
+      se validan con sus ingredientes. Se revalidan si la comida de origen cambia.
+- [x] Buscador en el selector de ingredientes del formulario de recetas.
+- [x] Auditoría automática de accesibilidad (axe-core 4.11.1, WCAG 2.1 AA y buenas prácticas) sobre
+      las pantallas principales: corregidos los roles ARIA del mes, el contraste, la barra de progreso,
+      el orden de encabezados y una etiqueta que faltaba. Ninguna incidencia pendiente.
 
 ### Pendiente o conocido
 
@@ -102,16 +109,17 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
   real. Primer paso para continuar: fijar `AI_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL`
   en `.env`, pedir una propuesta semanal y revisar `AIRequestLog`.
 - **Invitaciones**: el enlace se comparte a mano (no se envían correos).
-- **Ingredientes**: la selección en el formulario de recetas es un `<select>` simple; con catálogos
-  grandes convendrá un buscador. No hay equivalencias pieza↔gramos (p. ej. «1 huevo ≈ 60 g»):
-  las piezas nunca se convierten.
-- **Sobras**: «aprovechar sobras» no genera compra ni enlaza con la comida de origen; para cocinar
-  de más hay que fijar raciones a mano en la comida original.
+- **Equivalencias**: no hay equivalencias pieza↔gramos (p. ej. «1 huevo ≈ 60 g»): las piezas nunca
+  se convierten.
+- **Sobras**: el enlace es de una comida a otra; no hay lotes, congelación ni control de raciones
+  restantes (fuera de alcance).
 - **Revalidación**: se revalidan las comidas futuras al cambiar restricciones o ingredientes. Las
   pasadas se conservan como estaban.
 - **Memoria del chat limitada**: se envían los 6 últimos mensajes; cada mensaje genera una propuesta
   independiente. El proveedor de demostración no interpreta el historial.
-- Accesibilidad y rendimiento: revisados a mano, sin auditoría automatizada.
+- **Rendimiento**: sin medir con volúmenes de datos reales.
+- **Accesibilidad**: la auditoría automática no encuentra incidencias; falta una prueba con lector de
+  pantalla real.
 
 ### Fuera de alcance (no se muestran como operativos)
 
