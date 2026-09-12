@@ -87,8 +87,14 @@ Dónde se aplican las reglas:
 ## Unidades y compra
 
 - Tres dimensiones: masa (g, kg), volumen (ml, l, cucharada = 15 ml, cucharadita = 5 ml) y
-  unidades contables (unidad, diente, loncha, lata…). Solo se convierte dentro de una
-  dimensión; las piezas solo se suman con la misma pieza. Las cantidades son decimales.
+  unidades contables (unidad, diente, loncha, lata…). Dentro de una dimensión la conversión es
+  exacta. Las cantidades son decimales.
+- **Equivalencias** (`foods.UnitConversion`, `foods/conversions.py`): gramos de 1 pieza o de 1 ml
+  de un ingrediente. Las filas sin hogar son del catálogo y una fila del hogar para la misma
+  unidad la sustituye. La compra agrupa cada ingrediente en su unidad habitual (`default_unit`).
+  Una línea de otra dimensión se convierte a gramos y de ahí a esa unidad, pero solo si existen
+  las dos equivalencias. Si no, se queda como artículo aparte y nunca se inventa la conversión.
+  Los artículos convertidos llevan `is_approximate` y se muestran con «≈».
 - Escalado: `cantidad × raciones previstas / raciones base`, donde las raciones previstas son
   la suma de los factores de ración de los asistentes (o unas raciones fijadas a mano).
 - La compra suma solo las comidas en modalidad «cocinar en casa». La clave de agregación es

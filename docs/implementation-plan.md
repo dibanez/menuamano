@@ -35,9 +35,11 @@ propuesto.
 4. **Información incompleta = desconocido**: un ingrediente cuyo perfil de rasgos no está revisado
    (`trait_info_complete=False`), como los productos procesados, los ingredientes creados por la IA
    o los ingredientes nuevos del hogar, da una compatibilidad **desconocida**, nunca «segura».
-5. **Unidades**: tres dimensiones (masa, volumen, unidades contables). Solo se convierte dentro de
-   una dimensión (g↔kg, ml↔l, cucharada = 15 ml, cucharadita = 5 ml). Las piezas (`unidad`,
-   `diente`, `lata`…) solo se suman con la misma pieza.
+5. **Unidades**: tres dimensiones (masa, volumen, unidades contables). Dentro de una dimensión la
+   conversión es exacta (g↔kg, ml↔l, cucharada = 15 ml, cucharadita = 5 ml). Entre dimensiones solo
+   se convierte con una equivalencia conocida del ingrediente (p. ej. 1 huevo ≈ 60 g), y el
+   resultado se marca como aproximado. Sin equivalencia, las piezas (`unidad`, `diente`, `lata`…)
+   solo se suman con la misma pieza.
 6. **Snapshot de receta**: al asignar una receta a una comida se copia (nombre, ingredientes, pasos,
    versión). Editar la receta incrementa su versión; las comidas conservan su copia y muestran un
    aviso de «hay versión más reciente» con una acción explícita para actualizar.
@@ -83,7 +85,7 @@ propuesto.
 
 ## Estado (12/09/2026)
 
-Las tres fases están implementadas y la aplicación arranca con Docker. 87 pruebas automáticas
+Las tres fases están implementadas y la aplicación arranca con Docker. 96 pruebas automáticas
 pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a 400 px de ancho.
 
 ### Iteración 2 (rama `iteration-2`)
@@ -102,6 +104,14 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
       las pantallas principales: corregidos los roles ARIA del mes, el contraste, la barra de progreso,
       el orden de encabezados y una etiqueta que faltaba. Ninguna incidencia pendiente.
 
+### Iteración 3 (rama `piece-weights`)
+
+- [x] Equivalencias de peso por ingrediente (`UnitConversion`): cuánto pesa una pieza o un ml. El
+      catálogo trae valores aproximados para piezas medianas y densidades comunes, y cada hogar puede
+      sustituirlos por los suyos. La compra junta piezas, volumen y gramos del mismo ingrediente en su
+      unidad habitual solo si hay equivalencia, y marca la cantidad con «≈». Cada origen muestra la
+      cantidad tal como aparece en la receta.
+
 ### Pendiente o conocido
 
 - **Integración real con OpenAI sin probar contra la API**: el cliente se ha verificado con el
@@ -109,8 +119,9 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
   real. Primer paso para continuar: fijar `AI_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL`
   en `.env`, pedir una propuesta semanal y revisar `AIRequestLog`.
 - **Invitaciones**: el enlace se comparte a mano (no se envían correos).
-- **Equivalencias**: no hay equivalencias pieza↔gramos (p. ej. «1 huevo ≈ 60 g»): las piezas nunca
-  se convierten.
+- **Equivalencias**: solo se usan en la lista de compra. Las cantidades de cada comida se muestran en
+  la unidad de la receta. El catálogo cubre las piezas y los líquidos más comunes; el resto hay que
+  añadirlo por hogar.
 - **Sobras**: el enlace es de una comida a otra; no hay lotes, congelación ni control de raciones
   restantes (fuera de alcance).
 - **Revalidación**: se revalidan las comidas futuras al cambiar restricciones o ingredientes. Las
