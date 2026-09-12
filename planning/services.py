@@ -11,6 +11,7 @@ from django.db import transaction
 from django.db.models import F, Prefetch
 from django.utils import timezone
 
+from core.choices import MEAL_TYPE_ORDER
 from diners.models import Diner, DinerRestriction
 from foods import compatibility
 from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attendee, rules_for_diner
@@ -28,6 +29,9 @@ from .models import (
     SafetyStatus,
 )
 from .signals import meals_changed
+
+
+LEFTOVERS_MAX_DAYS = 4
 
 
 class PlanningError(Exception):
@@ -83,7 +87,9 @@ def meals_queryset(household):
                 )
             ),
         ),
-    )
+        Prefetch("leftover_meals", queryset=Meal.objects.prefetch_related("attendees")),
+        "leftovers_from__recipes",
+    ).select_related("leftovers_from")
 
 
 def meals_by_slot(household, start, end):
@@ -171,10 +177,33 @@ def meal_ingredient_facts(meal):
     return facts
 
 
+def _issue(level, message):
+    return {"level": level, "person": "", "ingredient": "", "message": message, "trait": ""}
+
+
+def _leftovers_check(meal):
+    """Leftovers are checked against the ingredients of the meal they come from."""
+    source = meals_queryset(meal.household).get(pk=meal.leftovers_from_id)
+    if source.mode != MealMode.COOK or not source.recipes.all():
+        return SafetyStatus.UNKNOWN, [
+            _issue("unknown", "La comida de origen ya no se cocina en casa: revisa de dónde salen estas sobras.")
+        ]
+    result = evaluate(meal_ingredient_facts(source), people_for_meal(meal))
+    issues = result.issues_as_dicts()
+    gap = (meal.date - source.date).days
+    if gap < 0:
+        issues.append(_issue("warning", "La comida de origen es posterior a esta: revisa las fechas."))
+    elif gap > LEFTOVERS_MAX_DAYS:
+        issues.append(_issue("warning", f"Las sobras vienen de hace {gap} días: comprueba que siguen en buen estado."))
+    return result.status, issues
+
+
 def revalidate_meal(meal):
     """Re-run dietary checks on the meal as it is now and persist the outcome."""
     meal = meals_queryset(meal.household).get(pk=meal.pk)
-    if meal.mode in MODES_WITH_RECIPES and meal.recipes.all():
+    if meal.mode == MealMode.LEFTOVERS and meal.leftovers_from_id:
+        status, issues = _leftovers_check(meal)
+    elif meal.mode in MODES_WITH_RECIPES and meal.recipes.all():
         result = evaluate(meal_ingredient_facts(meal), people_for_meal(meal))
         status, issues = result.status, result.issues_as_dicts()
     else:
@@ -183,7 +212,38 @@ def revalidate_meal(meal):
         safety_status=status, safety_issues=issues, safety_checked_at=timezone.now()
     )
     meal.safety_status, meal.safety_issues = status, issues
+    # Leftovers depending on this meal eat what it cooks: check them again too.
+    for dependent in meal.leftover_meals.all():
+        revalidate_meal(dependent)
     return meal
+
+
+def planned_servings(meal):
+    """Servings to cook: attendees plus the linked leftovers meals (needs meals_queryset prefetch)."""
+    extra = sum(
+        (dependent.servings for dependent in meal.leftover_meals.all() if dependent.mode == MealMode.LEFTOVERS),
+        Decimal("0"),
+    )
+    return meal.servings + extra
+
+
+def leftovers_candidates(meal):
+    """Cooked meals with recipes from the previous days that can provide leftovers."""
+    order = {str(m): i for i, m in enumerate(MEAL_TYPE_ORDER)}
+    meals = (
+        Meal.objects.filter(
+            household=meal.household, mode=MealMode.COOK, recipes__isnull=False,
+            date__gte=meal.date - timedelta(days=LEFTOVERS_MAX_DAYS), date__lte=meal.date,
+        )
+        .exclude(pk=meal.pk)
+        .distinct()
+        .prefetch_related("recipes")
+        .order_by("-date", "meal_type")
+    )
+    return [
+        m for m in meals
+        if m.date < meal.date or order.get(m.meal_type, 0) < order.get(meal.meal_type, 0)
+    ]
 
 
 def revalidate_upcoming(household, since=None):
@@ -224,7 +284,12 @@ def _touch(meal, user, lock=True):
 
 
 def _changed(household, *days):
-    meals_changed.send(sender=Meal, household=household, dates=[d for d in days if d])
+    days = [d for d in days if d]
+    # Leftovers change what their source meal cooks, so its date is affected too.
+    source_days = Meal.objects.filter(
+        household=household, date__in=days, mode=MealMode.LEFTOVERS, leftovers_from__isnull=False
+    ).values_list("leftovers_from__date", flat=True)
+    meals_changed.send(sender=Meal, household=household, dates=days + list(source_days))
 
 
 @transaction.atomic
@@ -250,12 +315,52 @@ def get_or_create_meal(household, day, meal_type, context=None, user=None):
 
 @transaction.atomic
 def update_meal_details(meal, user, *, mode, notes, locked, outcome, outcome_notes):
+    old_source_date = meal.leftovers_from.date if meal.leftovers_from_id else None
     meal.mode, meal.notes, meal.outcome, meal.outcome_notes = mode, notes, outcome, outcome_notes
-    meal.save(update_fields=["mode", "notes", "outcome", "outcome_notes", "updated_at"])
+    if mode != MealMode.LEFTOVERS:
+        meal.leftovers_from = None
+    meal.save(update_fields=["mode", "notes", "outcome", "outcome_notes", "leftovers_from", "updated_at"])
     _touch(meal, user, lock=False)
     Meal.objects.filter(pk=meal.pk).update(locked=locked)
     meal = revalidate_meal(meal)
-    _changed(meal.household, meal.date)
+    _changed(meal.household, meal.date, old_source_date)
+    return meal
+
+
+@transaction.atomic
+def set_leftovers_source(meal, source, user):
+    """Mark the meal as leftovers of an earlier cooked meal, which then cooks extra servings."""
+    if source.household_id != meal.household_id:
+        raise PlanningError("La comida de origen no es de este hogar.")
+    if source.pk == meal.pk:
+        raise PlanningError("Una comida no puede ser sobras de sí misma.")
+    if source not in leftovers_candidates(meal):
+        raise PlanningError(
+            f"Elige una comida anterior, cocinada en casa y con recetas, de los últimos {LEFTOVERS_MAX_DAYS} días."
+        )
+    if meal.recipes.exists():
+        raise PlanningError("Quita antes las recetas de esta comida: las sobras usan las de la comida de origen.")
+    if meal.leftover_meals.exists():
+        raise PlanningError("De esta comida salen sobras para otra, así que no puede ser sobras a su vez.")
+    current = meals_queryset(meal.household).get(pk=meal.pk)
+    origin = meals_queryset(meal.household).get(pk=source.pk)
+    result = evaluate(meal_ingredient_facts(origin), people_for_meal(current))
+    if result.status == compatibility.CONFLICT:
+        raise IncompatibleRecipe(result)
+    Meal.objects.filter(pk=meal.pk).update(mode=MealMode.LEFTOVERS, leftovers_from=source)
+    _touch(meal, user)
+    meal = revalidate_meal(meal)
+    _changed(meal.household, meal.date, source.date)
+    return meal, result
+
+
+@transaction.atomic
+def clear_leftovers_source(meal, user):
+    old_source_date = meal.leftovers_from.date if meal.leftovers_from_id else None
+    Meal.objects.filter(pk=meal.pk).update(leftovers_from=None)
+    _touch(meal, user)
+    meal = revalidate_meal(meal)
+    _changed(meal.household, meal.date, old_source_date)
     return meal
 
 
@@ -400,13 +505,19 @@ def move_or_copy(meal, user, target_date, target_type, copy=False, overwrite=Fal
             raise PlanningError("La comida de destino está protegida. Desprotégela antes de sustituirla.")
         if not overwrite:
             raise PlanningError("Ya hay una comida en el destino. Marca «sustituir» para reemplazarla.")
+        orphaned = list(target.leftover_meals.all())
         target.delete()
+        for dependent in orphaned:
+            revalidate_meal(dependent)
 
     source = meals_queryset(household).get(pk=meal.pk)
     new_meal = Meal.objects.create(
         household=household, date=target_date, meal_type=target_type, mode=source.mode, notes=source.notes,
-        locked=True, source=Meal.Source.MANUAL, updated_by=user,
+        locked=True, source=Meal.Source.MANUAL, updated_by=user, leftovers_from=source.leftovers_from,
     )
+    if not copy:
+        # Leftovers planned from the moved meal keep pointing at it.
+        Meal.objects.filter(leftovers_from=meal).update(leftovers_from=new_meal)
     for attendee in source.attendees.all():
         MealAttendee.objects.create(
             meal=new_meal, diner=attendee.diner, guest_name=attendee.guest_name,
@@ -515,7 +626,7 @@ def regenerate_range(household, start, end, user):
                         report.without_recipe.append(slot_key(day, meal_type))
                 Meal.objects.filter(pk=meal.pk).update(
                     mode=mode, notes=notes, source=Meal.Source.GENERATED, version=F("version") + 1,
-                    updated_by=user, updated_at=timezone.now(), outcome=Meal.Outcome.PENDING,
+                    updated_by=user, updated_at=timezone.now(), outcome=Meal.Outcome.PENDING, leftovers_from=None,
                 )
                 if recipe is not None:
                     recipe_services.snapshot_into_meal(meal, recipe)

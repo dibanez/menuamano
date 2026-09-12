@@ -60,6 +60,11 @@ class Meal(models.Model):
     safety_checked_at = models.DateTimeField(null=True, blank=True)
     outcome = models.CharField("qué se comió", max_length=12, choices=Outcome.choices, default=Outcome.PENDING)
     outcome_notes = models.CharField("detalle de lo consumido", max_length=200, blank=True)
+    # For "leftovers" meals: the cooked meal they come from. That meal cooks extra servings.
+    leftovers_from = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="leftover_meals",
+        verbose_name="sobras de",
+    )
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

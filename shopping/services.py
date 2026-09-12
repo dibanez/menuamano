@@ -14,7 +14,7 @@ from django.utils import timezone
 from foods.models import CATEGORY_ORDER, Category
 from foods.units import scale, to_base
 from planning.models import MODES_WITH_SHOPPING
-from planning.services import meals_queryset
+from planning.services import meals_queryset, planned_servings
 
 from .models import ShoppingItem, ShoppingList
 
@@ -38,7 +38,7 @@ def compute_needs(household, start, end):
     needs = OrderedDict()
     meals = meals_queryset(household).filter(date__gte=start, date__lte=end, mode__in=MODES_WITH_SHOPPING)
     for meal in meals.order_by("date", "meal_type"):
-        meal_servings = meal.servings
+        meal_servings = planned_servings(meal)  # includes servings reserved for linked leftovers
         for meal_recipe in meal.recipes.all():
             servings = meal_recipe.effective_servings(meal_servings)
             for line in meal_recipe.ingredients.all():

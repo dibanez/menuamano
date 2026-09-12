@@ -5,7 +5,7 @@
     <span class="meal-type">{{ slot.label }}</span><br>
     {% if slot.meal %}
       {% with meal=slot.meal recipes=slot.meal.recipes.all people=slot.meal.attendees.all %}
-        <span class="meal-title">{% if recipes %}{% for mr in recipes %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}{{ meal.get_mode_display }}{% endif %}</span><br>
+        <span class="meal-title">{% if meal.mode == "leftovers" and meal.leftovers_from %}Sobras: {% for mr in meal.leftovers_from.recipes.all %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif recipes %}{% for mr in recipes %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}{{ meal.get_mode_display }}{% endif %}</span><br>
         <span class="meal-meta">{% if recipes %}{{ meal.get_mode_display }}, {% endif %}{{ people|length }} persona{{ people|length|pluralize }}{% if meal.outcome != "pending" %}, {{ meal.get_outcome_display|lower }}{% endif %}</span>
         {% if show_people and people %}<br><span class="meal-meta">{% for a in people %}{{ a.label }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% endif %}
         {% if show_people and meal.notes %}<br><span class="meal-meta">{{ meal.notes }}</span>{% endif %}

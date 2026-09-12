@@ -155,7 +155,7 @@ def meal_detail(request, pk):
     diners = [
         {"diner": d, "attendee": by_diner.get(d.pk)} for d in services.diners_queryset(household)
     ]
-    servings = meal.servings
+    servings = services.planned_servings(meal)
     blocks = []
     for meal_recipe in meal.recipes.all():
         effective = meal_recipe.effective_servings(servings)
@@ -189,6 +189,12 @@ def meal_detail(request, pk):
         "traits": Trait.choices,
         "label_reminder": LABEL_REMINDER,
         "shows_recipes": meal.mode in MODES_WITH_RECIPES,
+        "attendee_servings": meal.servings,
+        "leftovers_extra": servings - meal.servings,
+        "dependents": [d for d in meal.leftover_meals.all() if d.mode == "leftovers"],
+        "leftovers_source": meal.leftovers_from if meal.mode == "leftovers" else None,
+        "leftovers_candidates": services.leftovers_candidates(meal) if meal.mode == "leftovers" and not meal.leftovers_from_id else [],
+        "leftovers_days": services.LEFTOVERS_MAX_DAYS,
         "conflicts": [i for i in meal.safety_issues if i.get("level") == "conflict"],
         "unknowns": [i for i in meal.safety_issues if i.get("level") == "unknown"],
         "warnings": [i for i in meal.safety_issues if i.get("level") == "warning"],
@@ -210,6 +216,31 @@ def meal_update(request, pk):
         messages.success(request, "Comida guardada.")
     else:
         messages.error(request, "Revisa los datos de la comida.")
+    return redirect("planning:meal", meal.pk)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def meal_leftovers(request, pk):
+    meal = _meal(request, pk)
+    source = get_object_or_404(Meal, pk=request.POST.get("source") or 0, household=request.household)
+    try:
+        services.set_leftovers_source(meal, source, request.user)
+    except services.IncompatibleRecipe as exc:
+        messages.error(request, "No se pueden usar esas sobras. " + " ".join(i.message for i in exc.result.conflicts[:3]))
+    except services.PlanningError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Sobras enlazadas. La comida de origen cocinará esas raciones de más y la compra se ha actualizado.")
+    return redirect("planning:meal", meal.pk)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def meal_leftovers_clear(request, pk):
+    meal = _meal(request, pk)
+    services.clear_leftovers_source(meal, request.user)
+    messages.success(request, "Enlace de sobras quitado.")
     return redirect("planning:meal", meal.pk)
 
 
@@ -403,8 +434,12 @@ def meal_move(request, pk):
 def meal_delete(request, pk):
     meal = _meal(request, pk)
     day_, household = meal.date, meal.household
+    source_day = meal.leftovers_from.date if meal.leftovers_from_id else None
+    orphaned = list(meal.leftover_meals.all())
     meal.delete()
-    services.meals_changed.send(sender=Meal, household=household, dates=[day_])
+    for dependent in orphaned:
+        services.revalidate_meal(dependent)
+    services.meals_changed.send(sender=Meal, household=household, dates=[d for d in (day_, source_day) if d])
     messages.success(request, "Comida vaciada.")
     return redirect(_week_url(day_))
 

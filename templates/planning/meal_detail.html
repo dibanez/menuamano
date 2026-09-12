@@ -14,8 +14,38 @@
       </form>
     {% endif %}
   </span>
-  <p class="lead">{{ meal.get_mode_display }}. {{ servings|num }} ración{{ servings|pluralize:"es" }} para {{ meal.attendees.all|length }} persona{{ meal.attendees.all|length|pluralize }}.{% if meal.locked %} Protegida frente a regeneraciones.{% endif %}</p>
+  <p class="lead">{{ meal.get_mode_display }}. {{ attendee_servings|num }} ración{{ attendee_servings|pluralize:"es" }} para {{ meal.attendees.all|length }} persona{{ meal.attendees.all|length|pluralize }}{% if leftovers_extra %}, más {{ leftovers_extra|num }} para sobras{% endif %}.{% if meal.locked %} Protegida frente a regeneraciones.{% endif %}</p>
 </div>
+
+{% if dependents %}
+  <div class="notice ok">
+    <strong>Cocina de más</strong>
+    {{ leftovers_extra|num }} raciones son para las sobras de {% for d in dependents %}<a href="{% url 'planning:meal' d.pk %}">{{ d.get_meal_type_display|lower }} del {{ d.date|date:"l j" }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}. Ya están sumadas en las cantidades y en la compra.
+  </div>
+{% endif %}
+
+{% if meal.mode == "leftovers" %}
+<section class="panel">
+  <h2 class="mt-0">De dónde salen las sobras</h2>
+  {% if leftovers_source %}
+    <p>De la <a href="{% url 'planning:meal' leftovers_source.pk %}">{{ leftovers_source.get_meal_type_display|lower }} del {{ leftovers_source.date|date:"l j" }}</a>: {% for mr in leftovers_source.recipes.all %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% empty %}sin recetas{% endfor %}.</p>
+    <p class="muted small">Esa comida cocina {{ attendee_servings|num }} raciones más para vosotros. Las alergias se comprueban con sus ingredientes.</p>
+    {% if can_edit %}<form method="post" action="{% url 'planning:meal_leftovers_clear' meal.pk %}">{% csrf_token %}<button class="btn small" type="submit">Quitar el enlace</button></form>{% endif %}
+  {% elif leftovers_candidates and can_edit %}
+    <form method="post" action="{% url 'planning:meal_leftovers' meal.pk %}" class="row">
+      {% csrf_token %}
+      <label class="sr-only" for="leftovers-source">Comida de origen</label>
+      <select id="leftovers-source" name="source" style="flex:1;min-width:12rem" required>
+        {% for m in leftovers_candidates %}<option value="{{ m.pk }}">{{ m.get_meal_type_display }} del {{ m.date|date:"D j" }}: {% for mr in m.recipes.all %}{{ mr.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</option>{% endfor %}
+      </select>
+      <button class="btn primary" type="submit">Usar sus sobras</button>
+    </form>
+    <p class="muted small" style="margin-top:6px">La comida elegida cocinará las raciones de esta comida de más, y la compra se ajustará.</p>
+  {% else %}
+    <p class="muted">No hay comidas cocinadas con recetas en los {{ leftovers_days }} días anteriores.</p>
+  {% endif %}
+</section>
+{% endif %}
 
 {% if conflicts %}
   <div class="notice conflict" role="alert">
