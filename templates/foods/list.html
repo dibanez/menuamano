@@ -19,10 +19,12 @@
       <span class="ingredient-info">
         <strong>{{ ing.name }}</strong> <span class="muted small">{{ ing.get_category_display }}</span><br>
         {% for t in ing.traits %}<span class="badge">{{ t|trait_label }}</span> {% endfor %}
-        {% if not ing.trait_info_complete %}<span class="badge unknown">Sin revisar</span>{% endif %}
-        {% if ing.is_processed %}<span class="badge info">Revisar etiqueta</span>{% endif %}
+        {% if ing.pk in reviews %}<span class="badge ok">Etiqueta revisada por tu hogar</span>
+        {% elif not ing.trait_info_complete %}<span class="badge unknown">Sin revisar</span>
+        {% elif ing.is_processed %}<span class="badge info">Revisar etiqueta</span>{% endif %}
       </span>
       <span class="ingredient-actions">
+        {% if ing.pk in reviews or not ing.trait_info_complete or ing.is_processed %}<a class="btn small ghost" href="{% url 'foods:review' ing.pk %}">{% if ing.pk in reviews %}Ver revisión{% else %}Revisar etiqueta{% endif %}</a>{% endif %}
         <a class="btn small ghost" href="{% url 'foods:equivalences' ing.pk %}">Equivalencias</a>
         {% if ing.household_id and can_edit %}<a class="btn small" href="{% url 'foods:edit' ing.pk %}">Editar</a>{% elif not ing.household_id %}<span class="muted small">Catálogo</span>{% endif %}
       </span>

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Revisar {{ ingredient.name }} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Revisar la etiqueta: {{ ingredient.name }}</h1>
+  <p class="lead">La composición de este producto depende de la marca. Mira la etiqueta del que compráis y marca lo que contiene. La revisión solo vale para tu hogar.</p>
+</div>
+
+{% if review %}
+  <div class="notice ok">
+    <strong>Revisado por tu hogar</strong>
+    {% if review.traits %}Según la etiqueta contiene: {% for t in review.traits %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}.{% else %}Según la etiqueta no contiene ninguno de los alérgenos ni rasgos de la lista.{% endif %}
+    {% if review.note %}<br>{{ review.note }}.{% endif %}
+    <br><span class="small">{{ review.reviewed_by|default:"Alguien del hogar" }}, {{ review.reviewed_at|date:"j \d\e F \d\e Y" }}.</span>
+  </div>
+{% else %}
+  <div class="notice unknown">
+    <strong>Sin revisar</strong>
+    {% if ingredient.household_id %}Este ingrediente es de tu hogar y no tiene la información de alérgenos marcada como revisada.{% else %}El catálogo no sabe qué lleva la marca que compráis. Mientras no se revise, cualquier comida con este ingrediente pedirá revisión a quien tenga restricciones.{% endif %}
+  </div>
+{% endif %}
+
+{% if can_edit %}
+<form method="post" class="panel">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  {% include "partials/form_fields.html" %}
+  <p class="muted small">Si cambiáis de marca, vuelve a revisarla. menuamano no garantiza la ausencia de trazas: la etiqueta y la forma de preparar el plato mandan.</p>
+  <div class="form-actions">
+    <button class="btn primary" type="submit">Guardar la revisión</button>
+    <a class="btn ghost" href="{{ next }}">Cancelar</a>
+  </div>
+</form>
+{% if review %}
+  <form method="post" action="{% url 'foods:review_delete' ingredient.pk %}" class="row" style="justify-content:flex-end">
+    {% csrf_token %}<button class="btn small ghost danger" type="submit" data-confirm="Pulsa otra vez para quitarla">Quitar la revisión</button>
+  </form>
+{% endif %}
+{% else %}
+  <p class="muted">Solo las personas con rol de edición pueden revisar etiquetas.</p>
+{% endif %}
+{% endblock %}

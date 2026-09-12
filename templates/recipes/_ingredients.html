@@ -2,7 +2,7 @@
 <ul class="ingredients-list" id="ingredients">
   {% for ri, scaled in lines %}
     <li>
-      <span>{{ ri.ingredient.name }}{% if ri.note %} <span class="muted small">({{ ri.note }})</span>{% endif %}{% if ri.optional %} <span class="badge">opcional</span>{% endif %}{% if not ri.ingredient.trait_info_complete %} <span class="badge unknown">sin revisar</span>{% endif %}</span>
+      <span>{{ ri.ingredient.name }}{% if ri.note %} <span class="muted small">({{ ri.note }})</span>{% endif %}{% if ri.optional %} <span class="badge">opcional</span>{% endif %}{% if ri.ingredient_id in reviews %} <span class="badge ok">etiqueta revisada</span>{% elif not ri.ingredient.trait_info_complete %} <a class="badge unknown" href="{% url 'foods:review' ri.ingredient_id %}?next={{ request.get_full_path|urlencode }}">sin revisar</a>{% endif %}</span>
       <span class="qty">{{ scaled|qty:ri.unit }}</span>
     </li>
   {% empty %}

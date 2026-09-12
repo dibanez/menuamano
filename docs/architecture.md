@@ -46,7 +46,7 @@ implican otros (cerdo → carne → origen animal; lactosa → leche) y se expan
 | Resultado | Cuándo |
 |---|---|
 | **Conflicto** | Un ingrediente contiene un rasgo restringido o es un ingrediente vetado. Incluye opcionales y sustituciones. |
-| **Desconocido** | La persona tiene restricciones y el ingrediente no tiene la información revisada (`trait_info_complete=False`): productos procesados, ingredientes nuevos del hogar e ingredientes creados por la IA. |
+| **Desconocido** | La persona tiene restricciones y el ingrediente no tiene la información revisada (`trait_info_complete=False`): productos procesados, ingredientes nuevos del hogar e ingredientes creados por la IA. Deja de serlo cuando el hogar revisa la etiqueta (`IngredientReview`, por hogar): lo que marque la etiqueta sustituye a la información del catálogo. |
 | **Compatible** | Compatible según los datos registrados. Nunca es una garantía: siempre se muestra el recordatorio de etiquetado y contaminación cruzada. |
 
 Las preferencias («no le gusta») nunca bloquean, solo influyen en las propuestas. El texto

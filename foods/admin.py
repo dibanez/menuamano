@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ingredient, UnitConversion
+from .models import Ingredient, IngredientReview, UnitConversion
 
 
 class UnitConversionInline(admin.TabularInline):
@@ -14,3 +14,9 @@ class IngredientAdmin(admin.ModelAdmin):
     list_filter = ["category", "trait_info_complete", "is_processed", "source"]
     search_fields = ["name", "aliases"]
     inlines = [UnitConversionInline]
+
+
+@admin.register(IngredientReview)
+class IngredientReviewAdmin(admin.ModelAdmin):
+    list_display = ["ingredient", "household", "traits", "reviewed_by", "reviewed_at"]
+    search_fields = ["ingredient__name", "household__name"]

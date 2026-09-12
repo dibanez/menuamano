@@ -59,12 +59,14 @@ class Issue:
     ingredient: str
     message: str
     trait: str = ""
+    ingredient_id: int | None = None
 
     def as_dict(self):
         return {
             "level": self.level,
             "person": self.person,
             "ingredient": self.ingredient,
+            "ingredient_id": self.ingredient_id,
             "message": self.message,
             "trait": self.trait,
         }
@@ -106,7 +108,7 @@ def evaluate(ingredients, people):
             if ing.ingredient_id is not None and ing.ingredient_id in person.ingredient_ids:
                 issues.append(
                     Issue(LEVEL_CONFLICT, person.label, ing.name,
-                          f"{person.label} no puede tomar {ing.name}{suffix}.")
+                          f"{person.label} no puede tomar {ing.name}{suffix}.", ingredient_id=ing.ingredient_id)
                 )
                 continue
             matched = person.traits & ing.traits
@@ -115,20 +117,21 @@ def evaluate(ingredients, people):
                     issues.append(
                         Issue(LEVEL_CONFLICT, person.label, ing.name,
                               f"{ing.name} contiene {TRAIT_LABELS.get(trait, trait).lower()}, "
-                              f"incompatible con {person.label}{suffix}.", trait)
+                              f"incompatible con {person.label}{suffix}.", trait, ingredient_id=ing.ingredient_id)
                     )
                 continue
             if person.traits and not ing.info_complete:
                 issues.append(
                     Issue(LEVEL_UNKNOWN, person.label, ing.name,
                           f"No hay información suficiente sobre {ing.name} para confirmar que no contiene "
-                          f"{_labels(person.traits)} ({person.label}). Revísalo antes de aceptarlo{suffix}.")
+                          f"{_labels(person.traits)} ({person.label}). Revísalo antes de aceptarlo{suffix}.",
+                          ingredient_id=ing.ingredient_id)
                 )
             elif person.traits and ing.is_processed:
                 issues.append(
                     Issue(LEVEL_WARNING, person.label, ing.name,
                           f"{ing.name} es un producto procesado: comprueba la etiqueta de la marca que compres "
-                          f"({person.label}: {_labels(person.traits)}).")
+                          f"({person.label}: {_labels(person.traits)}).", ingredient_id=ing.ingredient_id)
                 )
         if person.unverified_notes:
             issues.append(
@@ -149,13 +152,18 @@ def evaluate(ingredients, people):
 # --- Adapters from models -----------------------------------------------------------------
 
 
-def facts_for_ingredient(ingredient, optional=False, substituted_for=None):
+def facts_for_ingredient(ingredient, optional=False, substituted_for=None, review=None):
+    """Facts for one ingredient. A household label review replaces the catalogue information."""
+    if review is not None:
+        traits, complete, processed = frozenset(review.traits), True, False
+    else:
+        traits, complete, processed = frozenset(ingredient.traits), ingredient.trait_info_complete, ingredient.is_processed
     return IngredientFacts(
         ingredient_id=ingredient.pk,
         name=ingredient.name,
-        traits=frozenset(ingredient.traits),
-        info_complete=ingredient.trait_info_complete,
-        is_processed=ingredient.is_processed,
+        traits=traits,
+        info_complete=complete,
+        is_processed=processed,
         optional=optional,
         substituted_for=substituted_for.name if substituted_for else "",
     )

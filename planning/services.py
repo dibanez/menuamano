@@ -15,6 +15,7 @@ from core.choices import MEAL_TYPE_ORDER
 from diners.models import Diner, DinerRestriction
 from foods import compatibility
 from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attendee, rules_for_diner
+from foods.reviews import reviews_for
 from recipes import services as recipe_services
 
 from .models import (
@@ -170,15 +171,19 @@ def people_for_meal(meal):
 
 
 def meal_ingredient_facts(meal):
+    reviews = reviews_for(meal.household_id)
     facts = []
     for meal_recipe in meal.recipes.all():
         for line in meal_recipe.ingredients.all():
-            facts.append(facts_for_ingredient(line.ingredient, optional=line.optional, substituted_for=line.substituted_for))
+            facts.append(facts_for_ingredient(
+                line.ingredient, optional=line.optional, substituted_for=line.substituted_for,
+                review=reviews.get(line.ingredient_id),
+            ))
     return facts
 
 
 def _issue(level, message):
-    return {"level": level, "person": "", "ingredient": "", "message": message, "trait": ""}
+    return {"level": level, "person": "", "ingredient": "", "ingredient_id": None, "message": message, "trait": ""}
 
 
 def _leftovers_check(meal):
@@ -255,15 +260,17 @@ def revalidate_upcoming(household, since=None):
     return len(ids)
 
 
-def compatible_alternatives(household, people, meal_type=None, exclude_ids=(), limit=5):
+def compatible_alternatives(household, people, meal_type=None, exclude_ids=(), limit=5, reviews=None):
     """Recipes that are compatible (OK first, then UNKNOWN) for the given people."""
+    if reviews is None:
+        reviews = reviews_for(household)
     ok, unknown = [], []
     for recipe in recipe_services.recipes_for_household(household):
         if recipe.pk in exclude_ids:
             continue
         if meal_type and not recipe_services.fits_meal_type(recipe, meal_type):
             continue
-        status = recipe_services.check_recipe(recipe, people).status
+        status = recipe_services.check_recipe(recipe, people, reviews).status
         if status == compatibility.OK:
             ok.append(recipe)
         elif status == compatibility.UNKNOWN:
@@ -469,7 +476,10 @@ def substitute_ingredient(line, new_ingredient, user):
     meal = meals_queryset(line.meal_recipe.meal.household).get(pk=line.meal_recipe.meal_id)
     people = people_for_meal(meal)
     original = line.substituted_for or line.ingredient
-    result = evaluate([facts_for_ingredient(new_ingredient, optional=line.optional, substituted_for=original)], people)
+    review = reviews_for(meal.household_id).get(new_ingredient.pk)
+    result = evaluate(
+        [facts_for_ingredient(new_ingredient, optional=line.optional, substituted_for=original, review=review)], people
+    )
     if result.status == compatibility.CONFLICT:
         raise IncompatibleRecipe(result)
     line.substituted_for = original if new_ingredient.pk != original.pk else None
@@ -560,11 +570,11 @@ def _stable_rank(*parts):
     return hashlib.sha256("|".join(str(p) for p in parts).encode()).hexdigest()
 
 
-def choose_recipe(candidates, people, day, meal_type, usage, dislikes):
+def choose_recipe(candidates, people, day, meal_type, usage, dislikes, reviews=None):
     """Deterministic choice among compatible recipes, favouring variety and preferences."""
     scored = []
     for recipe in candidates:
-        result = recipe_services.check_recipe(recipe, people)
+        result = recipe_services.check_recipe(recipe, people, reviews)
         if result.status != compatibility.OK:
             continue  # regeneration never auto-accepts unknown or conflicting recipes
         disliked = sum(1 for ri in recipe.ingredients.all() if ri.ingredient_id in dislikes)
@@ -585,6 +595,7 @@ def regenerate_range(household, start, end, user):
     context = PlanningContext.load(household, start, end)
     existing = meals_by_slot(household, start - timedelta(days=7), end)
     candidates = list(recipe_services.recipes_for_household(household))
+    reviews = reviews_for(household)
     usage = Counter()
     for meal in existing.values():
         for meal_recipe in meal.recipes.all():
@@ -603,7 +614,7 @@ def regenerate_range(household, start, end, user):
             recipe = None
             if defaults.mode == MealMode.COOK and defaults.diners:
                 fitting = [r for r in candidates if recipe_services.fits_meal_type(r, meal_type)]
-                recipe = choose_recipe(fitting, people, day, meal_type, usage, dislikes)
+                recipe = choose_recipe(fitting, people, day, meal_type, usage, dislikes, reviews)
                 if recipe is not None:
                     usage[recipe.pk] += 1
             with transaction.atomic():

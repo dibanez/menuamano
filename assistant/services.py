@@ -22,6 +22,7 @@ from diners.models import Diner
 from foods import compatibility
 from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attendee, rules_for_diner
 from foods.models import Category, Ingredient, Unit, normalize_name
+from foods.reviews import reviews_for
 from planning import services as planning
 from planning.models import MODES_WITH_RECIPES, Meal, MealMode
 from recipes import services as recipe_services
@@ -170,7 +171,7 @@ def _validate_new_recipe(household, raw):
     return recipe
 
 
-def _new_recipe_facts(recipe):
+def _new_recipe_facts(recipe, reviews):
     """Facts for a proposed recipe. Unmatched ingredients are unknown by definition."""
     facts = []
     ids = [ln["ingredient_id"] for ln in recipe["ingredients"] if ln["ingredient_id"]]
@@ -178,7 +179,7 @@ def _new_recipe_facts(recipe):
     for line in recipe["ingredients"]:
         ingredient = by_id.get(line["ingredient_id"])
         if ingredient:
-            facts.append(facts_for_ingredient(ingredient, optional=line["optional"]))
+            facts.append(facts_for_ingredient(ingredient, optional=line["optional"], review=reviews.get(ingredient.pk)))
         else:
             facts.append(compatibility.IngredientFacts(None, line["name"], frozenset(), False, False, line["optional"]))
     return facts
@@ -211,6 +212,7 @@ def validate_output(household, context, output, start, end):
     existing = {
         r.pk: r for r in recipe_services.recipes_for_household(household)
     }
+    reviews = reviews_for(household)
     meals = planning.meals_by_slot(household, start, end)
     planning_context = planning.PlanningContext.load(household, start, end)
     items, seen = [], set()
@@ -292,9 +294,9 @@ def validate_output(household, context, output, start, end):
         people = _people_for_slot(meal, attendee_diners, defaults.diners)
         facts = []
         for rid in item["recipe_ids"]:
-            facts.extend(recipe_services.recipe_facts(existing[rid]))
+            facts.extend(recipe_services.recipe_facts(existing[rid], reviews))
         for ref in item["new_recipe_refs"]:
-            facts.extend(_new_recipe_facts(new_recipes[ref]))
+            facts.extend(_new_recipe_facts(new_recipes[ref], reviews))
         result = evaluate(facts, people)
         if result.status == compatibility.CONFLICT:
             item["status"] = ITEM_CONFLICT
@@ -309,7 +311,7 @@ def validate_output(household, context, output, start, end):
     everyone = [rules_for_diner(d) for d in context.code_to_diner.values()]
     recipes_out = []
     for recipe in new_recipes.values():
-        result = evaluate(_new_recipe_facts(recipe), everyone)
+        result = evaluate(_new_recipe_facts(recipe, reviews), everyone)
         recipe["status"] = {compatibility.OK: ITEM_OK, compatibility.UNKNOWN: ITEM_REVIEW}.get(result.status, ITEM_CONFLICT)
         recipe["issues"] = [i.message for i in result.issues if i.level != "warning"][:10]
         recipes_out.append(recipe)
@@ -449,7 +451,8 @@ def _apply_item(household, user, item, created, accepted_review):
     # Revalidate with current restrictions: they may have changed since the proposal.
     meal = planning.meals_queryset(household).get(pk=meal.pk)
     people = _people_for_slot(meal, diners, [a.diner for a in meal.attendees.all() if a.diner_id])
-    facts = [f for recipe in recipes for f in recipe_services.recipe_facts(recipe)] if item["mode"] in MODES_WITH_RECIPES else []
+    reviews = reviews_for(household)
+    facts = [f for recipe in recipes for f in recipe_services.recipe_facts(recipe, reviews)] if item["mode"] in MODES_WITH_RECIPES else []
     check = evaluate(facts, people)
     if check.status == compatibility.CONFLICT:
         return "ahora es incompatible con algún asistente."

@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from core.choices import MealType
 from foods.compatibility import LABEL_REMINDER
 from foods.models import Ingredient, Trait
+from foods.reviews import reviews_for
 from foods.units import scale
 from households.models import Role
 from households.permissions import household_required
@@ -150,6 +151,10 @@ def slot(request, day, meal_type):
 def meal_detail(request, pk):
     household = request.household
     meal = get_object_or_404(services.meals_queryset(household), pk=pk)
+    if any(i.get("ingredient") and "ingredient_id" not in i for i in meal.safety_issues):
+        # Checked before issues pointed at their ingredient: refresh so the review link can be shown.
+        services.revalidate_meal(meal)
+        meal = services.meals_queryset(household).get(pk=pk)
     attendees = list(meal.attendees.all())
     by_diner = {a.diner_id: a for a in attendees if a.diner_id}
     diners = [
@@ -166,14 +171,17 @@ def meal_detail(request, pk):
         blocks.append({"mr": meal_recipe, "servings": effective, "lines": lines})
 
     people = services.people_for_meal(meal)
+    reviews = reviews_for(household)
     options = {"ok": [], "unknown": [], "conflict": []}
     for recipe in recipe_services.recipes_for_household(household):
-        status = recipe_services.check_recipe(recipe, people).status
+        status = recipe_services.check_recipe(recipe, people, reviews).status
         options[status].append(recipe)
     alternatives = []
     if meal.safety_status == SafetyStatus.CONFLICT:
         current = {mr.recipe_id for mr in meal.recipes.all()}
-        alternatives = services.compatible_alternatives(household, people, meal.meal_type, exclude_ids=current)
+        alternatives = services.compatible_alternatives(
+            household, people, meal.meal_type, exclude_ids=current, reviews=reviews
+        )
 
     context = {
         "meal": meal,

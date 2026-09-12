@@ -48,3 +48,19 @@ class IngredientForm(forms.ModelForm):
 
     def clean_aliases(self):
         return [a.strip() for a in self.cleaned_data["aliases"].split(",") if a.strip()]
+
+
+class IngredientReviewForm(forms.Form):
+    """What the label of the product this household buys says it contains."""
+
+    traits = forms.MultipleChoiceField(
+        label="Según la etiqueta, contiene", choices=Trait.choices, required=False,
+        widget=forms.CheckboxSelectMultiple,
+        help_text="Marca también lo que aparezca como «puede contener trazas de…». Si no contiene "
+        "ninguno, déjalo todo sin marcar.",
+    )
+    note = forms.CharField(label="Marca o nota (opcional)", max_length=120, required=False)
+    confirm = forms.BooleanField(
+        label="He leído la lista de ingredientes y alérgenos de la etiqueta del producto que compramos.",
+        required=True, error_messages={"required": "Confirma que has leído la etiqueta."},
+    )

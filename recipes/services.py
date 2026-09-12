@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import F, Prefetch
 
 from foods.compatibility import evaluate, facts_for_ingredient
+from foods.reviews import reviews_for
 from planning.models import MealRecipe, MealRecipeIngredient
 
 from .models import Recipe, RecipeIngredient
@@ -18,12 +19,18 @@ def recipes_for_household(household, include_archived=False):
     )
 
 
-def recipe_facts(recipe):
-    return [facts_for_ingredient(ri.ingredient, optional=ri.optional) for ri in recipe.ingredients.all()]
+def recipe_facts(recipe, reviews=None):
+    """Ingredient facts for the recipe's household. Pass `reviews` when checking many recipes."""
+    if reviews is None:
+        reviews = reviews_for(recipe.household_id)
+    return [
+        facts_for_ingredient(ri.ingredient, optional=ri.optional, review=reviews.get(ri.ingredient_id))
+        for ri in recipe.ingredients.all()
+    ]
 
 
-def check_recipe(recipe, people):
-    return evaluate(recipe_facts(recipe), people)
+def check_recipe(recipe, people, reviews=None):
+    return evaluate(recipe_facts(recipe, reviews), people)
 
 
 def fits_meal_type(recipe, meal_type):

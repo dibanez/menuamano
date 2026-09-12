@@ -71,7 +71,7 @@
 {% if unknowns %}
   <div class="notice unknown">
     <strong>Requiere revisión</strong>
-    <ul>{% for i in unknowns %}<li>{{ i.message }}</li>{% endfor %}</ul>
+    <ul>{% for i in unknowns %}<li>{{ i.message }}{% if i.ingredient_id and can_edit %} <a href="{% url 'foods:review' i.ingredient_id %}?next={{ request.get_full_path|urlencode }}">He revisado la etiqueta</a>{% endif %}</li>{% endfor %}</ul>
   </div>
 {% endif %}
 {% if warnings %}

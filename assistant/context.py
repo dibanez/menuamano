@@ -16,6 +16,7 @@ from core.choices import MealType, Weekday
 from foods import compatibility
 from foods.compatibility import rules_for_diner
 from foods.models import Ingredient, Trait, Unit
+from foods.reviews import reviews_for
 from planning.services import PlanningContext, daterange, diners_queryset, meals_by_slot, slot_key
 from recipes import services as recipe_services
 
@@ -117,9 +118,10 @@ def build_context(household, start, end, operation, user_request="", focus=None,
         .order_by("-uses", "name")[:MAX_RECIPES]
     )
     person_rules = {code: rules_for_diner(d) for code, d in code_to_diner.items()}
+    reviews = reviews_for(household)
     recipe_rows = []
     for recipe in recipes:
-        facts = recipe_services.recipe_facts(recipe)
+        facts = recipe_services.recipe_facts(recipe, reviews)
         blocked, review = [], []
         for code, rules in person_rules.items():
             status = compatibility.evaluate(facts, [rules]).status

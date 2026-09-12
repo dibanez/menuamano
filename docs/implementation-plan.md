@@ -35,6 +35,9 @@ propuesto.
 4. **Información incompleta = desconocido**: un ingrediente cuyo perfil de rasgos no está revisado
    (`trait_info_complete=False`), como los productos procesados, los ingredientes creados por la IA
    o los ingredientes nuevos del hogar, da una compatibilidad **desconocida**, nunca «segura».
+   El hogar puede resolverlo revisando la etiqueta del producto que compra (`IngredientReview`):
+   la revisión solo vale para ese hogar, sustituye la información del catálogo en todas las
+   comprobaciones y, si la etiqueta lleva algo restringido, la comida pasa a incompatible.
 5. **Unidades**: tres dimensiones (masa, volumen, unidades contables). Dentro de una dimensión la
    conversión es exacta (g↔kg, ml↔l, cucharada = 15 ml, cucharadita = 5 ml). Entre dimensiones solo
    se convierte con una equivalencia conocida del ingrediente (p. ej. 1 huevo ≈ 60 g), y el

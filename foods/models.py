@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -239,3 +240,40 @@ class UnitConversion(models.Model):
 
     def __str__(self):
         return f"1 {self.get_unit_display()} de {self.ingredient} ≈ {self.grams} g"
+
+
+class IngredientReview(models.Model):
+    """A household's check of the label of the product it actually buys.
+
+    Processed products change with the brand, so the shared catalogue marks them as unreviewed.
+    A review replaces that missing information for one household only: `traits` is what the
+    label says the product contains, including "may contain traces of".
+    """
+
+    household = models.ForeignKey(
+        "households.Household", on_delete=models.CASCADE, related_name="ingredient_reviews"
+    )
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name="household_reviews")
+    traits = ArrayField(
+        models.CharField(max_length=16, choices=Trait.choices), default=list, blank=True,
+        verbose_name="contiene según la etiqueta",
+    )
+    note = models.CharField("marca o nota", max_length=120, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    reviewed_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "revisión de etiqueta"
+        verbose_name_plural = "revisiones de etiqueta"
+        constraints = [
+            models.UniqueConstraint(fields=["household", "ingredient"], name="unique_ingredient_review")
+        ]
+
+    def __str__(self):
+        return f"{self.ingredient} ({self.household})"
+
+    def save(self, *args, **kwargs):
+        self.traits = sorted(str(t) for t in expand_traits(self.traits))
+        super().save(*args, **kwargs)

@@ -2,14 +2,17 @@ from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from households.models import Role
 from households.permissions import household_required
 
-from .forms import ConversionForm, IngredientForm
-from .models import Ingredient, UnitConversion
+from . import reviews
+from .forms import ConversionForm, IngredientForm, IngredientReviewForm
+from .models import Ingredient, IngredientReview, UnitConversion
 
 
 @household_required()
@@ -18,9 +21,11 @@ def ingredient_list(request):
     ingredients = Ingredient.objects.for_household(request.household)
     if q:
         ingredients = ingredients.filter(Q(name__icontains=q) | Q(aliases__icontains=q))
+    household_reviews = reviews.reviews_for(request.household)
     if request.GET.get("revisar"):
-        ingredients = ingredients.filter(trait_info_complete=False)
-    return render(request, "foods/list.html", {"ingredients": ingredients.order_by("name"), "q": q})
+        ingredients = ingredients.filter(trait_info_complete=False).exclude(pk__in=household_reviews)
+    context = {"ingredients": ingredients.order_by("name"), "q": q, "reviews": household_reviews}
+    return render(request, "foods/list.html", context)
 
 
 @household_required(Role.EDITOR)
@@ -94,3 +99,39 @@ def equivalence_delete(request, pk, cid):
     _recalculate_open_lists(request.household)
     messages.success(request, "Equivalencia eliminada.")
     return redirect("foods:equivalences", pk)
+
+
+def _safe_next(request, default):
+    target = request.POST.get("next") or request.GET.get("next") or ""
+    if target and url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        return target
+    return default
+
+
+@household_required()
+def ingredient_review(request, pk):
+    """Record what the label of the product this household buys says it contains."""
+    ingredient = get_object_or_404(Ingredient.objects.for_household(request.household), pk=pk)
+    review = IngredientReview.objects.filter(household=request.household, ingredient=ingredient).first()
+    next_url = _safe_next(request, reverse("foods:list"))
+    initial = {"traits": (review.traits if review else ingredient.traits), "note": review.note if review else ""}
+    form = IngredientReviewForm(request.POST or None, initial=initial)
+    if request.method == "POST":
+        if not request.membership.can_edit:
+            raise PermissionDenied("Editors only")
+        if form.is_valid():
+            reviews.save_review(
+                request.household, ingredient, request.user, form.cleaned_data["traits"], form.cleaned_data["note"]
+            )
+            messages.success(request, f"Etiqueta de «{ingredient.name}» revisada. Las comidas previstas se han vuelto a comprobar.")
+            return redirect(next_url)
+    return render(request, "foods/review.html", {"ingredient": ingredient, "review": review, "form": form, "next": next_url})
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def ingredient_review_delete(request, pk):
+    review = get_object_or_404(IngredientReview, ingredient_id=pk, household=request.household)
+    reviews.delete_review(review)
+    messages.success(request, "Revisión eliminada: se vuelve a usar la información del catálogo.")
+    return redirect("foods:review", pk)

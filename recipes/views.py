@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from foods.compatibility import LABEL_REMINDER, rules_for_diner
+from foods.reviews import reviews_for
 from foods.units import scale
 from households.models import Role
 from households.permissions import household_required
@@ -60,10 +61,14 @@ def recipe_detail(request, pk):
     recipe = get_object_or_404(services.recipes_for_household(request.household, include_archived=True), pk=pk)
     servings = _parse_servings(request.GET.get("raciones"), recipe.base_servings)
     lines = [(ri, scale(ri.quantity, recipe.base_servings, servings)) for ri in recipe.ingredients.all()]
+    reviews = reviews_for(request.household)
     if request.htmx and "raciones" in request.GET:
-        return render(request, "recipes/_ingredients.html", {"recipe": recipe, "lines": lines, "servings": servings})
+        return render(
+            request, "recipes/_ingredients.html",
+            {"recipe": recipe, "lines": lines, "servings": servings, "reviews": reviews},
+        )
     diners = list(diners_queryset(request.household))
-    compatibility = [(diner, services.check_recipe(recipe, [rules_for_diner(diner)])) for diner in diners]
+    compatibility = [(diner, services.check_recipe(recipe, [rules_for_diner(diner)], reviews)) for diner in diners]
     history = (
         MealRecipe.objects.filter(recipe=recipe, meal__household=request.household)
         .select_related("meal").order_by("-meal__date")[:8]
@@ -72,6 +77,7 @@ def recipe_detail(request, pk):
         "recipe": recipe,
         "lines": lines,
         "servings": servings,
+        "reviews": reviews,
         "steps": recipe.steps.all(),
         "compatibility": compatibility,
         "is_favorite": recipe.pk in _favorite_ids(request),
