@@ -63,8 +63,33 @@ Toda la configuración llega por variables de entorno (ver `.env.example`).
 Si `AI_PROVIDER=openai` y falta la clave o el modelo, el asistente aparece como «IA sin
 configurar» y el resto de la aplicación funciona igual.
 
-`compose.prod.yaml` es solo una referencia de despliegue (gunicorn, `DEBUG=False`, cookies
-seguras, estáticos con WhiteNoise). Este repositorio no despliega nada.
+## Despliegue en Dokploy
+
+`compose.prod.yaml` está preparado para Dokploy (gunicorn, `DEBUG=False`, cookies seguras, HSTS,
+estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
+
+1. Crea un servicio **Docker Compose** desde el repositorio, con la ruta `./compose.prod.yaml`.
+2. En **Environment** define las variables. Dokploy las escribe en un `.env` y el compose las lee
+   con `${VAR}`; no hace falta `env_file`.
+
+   | Variable | Obligatoria | Valor |
+   |---|---|---|
+   | `DJANGO_SECRET_KEY` | Sí | Cadena aleatoria larga |
+   | `DJANGO_ALLOWED_HOSTS` | Sí | Tu dominio, p. ej. `menuamano.example.com` |
+   | `POSTGRES_PASSWORD` | Sí | Contraseña de la base de datos |
+   | `POSTGRES_DB`, `POSTGRES_USER` | No | `menuamano` por defecto |
+   | `DJANGO_CSRF_TRUSTED_ORIGINS` | No | `https://tu-dominio` si usas otro origen |
+   | `AI_PROVIDER` | No | `demo` (por defecto) u `openai` |
+   | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
+   | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
+
+3. En **Domains** añade el dominio para el servicio `web`, puerto `8000`, con HTTPS. Dokploy
+   añade las etiquetas de Traefik y la red al desplegar; el compose no publica puertos.
+4. Despliega. Al arrancar se aplican las migraciones y se recogen los estáticos. El healthcheck
+   usa `/healthz`, que comprueba la base de datos y no pasa por la redirección HTTPS.
+
+Para crear un superusuario: `python manage.py createsuperuser` en la terminal del contenedor `web`
+desde Dokploy. No cargues `load_demo` en producción.
 
 ## Estructura
 

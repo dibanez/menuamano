@@ -1,31 +1,66 @@
-# Production-like stack for reference. It is NOT deployed by this repository.
-# Usage: docker compose -f compose.prod.yaml --env-file .env.production up --build
+# Production stack for Dokploy (service type: Docker Compose, compose path: ./compose.prod.yaml).
+#
+# Variables are defined in Dokploy's Environment tab. Dokploy writes them to a .env file next to
+# this compose file and Compose interpolates the ${VAR} references below; nothing else is read.
+# Required variables fail the deployment with a clear message when missing.
+#
+# Domain: add it in Dokploy's Domains tab for service "web", container port 8000, with HTTPS.
+# Dokploy adds the Traefik labels and the network at deploy time, so no ports are published here.
 services:
   db:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-menuamano}
+      POSTGRES_USER: ${POSTGRES_USER:-menuamano}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
     volumes:
-      - pgdata_prod:/var/lib/postgresql/data
+      # Named volume: required for Dokploy volume backups.
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
+      timeout: 5s
       retries: 20
 
   web:
     build: .
-    env_file: .env.production
+    restart: unless-stopped
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in Dokploy}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in Dokploy (e.g. menuamano.example.com)}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-true}
+      DJANGO_HSTS_SECONDS: ${DJANGO_HSTS_SECONDS:-3600}
       POSTGRES_HOST: db
-    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 90"
-    ports:
-      - "127.0.0.1:8000:8000"
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-menuamano}
+      POSTGRES_USER: ${POSTGRES_USER:-menuamano}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
+      AI_PROVIDER: ${AI_PROVIDER:-demo}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      OPENAI_TIMEOUT_SECONDS: ${OPENAI_TIMEOUT_SECONDS:-45}
+      OPENAI_MAX_RETRIES: ${OPENAI_MAX_RETRIES:-2}
+      OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-6000}
+    command: >-
+      sh -c "python manage.py migrate --noinput
+      && python manage.py collectstatic --noinput
+      && exec gunicorn config.wsgi:application --bind 0.0.0.0:8000
+      --workers ${GUNICORN_WORKERS:-3} --timeout 90 --access-logfile -"
+    expose:
+      - "8000"
+    healthcheck:
+      # /healthz skips the HTTPS redirect and host validation and checks the database connection.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
-  pgdata_prod:
+  pgdata:

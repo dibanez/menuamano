@@ -146,3 +146,8 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
 especializan. Producción exige `DJANGO_SECRET_KEY` y activa cookies seguras, HSTS y estáticos
 comprimidos. `ATOMIC_REQUESTS=False` para que las llamadas de red no queden dentro de
 transacciones largas.
+
+Despliegue: `compose.prod.yaml` está pensado para Dokploy. Las variables llegan por interpolación
+`${VAR}` desde el `.env` que genera Dokploy, y las obligatorias hacen fallar el despliegue si
+faltan. Traefik enruta al puerto 8000 con las etiquetas que añade Dokploy. `HealthCheckMiddleware`
+va el primero y atiende `/healthz` antes de la validación de host y de la redirección HTTPS.
