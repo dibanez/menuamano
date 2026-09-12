@@ -75,6 +75,7 @@ def diner_detail(request, pk):
     diner = _diner(request, pk)
     household = request.household
     preferences = list(diner.preferences.select_related("ingredient").order_by("ingredient__name", "text"))
+    grid = _attendance_grid(diner, household)
     context = {
         "diner": diner,
         "restrictions": diner.restrictions.select_related("ingredient"),
@@ -86,7 +87,8 @@ def diner_detail(request, pk):
         "preferences_form": PreferencesForm(diner=diner, prefix="p"),
         "text_preference_form": TextPreferenceForm(prefix="t"),
         "preset_form": DietPresetForm(prefix="d"),
-        "grid": _attendance_grid(diner, household),
+        "grid": grid,
+        "attendance_count": sum(1 for row in grid for _, checked in row["cells"] if checked),
         "meal_types": [MealType(mt) for mt in household.meal_types],
         "can_view_health": can_view_health(request.user, diner),
     }

@@ -19,24 +19,29 @@
 {% endfor %}
 
 {% if can_edit %}
-<section class="panel">
-  <h2 class="mt-0">Rellenar o regenerar un intervalo</h2>
-  <p class="muted small">Usa vuestras recetas, la asistencia habitual, las reglas y las excepciones. Solo elige recetas compatibles según los datos. Las comidas protegidas con candado no se tocan; las que editas a mano quedan protegidas.</p>
-  <form method="post" action="{% url 'planning:regenerate' %}" class="grid-2" hx-disabled-elt="find button">
-    {% csrf_token %}
-    {% with form=range_form %}{% include "partials/form_fields.html" %}{% endwith %}
-    <div><button class="btn primary" type="submit">Regenerar</button></div>
-  </form>
+<details class="panel more">
+  <summary><span>Rellenar la semana<span class="more-hint">Con vuestras recetas{% if ai_status.available and ai_allowed %} o con el asistente{% endif %}</span></span></summary>
+  <section>
+    <h3>Rellenar o regenerar un intervalo</h3>
+    <p class="muted small">Usa vuestras recetas, la asistencia habitual, las reglas y las excepciones. Solo elige recetas compatibles según los datos. Las comidas protegidas con candado no se tocan; las que editas a mano quedan protegidas.</p>
+    <form method="post" action="{% url 'planning:regenerate' %}" class="grid-2" hx-disabled-elt="find button">
+      {% csrf_token %}
+      {% with form=range_form %}{% include "partials/form_fields.html" %}{% endwith %}
+      <div><button class="btn primary" type="submit">Regenerar</button></div>
+    </form>
+  </section>
   {% if ai_status.available and ai_allowed %}
-  <form method="post" action="{% url 'assistant:plan_range' %}" style="margin-top:12px" hx-disabled-elt="find button">
-    {% csrf_token %}
-    <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">
-    <input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}">
-    <button class="btn" type="submit">Pedir una propuesta al asistente para esta semana</button>
-    {% if ai_status.is_demo %}<span class="badge demo">Modo demostración</span>{% endif %}
-    <p class="muted small" style="margin:6px 0 0">Verás los cambios antes de aplicarlos.</p>
-  </form>
+  <section>
+    <form method="post" action="{% url 'assistant:plan_range' %}" hx-disabled-elt="find button">
+      {% csrf_token %}
+      <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">
+      <input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}">
+      <button class="btn" type="submit">Pedir una propuesta al asistente para esta semana</button>
+      {% if ai_status.is_demo %}<span class="badge demo">Modo demostración</span>{% endif %}
+      <p class="muted small" style="margin:6px 0 0">Verás los cambios antes de aplicarlos.</p>
+    </form>
+  </section>
   {% endif %}
-</section>
+</details>
 {% endif %}
 {% endblock %}

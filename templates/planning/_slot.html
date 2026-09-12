@@ -17,7 +17,7 @@
   </span>
   <span class="meal-side">
     {% if slot.meal %}
-      {% status_badge slot.meal.safety_status %}
+      {% if slot.meal.safety_status != "ok" %}{% status_badge slot.meal.safety_status %}{% endif %}{# only what needs attention stands out #}
       {% if slot.meal.locked %}<svg class="icon icon-s" role="img" aria-label="Protegida"><use href="#i-lock"/></svg>{% endif %}
     {% endif %}
   </span>

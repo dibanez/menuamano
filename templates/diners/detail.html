@@ -100,8 +100,9 @@
   {% endif %}
 </section>
 
-<section class="panel">
-  <h2>Cuándo come en casa</h2>
+<details class="panel more">
+  <summary><span>Cuándo come en casa<span class="more-hint">{% if attendance_count %}Suele estar en {{ attendance_count }} comida{{ attendance_count|pluralize }} a la semana{% else %}Sin comidas habituales marcadas{% endif %}</span></span></summary>
+  <section>
   <p class="muted small">Marca las comidas en las que suele estar. Se usa al crear o regenerar comidas; cada comida se puede ajustar después.</p>
   <form method="post" action="{% url 'diners:attendance_save' diner.pk %}">
     {% csrf_token %}
@@ -122,5 +123,6 @@
     </div>
     {% if can_edit %}<div class="form-actions"><button class="btn" type="submit">Guardar asistencia</button></div>{% endif %}
   </form>
-</section>
+  </section>
+</details>
 {% endblock %}
