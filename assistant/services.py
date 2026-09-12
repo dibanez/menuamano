@@ -213,6 +213,7 @@ def validate_output(household, context, output, start, end):
         r.pk: r for r in recipe_services.recipes_for_household(household)
     }
     reviews = reviews_for(household)
+    focus = context.data.get("focus_slot") or {}
     meals = planning.meals_by_slot(household, start, end)
     planning_context = planning.PlanningContext.load(household, start, end)
     items, seen = [], set()
@@ -249,8 +250,11 @@ def validate_output(household, context, output, start, end):
                 "attendees": [a.label for a in meal.attendees.all()],
             }
             if meal.locked:
-                _reject(item, "La comida está protegida; no se puede cambiar desde una propuesta.")
-                continue
+                if (change.date, change.meal_type) != (focus.get("date"), focus.get("meal_type")):
+                    _reject(item, "La comida está protegida; no se puede cambiar desde una propuesta.")
+                    continue
+                # Set only here, never from provider output: the one locked meal the person asked about.
+                item["requested_meal"] = True
 
         if change.attendee_codes is not None:
             diners = []
@@ -438,7 +442,7 @@ def _apply_item(household, user, item, created, accepted_review):
     """Apply one change after re-checking it against current data. Returns an error or None."""
     the_date = date.fromisoformat(item["date"])
     meal, _ = planning.get_or_create_meal(household, the_date, item["meal_type"], user=user)
-    if meal.locked:
+    if meal.locked and not item.get("requested_meal"):
         return "la comida está protegida."
     diners = None
     if item["attendee_ids"] is not None:

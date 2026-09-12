@@ -110,6 +110,9 @@ def build_context(household, start, end, operation, user_request="", focus=None,
                     "rule_source": defaults.source,
                 }
             )
+            if focus and (day, meal_type) == (focus[0], focus[1]):
+                # The person asked about this very meal: its lock only guards against regenerations.
+                slot["locked"] = False
             slots.append(slot)
 
     recipes = (
