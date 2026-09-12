@@ -83,8 +83,17 @@ propuesto.
 
 ## Estado (12/09/2026)
 
-Las tres fases están implementadas y la aplicación arranca con Docker. 64 pruebas automáticas
+Las tres fases están implementadas y la aplicación arranca con Docker. 76 pruebas automáticas
 pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a 400 px de ancho.
+
+### Iteración 2 (rama `iteration-2`)
+
+- [x] `.dockerignore`: la imagen ya no copia `.venv` ni `.git`.
+- [x] Invitaciones con enlace de un solo uso, con rol y caducidad a 7 días. Solo se guarda el hash
+      del token y el enlace se muestra una vez. Quien no tiene cuenta puede registrarse desde el enlace.
+- [x] Chat: los nombres que se escriben se sustituyen por códigos antes de salir del servidor y
+      los códigos de la respuesta se muestran como nombres. Se envían los 6 últimos mensajes.
+- [x] Compra: para piezas se sugiere comprar el entero superior (p. ej. «falta 1,9 unidades. Compra 2»).
 
 ### Pendiente o conocido
 
@@ -92,8 +101,7 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
   SDK 3.13 instalado (firmas, excepciones y tipos) y con dobles de prueba, pero no con una clave
   real. Primer paso para continuar: fijar `AI_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL`
   en `.env`, pedir una propuesta semanal y revisar `AIRequestLog`.
-- **Invitaciones**: solo se puede añadir a personas ya registradas, por correo. Falta un flujo de
-  invitación con enlace.
+- **Invitaciones**: el enlace se comparte a mano (no se envían correos).
 - **Ingredientes**: la selección en el formulario de recetas es un `<select>` simple; con catálogos
   grandes convendrá un buscador. No hay equivalencias pieza↔gramos (p. ej. «1 huevo ≈ 60 g»):
   las piezas nunca se convierten.
@@ -101,8 +109,8 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
   de más hay que fijar raciones a mano en la comida original.
 - **Revalidación**: se revalidan las comidas futuras al cambiar restricciones o ingredientes. Las
   pasadas se conservan como estaban.
-- **El chat es de un solo turno**: cada mensaje genera una propuesta independiente; no se envía el
-  historial de la conversación al modelo.
+- **Memoria del chat limitada**: se envían los 6 últimos mensajes; cada mensaje genera una propuesta
+  independiente. El proveedor de demostración no interpreta el historial.
 - Accesibilidad y rendimiento: revisados a mano, sin auditoría automatizada.
 
 ### Fuera de alcance (no se muestran como operativos)

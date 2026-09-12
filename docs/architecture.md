@@ -26,6 +26,9 @@ emite cualquier cambio de comida, así `planning` no depende de `shopping`.
   compartido.
 - `household_required(role)` exige iniciar sesión, tener hogar y un rol mínimo:
   lectura < edición < administración.
+- **Invitaciones** (`households/invitations.py`): enlaces de un solo uso con rol y caducidad.
+  Solo se guarda el SHA-256 del token; la aceptación bloquea la fila para que no se use dos veces.
+  Quien ya es miembro conserva su rol y no consume el enlace.
 - **Peso** (`diners/permissions.py`): lo ven y registran solo la persona vinculada al comensal
   y quien tenga una concesión explícita (`HealthDataAccess`). Las concesiones las gestiona la
   propia persona; si el comensal no tiene cuenta, la administración del hogar. El rol de
@@ -89,6 +92,8 @@ Dónde se aplican las reglas:
   manuales. Si algo comprado deja de hacer falta, se queda como **excedente**; no se borra ni se
   da por consumido.
 - Los ingredientes «al gusto» (sin cantidad) no se añaden a la compra.
+- Para piezas, la lista sugiere comprar el entero superior de lo pendiente sin alterar la cantidad
+  necesaria calculada.
 
 ## Asistente (OpenAI)
 
@@ -106,6 +111,8 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   local; sus respuestas llevan la etiqueta «Modo demostración».
 - **Contexto mínimo**: los comensales viajan como C1, C2… con grupo de edad, factor de ración,
   restricciones y gustos. No se envían nombres, fechas de nacimiento, pesos ni notas libres.
+  Los nombres de comensales escritos en el chat (petición y últimos 6 mensajes) se sustituyen por
+  su código antes de enviarlos, y los códigos de la respuesta se muestran como nombres.
 - **Esquema estricto** (`assistant/schemas.py`). La salida es la entrada de una validación
   posterior: fechas dentro del intervalo, tipos de comida activos, huecos no protegidos, recetas
   del propio hogar, códigos de comensal existentes y reglas alimentarias. Lo inválido se marca
