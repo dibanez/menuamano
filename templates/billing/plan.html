@@ -45,7 +45,7 @@
   <h2 class="mt-0">Premium</h2>
   <ul class="plan-features">
     <li>Asistente con IA: propone menús, reemplazos y recetas que revisas antes de aplicar</li>
-    <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
+    <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes{% if free.has_ai %} (ahora {{ free.ai_monthly_limit }}){% endif %}</li>
     <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar (ahora {{ free.max_members }})</li>
   </ul>
   {% if is_household_admin and billing_enabled %}

@@ -6,7 +6,7 @@
 {% include "legal/_owner.html" %}
 
 <h2>2. El servicio</h2>
-<p>menuamano permite a un hogar planificar sus comidas, registrar quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. El plan Premium añade un asistente con inteligencia artificial y admite más personas con cuenta en el hogar.</p>
+<p>menuamano permite a un hogar planificar sus comidas, registrar quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. {% if free.has_ai %}Incluye un asistente con inteligencia artificial con un número limitado de peticiones al mes; el plan Premium amplía ese cupo y admite más personas con cuenta en el hogar.{% else %}El plan Premium añade un asistente con inteligencia artificial y admite más personas con cuenta en el hogar.{% endif %}</p>
 
 <h2>3. Tu cuenta</h2>
 <ul>
@@ -21,7 +21,7 @@
 
 <h2>5. Planes y precios</h2>
 <ul>
-  <li><strong>{{ free.name }}:</strong> gratuito, con planificación manual completa y hasta {{ free.max_members }} personas con cuenta en el hogar.</li>
+  <li><strong>{{ free.name }}:</strong> gratuito, con planificación completa{% if free.has_ai %}, el asistente con IA (hasta {{ free.ai_monthly_limit }} peticiones al mes por hogar){% endif %} y hasta {{ free.max_members }} personas con cuenta en el hogar.</li>
   <li><strong>{{ premium.name }}:</strong> {{ prices.monthly }} al mes o {{ prices.yearly }} al año por hogar, impuestos incluidos. Incluye el asistente con IA (hasta {{ premium.ai_monthly_limit }} peticiones al mes por hogar) y hasta {{ premium.max_members }} personas con cuenta.</li>
 </ul>
 <p>Premium lo contrata una persona administradora del hogar y lo disfrutan todas sus personas miembro. El pago se realiza mediante Stripe. La suscripción se renueva automáticamente al final de cada periodo (mensual o anual) hasta que la canceles.</p>

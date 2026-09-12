@@ -71,6 +71,7 @@
           <li>Calendario de desayunos, comidas, meriendas y cenas</li>
           <li>Comensales ilimitados, con alergias y gustos</li>
           <li>Recetario, sobras y lista de la compra automática</li>
+          {% if free.has_ai %}<li>Asistente con IA: {{ free.ai_monthly_limit }} peticiones al mes para probarlo</li>{% endif %}
           <li>Hasta {{ free.max_members }} personas con cuenta en el hogar</li>
         </ul>
         <a class="btn block" href="{% url 'accounts:signup' %}">Empezar gratis</a>

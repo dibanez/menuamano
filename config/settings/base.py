@@ -180,6 +180,7 @@ STRIPE_AUTOMATIC_TAX = env_bool("STRIPE_AUTOMATIC_TAX", False)
 # Without billing (local development) every household gets Premium features.
 BILLING_ENABLED = env_bool("BILLING_ENABLED", bool(STRIPE_SECRET_KEY))
 FREE_MAX_MEMBERS = env_int("FREE_MAX_MEMBERS", 2)
+FREE_AI_MONTHLY_LIMIT = env_int("FREE_AI_MONTHLY_LIMIT", 10)  # 0 = no assistant on the free plan
 PREMIUM_MAX_MEMBERS = env_int("PREMIUM_MAX_MEMBERS", 8)
 PREMIUM_AI_MONTHLY_LIMIT = env_int("PREMIUM_AI_MONTHLY_LIMIT", 150)
 PREMIUM_PRICE_MONTHLY_LABEL = env_str("PREMIUM_PRICE_MONTHLY_LABEL", "4,99 €")

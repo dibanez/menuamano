@@ -131,10 +131,11 @@ Mailgun (*Sending → Logs* y *Suppressions*). Si en Mailgun quedan webhooks apu
 
 ### Pagos con Stripe
 
-Planes: **Gratis** (planificación manual completa, hasta 2 personas con cuenta) y **Premium**
+Planes: **Gratis** (planificación completa, asistente con IA con 10 peticiones al mes y hasta 2
+personas con cuenta) y **Premium**
 (4,99 €/mes o 49 €/año por hogar: asistente con IA con 150 peticiones al mes y hasta 8 personas
-con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `PREMIUM_MAX_MEMBERS` y
-`PREMIUM_AI_MONTHLY_LIMIT`. En producción la facturación está activa por defecto (`*` en la tabla:
+con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `FREE_AI_MONTHLY_LIMIT`
+(0 quita el asistente del plan gratuito), `PREMIUM_MAX_MEMBERS` y `PREMIUM_AI_MONTHLY_LIMIT`. En producción la facturación está activa por defecto (`*` en la tabla:
 obligatorias salvo `BILLING_ENABLED=false`).
 
 1. En Stripe crea el producto «menuamano Premium» con dos precios recurrentes en EUR: 4,99 € al mes

@@ -23,7 +23,7 @@ class Plan:
 def get_plan(code):
     if code == PREMIUM:
         return Plan(PREMIUM, "Premium", settings.PREMIUM_MAX_MEMBERS, settings.PREMIUM_AI_MONTHLY_LIMIT)
-    return Plan(FREE, "Gratis", settings.FREE_MAX_MEMBERS, 0)
+    return Plan(FREE, "Gratis", settings.FREE_MAX_MEMBERS, settings.FREE_AI_MONTHLY_LIMIT)
 
 
 def price_labels():

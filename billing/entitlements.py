@@ -44,7 +44,10 @@ def check_ai(household):
     if not plan.has_ai:
         return False, "El asistente con IA forma parte del plan Premium."
     if ai_calls_this_month(household) >= plan.ai_monthly_limit:
-        return False, f"Habéis usado las {plan.ai_monthly_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
+        message = f"Habéis usado las {plan.ai_monthly_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
+        if plan.code == FREE:
+            message += f" Con Premium tenéis {get_plan(PREMIUM).ai_monthly_limit} al mes."
+        return False, message
     return True, ""
 
 

@@ -13,7 +13,7 @@
   <div class="notice unknown"><strong>El asistente no está disponible</strong>{{ ai_status.detail }}</div>
 {% endif %}
 {% if ai_status.available and not ai_allowed %}
-  <div class="notice"><strong>Asistente Premium</strong>{{ ai_block_message }} <a href="{% url 'billing:plan' %}">Ver el plan del hogar</a></div>
+  <div class="notice"><strong>Asistente con IA</strong>{{ ai_block_message }} <a href="{% url 'billing:plan' %}">Ver el plan del hogar</a></div>
 {% endif %}
 
 {% if pending %}

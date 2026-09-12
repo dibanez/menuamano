@@ -35,6 +35,7 @@ def billing_on(settings):
     settings.STRIPE_PRICE_MONTHLY = "price_month"
     settings.STRIPE_PRICE_YEARLY = "price_year"
     settings.FREE_MAX_MEMBERS = 2
+    settings.FREE_AI_MONTHLY_LIMIT = 2
     settings.PREMIUM_MAX_MEMBERS = 8
     settings.PREMIUM_AI_MONTHLY_LIMIT = 3
     settings.SITE_URL = "https://menuamano.example.com"
@@ -119,7 +120,19 @@ class NeverCalled:
         raise AssertionError("the provider must not be called")
 
 
-def test_free_households_cannot_use_the_ai(billing_on, household, admin_user, monday, monkeypatch):
+def test_free_households_get_a_small_ai_quota(billing_on, household, admin_user, monday, monkeypatch):
+    assert entitlements.check_ai(household) == (True, "")
+    for _ in range(2):
+        AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
+    allowed, message = entitlements.check_ai(household)
+    assert not allowed and "2 peticiones" in message and "Con Premium tenéis 3 al mes" in message
+    monkeypatch.setattr(assistant_services, "get_provider", lambda: NeverCalled())
+    with pytest.raises(assistant_services.AssistantError, match="2 peticiones"):
+        assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
+
+
+def test_free_ai_can_be_turned_off(billing_on, household, admin_user, monday, monkeypatch):
+    billing_on.FREE_AI_MONTHLY_LIMIT = 0
     monkeypatch.setattr(assistant_services, "get_provider", lambda: NeverCalled())
     with pytest.raises(assistant_services.AssistantError, match="Premium"):
         assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
@@ -140,10 +153,14 @@ def test_premium_ai_quota_counts_only_paid_calls(billing_on, household, admin_us
     assert entitlements.ai_calls_this_month(household) == 3
 
 
-def test_free_chat_page_offers_premium(billing_on, client, household, admin_user):
+def test_free_chat_works_until_the_quota_runs_out(billing_on, client, household, admin_user):
     assert client.login(email=admin_user.email, password=PASSWORD)
+    assert 'name="message"' in client.get(reverse("assistant:chat")).content.decode()
+    assert "0 de 2" in client.get(reverse("billing:plan")).content.decode()
+    for _ in range(2):
+        AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
     page = client.get(reverse("assistant:chat")).content.decode()
-    assert "Asistente Premium" in page and 'name="message"' not in page
+    assert 'name="message"' not in page and "Con Premium tenéis 3 al mes" in page
 
 
 def test_member_limit_applies_to_invitations_and_premium_raises_it(billing_on, client, household, admin_user):
