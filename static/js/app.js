@@ -17,6 +17,26 @@ document.addEventListener("click", (event) => {
   if (firstInput) firstInput.focus();
 });
 
+// Searchable selects: typing narrows the options of the select in the same field and picks the
+// first match (hiding options is ignored by some mobile browsers, selecting always works).
+const normalizeText = (text) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+document.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-filter-select]");
+  if (!input) return;
+  const select = input.closest(".field")?.querySelector("select");
+  if (!select) return;
+  const term = normalizeText(input.value.trim());
+  let firstMatch = null;
+  for (const option of select.options) {
+    const match = !term || normalizeText(option.text).includes(term);
+    option.hidden = !match && option.value !== "";
+    if (match && option.value && !firstMatch) firstMatch = option;
+  }
+  if (term && firstMatch) select.value = firstMatch.value;
+  input.setAttribute("aria-description", firstMatch ? `Seleccionado: ${firstMatch.text}` : "Sin coincidencias");
+});
+
 // Copy the value of an input to the clipboard.
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-copy]");
