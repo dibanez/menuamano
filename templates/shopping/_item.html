@@ -22,6 +22,9 @@
       {% endif %}
       {% if item.manual_note %}<br>{{ item.manual_note }}{% endif %}
     </div>
+    {% if item.label_check %}
+      <div class="label-check">Mira la etiqueta por {{ item.label_check }}.{% if can_edit and item.ingredient_id %} <a href="{% url 'foods:review' item.ingredient_id %}?next={% url 'shopping:detail' item.shopping_list_id %}">Revisar</a>{% endif %}</div>
+    {% endif %}
   </div>
   {% if item.source_rows or can_edit %}
   <details>

@@ -79,6 +79,7 @@ def detail(request, pk):
     for item in surplus:
         decorate(item)
     all_items = [item for _, items in groups for item in items]
+    services.attach_label_checks(request.household, all_items)
     done = sum(1 for item in all_items if item.is_done)
     context = {
         "shopping_list": shopping_list,
@@ -116,7 +117,8 @@ def delete(request, pk):
 
 def _respond_item(request, item):
     if request.htmx:
-        return render(request, "shopping/_item.html", {"item": decorate(item), "can_edit": True})
+        services.attach_label_checks(request.household, [decorate(item)])
+        return render(request, "shopping/_item.html", {"item": item, "can_edit": True})
     return redirect("shopping:detail", item.shopping_list_id)
 
 

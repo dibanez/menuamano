@@ -12,6 +12,10 @@ from django.db.models import Q
 from .models import UNIT_INFO, Dimension, Unit, UnitConversion
 from .units import to_base
 
+# A pinch is always a tiny amount of a powder, so it has a generic weight. It lets «una pizca de
+# sal» merge with grams of salt; an ingredient's own pinch equivalence still takes precedence.
+PINCH_GRAMS = Decimal("0.4")
+
 
 def load(household, ingredient_ids):
     """{ingredient_id: {unit: grams}} with the household's rows overriding the catalogue's."""
@@ -37,7 +41,10 @@ def grams_per(unit, table):
     if dimension == Dimension.VOLUME:
         per_ml = table.get(str(Unit.ML))
         return per_ml * factor if per_ml else None
-    return table.get(str(Unit(unit)))
+    grams = table.get(str(Unit(unit)))
+    if grams is None and Unit(unit) == Unit.PINCH:
+        return PINCH_GRAMS
+    return grams
 
 
 def convert(quantity, unit, target_unit, table):

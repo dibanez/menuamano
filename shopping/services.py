@@ -14,7 +14,7 @@ from django.utils import timezone
 from foods import conversions
 from foods.models import CATEGORY_ORDER, Category
 from foods.units import scale, to_base
-from planning.models import MODES_WITH_SHOPPING
+from planning.models import MODES_WITH_SHOPPING, Meal
 from planning.services import meals_queryset, planned_servings
 
 from .models import ShoppingItem, ShoppingList
@@ -169,6 +169,37 @@ def add_manual_item(shopping_list, name, quantity=None, unit="", note="", catego
         shopping_list=shopping_list, is_manual=True, name=name, needed_quantity=quantity or ZERO,
         unit=unit, manual_note=note, category=category,
     )
+
+
+LABEL_CHECK_LEVELS = {"conflict", "unknown", "warning"}
+
+
+def _join_people(names):
+    names = sorted(names)
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} y {names[-1]}"
+
+
+def attach_label_checks(household, items):
+    """Set `item.label_check` to the people whose restrictions flag the item in its meals.
+
+    Uses the dietary issues already stored on the meals, so it matches what the meal page says.
+    Issues stored before they carried an ingredient id are matched by ingredient name.
+    """
+    meal_ids = {s.get("meal_id") for item in items for s in item.sources if s.get("meal_id")}
+    by_id, by_name = {}, {}
+    issues_per_meal = Meal.objects.filter(household=household, pk__in=meal_ids).values_list("safety_issues", flat=True)
+    for issues in issues_per_meal:
+        for issue in issues:
+            if issue.get("level") not in LABEL_CHECK_LEVELS or not issue.get("person"):
+                continue
+            if issue.get("ingredient_id"):
+                by_id.setdefault(issue["ingredient_id"], set()).add(issue["person"])
+            elif issue.get("ingredient"):
+                by_name.setdefault(issue["ingredient"], set()).add(issue["person"])
+    for item in items:
+        people = by_id.get(item.ingredient_id, set()) | by_name.get(item.name, set()) if item.sources else set()
+        item.label_check = _join_people(people) if people else ""
+    return items
 
 
 def grouped_items(shopping_list):

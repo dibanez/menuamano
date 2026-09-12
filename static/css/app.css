@@ -342,6 +342,9 @@ ol.steps li::marker { font-weight: 800; color: var(--leaf); }
 .shop-item .name { font-weight: 650; overflow-wrap: anywhere; }
 .shop-item.done .name { text-decoration: line-through; color: var(--muted); }
 .shop-item .amounts { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.shop-item .label-check { margin-top: 2px; font-size: 0.8rem; color: var(--unknown); overflow-wrap: anywhere; }
+.shop-item .label-check a { color: inherit; font-weight: 650; }
+.shop-item.done .label-check { display: none; }
 .shop-item details { grid-column: 2 / -1; min-width: 0; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
 .shop-item details summary { cursor: pointer; }
 .tick {
