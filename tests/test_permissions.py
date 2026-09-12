@@ -55,7 +55,7 @@ def test_cannot_modify_other_household_objects_by_id(client, two_homes):
         (reverse("planning:meal_update", args=[meal_b.pk]), {"mode": "free"}),
         (reverse("planning:meal_delete", args=[meal_b.pk]), {}),
         (reverse("shopping:item_toggle", args=[item_b.pk]), {}),
-        (reverse("diners:restriction_add", args=[two_homes["diner_b"].pk]), {"r-kind": "allergy", "r-trait": "egg"}),
+        (reverse("diners:restrictions_save", args=[two_homes["diner_b"].pk]), {"r-kind": "allergy", "r-traits": ["egg"]}),
         (reverse("recipes:edit", args=[two_homes["recipe_b"].pk]), {"name": "Hackeada"}),
     ]
     for url, data in posts:

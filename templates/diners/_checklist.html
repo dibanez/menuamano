@@ -1,0 +1,8 @@
+<fieldset class="field{% if field.errors %} has-error{% endif %}">
+  <legend>{{ field.label }}</legend>
+  <input type="search" data-filter-list placeholder="Buscar ingrediente…" aria-label="Buscar en «{{ field.label|lower }}»" autocomplete="off">
+  <div class="checklist">
+    {% for checkbox in field %}<label>{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% endfor %}
+  </div>
+  {% if field.errors %}<ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+</fieldset>

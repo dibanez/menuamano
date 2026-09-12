@@ -37,6 +37,19 @@ document.addEventListener("input", (event) => {
   input.setAttribute("aria-description", firstMatch ? `Seleccionado: ${firstMatch.text}` : "Sin coincidencias");
 });
 
+// Searchable checkbox lists: typing hides the entries that do not match (checked ones included,
+// they stay selected and are still submitted).
+document.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-filter-list]");
+  if (!input) return;
+  const list = input.closest("fieldset")?.querySelector(".checklist");
+  if (!list) return;
+  const term = normalizeText(input.value.trim());
+  for (const label of list.querySelectorAll("label")) {
+    label.hidden = Boolean(term) && !normalizeText(label.textContent).includes(term);
+  }
+});
+
 // Copy the value of an input to the clipboard.
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-copy]");

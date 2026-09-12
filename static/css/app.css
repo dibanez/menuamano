@@ -194,6 +194,18 @@ fieldset.field legend { font-weight: 650; margin-bottom: 6px; padding: 0; }
 
 .form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 
+/* Long searchable checkbox lists (ingredients). Checked entries are listed first by the server. */
+.checklist {
+  display: grid; grid-template-columns: 1fr; gap: 2px; max-height: 17rem; overflow-y: auto; margin-top: 6px;
+  padding: 4px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--surface);
+}
+@media (min-width: 560px) { .checklist { grid-template-columns: 1fr 1fr; } }
+.checklist label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 10px; border-radius: var(--radius-s); cursor: pointer; }
+.checklist label:has(input:checked) { background: var(--leaf-soft); font-weight: 650; }
+.checklist label[hidden] { display: none; }
+details.editor > summary { margin-top: 8px; }
+.editor-form { margin-top: 14px; }
+
 /* Compact rows used in formsets */
 .formset-row { display: grid; gap: 8px; grid-template-columns: 1fr; padding: 12px 0; border-top: 1px dashed var(--line); }
 @media (min-width: 640px) {

@@ -9,9 +9,19 @@ from foods.models import DIET_PRESETS
 from households.models import Role
 from households.permissions import household_required
 
-from .forms import DietPresetForm, DinerForm, GrantForm, PreferenceForm, RestrictionForm, WeightForm
+from . import services
+from .forms import (
+    DietPresetForm,
+    DinerForm,
+    GrantForm,
+    PreferencesForm,
+    RestrictionsForm,
+    TextPreferenceForm,
+    WeightForm,
+)
 from .models import AttendancePattern, Diner, DinerPreference, DinerRestriction, HealthDataAccess
 from .permissions import can_manage_health_access, can_view_health
+from .signals import batch_restriction_changes
 
 
 def _diner(request, pk):
@@ -32,7 +42,7 @@ def diner_create(request):
         diner = form.save(commit=False)
         diner.household = request.household
         diner.save()
-        messages.success(request, f"{diner.alias} añadido. Indica ahora sus alergias o restricciones, si las tiene.")
+        messages.success(request, f"{diner.alias} añadido. Marca ahora sus alergias o restricciones, si las tiene.")
         return redirect("diners:detail", diner.pk)
     return render(request, "diners/form.html", {"form": form})
 
@@ -64,13 +74,18 @@ def _attendance_grid(diner, household):
 def diner_detail(request, pk):
     diner = _diner(request, pk)
     household = request.household
+    preferences = list(diner.preferences.select_related("ingredient").order_by("ingredient__name", "text"))
     context = {
         "diner": diner,
         "restrictions": diner.restrictions.select_related("ingredient"),
-        "preferences": diner.preferences.select_related("ingredient"),
-        "restriction_form": RestrictionForm(household=household, prefix="r"),
-        "preset_form": DietPresetForm(prefix="p"),
-        "preference_form": PreferenceForm(household=household, prefix="pref"),
+        # Ingredient preferences go in the summary; free-text ones are listed with a remove button.
+        "dislikes": [p for p in preferences if p.ingredient_id and p.kind == DinerPreference.Kind.DISLIKE],
+        "likes": [p for p in preferences if p.ingredient_id and p.kind == DinerPreference.Kind.LIKE],
+        "text_preferences": [p for p in preferences if not p.ingredient_id],
+        "restrictions_form": RestrictionsForm(diner=diner, prefix="r"),
+        "preferences_form": PreferencesForm(diner=diner, prefix="p"),
+        "text_preference_form": TextPreferenceForm(prefix="t"),
+        "preset_form": DietPresetForm(prefix="d"),
         "grid": _attendance_grid(diner, household),
         "meal_types": [MealType(mt) for mt in household.meal_types],
         "can_view_health": can_view_health(request.user, diner),
@@ -84,18 +99,29 @@ def _form_errors_to_messages(request, form):
             messages.error(request, error)
 
 
+def _names(items):
+    return ", ".join(items)
+
+
 @household_required(Role.EDITOR)
 @require_POST
-def restriction_add(request, pk):
+def restrictions_save(request, pk):
     diner = _diner(request, pk)
-    form = RestrictionForm(request.POST, household=request.household, prefix="r")
-    if form.is_valid():
-        restriction = form.save(commit=False)
-        restriction.diner = diner
-        restriction.save()
-        messages.success(request, "Restricción añadida. Las comidas previstas se han vuelto a comprobar.")
-    else:
+    form = RestrictionsForm(request.POST, diner=diner, prefix="r")
+    if not form.is_valid():
         _form_errors_to_messages(request, form)
+        return redirect("diners:detail", diner.pk)
+    data = form.cleaned_data
+    added, removed = services.sync_restrictions(diner, data["traits"], data["ingredients"], data["kind"], data["label"])
+    if not added and not removed:
+        messages.info(request, "No había cambios en las restricciones.")
+        return redirect("diners:detail", diner.pk)
+    parts = []
+    if added:
+        parts.append(f"añadidas: {_names(added)}")
+    if removed:
+        parts.append(f"quitadas: {_names(removed)}")
+    messages.success(request, f"Restricciones guardadas ({'; '.join(parts)}). Las comidas previstas se han vuelto a comprobar.")
     return redirect("diners:detail", diner.pk)
 
 
@@ -103,10 +129,10 @@ def restriction_add(request, pk):
 @require_POST
 def preset_add(request, pk):
     diner = _diner(request, pk)
-    form = DietPresetForm(request.POST, prefix="p")
+    form = DietPresetForm(request.POST, prefix="d")
     if form.is_valid():
         label, traits = DIET_PRESETS[form.cleaned_data["preset"]]
-        with transaction.atomic():
+        with transaction.atomic(), batch_restriction_changes(diner.household):
             for trait in traits:
                 if not diner.restrictions.filter(trait=trait).exists():
                     DinerRestriction.objects.create(diner=diner, kind=DinerRestriction.Kind.DIET, trait=trait, label=label)
@@ -125,9 +151,25 @@ def restriction_delete(request, pk, rid):
 
 @household_required(Role.EDITOR)
 @require_POST
+def preferences_save(request, pk):
+    diner = _diner(request, pk)
+    form = PreferencesForm(request.POST, diner=diner, prefix="p")
+    if form.is_valid():
+        added, removed = services.sync_preferences(diner, form.cleaned_data["dislikes"], form.cleaned_data["likes"])
+        if added or removed:
+            messages.success(request, "Gustos guardados.")
+        else:
+            messages.info(request, "No había cambios en los gustos.")
+    else:
+        _form_errors_to_messages(request, form)
+    return redirect("diners:detail", diner.pk)
+
+
+@household_required(Role.EDITOR)
+@require_POST
 def preference_add(request, pk):
     diner = _diner(request, pk)
-    form = PreferenceForm(request.POST, household=request.household, prefix="pref")
+    form = TextPreferenceForm(request.POST, prefix="t")
     if form.is_valid():
         preference = form.save(commit=False)
         preference.diner = diner

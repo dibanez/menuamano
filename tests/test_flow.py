@@ -50,7 +50,7 @@ def test_main_flow(client):
     for alias, portion in [("Marta", "1"), ("Jon", "1"), ("Iker", "0.5")]:
         client.post(reverse("diners:create"), {"alias": alias, "portion_factor": portion, "is_active": "on"})
     iker = Diner.objects.get(household=household, alias="Iker")
-    client.post(reverse("diners:restriction_add", args=[iker.pk]), {"r-kind": "allergy", "r-trait": "egg"})
+    client.post(reverse("diners:restrictions_save", args=[iker.pk]), {"r-kind": "allergy", "r-traits": ["egg"]})
     assert iker.restrictions.count() == 1
 
     # Recipes.

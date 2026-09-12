@@ -32,12 +32,23 @@
   </ul>
   {% if diner.notes %}<div class="notice unknown"><strong>Observaciones no verificables automáticamente</strong>{{ diner.notes }}</div>{% endif %}
   {% if can_edit %}
-  <details>
-    <summary class="btn small" style="margin-top:8px">Añadir restricción</summary>
-    <form method="post" action="{% url 'diners:restriction_add' diner.pk %}" style="margin-top:12px">
+  <details class="editor" {% if not restrictions %}open{% endif %}>
+    <summary class="btn small">Marcar alergias y restricciones</summary>
+    <form method="post" action="{% url 'diners:restrictions_save' diner.pk %}" class="editor-form">
       {% csrf_token %}
-      {% with form=restriction_form %}{% include "partials/form_fields.html" %}{% endwith %}
-      <button class="btn primary" type="submit">Añadir restricción</button>
+      {% with form=restrictions_form %}
+      <fieldset class="field">
+        <legend>{{ form.traits.label }}</legend>
+        <div class="choices">{% for checkbox in form.traits %}<label>{{ checkbox.tag }} {{ checkbox.choice_label }}</label>{% endfor %}</div>
+      </fieldset>
+      {% include "diners/_checklist.html" with field=form.ingredients %}
+      <div class="grid-2">
+        {% include "partials/field.html" with field=form.kind %}
+        {% include "partials/field.html" with field=form.label %}
+      </div>
+      {% endwith %}
+      <p class="muted small">Marca o desmarca varias y guarda: se añaden las nuevas y se quitan las desmarcadas.</p>
+      <button class="btn primary" type="submit">Guardar restricciones</button>
     </form>
     <form method="post" action="{% url 'diners:preset_add' diner.pk %}" class="row" style="margin-top:16px">
       {% csrf_token %}
@@ -52,23 +63,38 @@
 <section class="panel">
   <h2>Gustos y preferencias</h2>
   <p class="muted small">Se tienen en cuenta al proponer menús, pero se pueden negociar.</p>
-  <ul class="list">
-    {% for p in preferences %}
-      <li class="row between">
-        <span><span class="badge {% if p.kind == 'like' %}ok{% endif %}">{{ p.get_kind_display }}</span> {{ p.ingredient|default:p.text }}</span>
-        {% if can_edit %}<form method="post" action="{% url 'diners:preference_delete' diner.pk p.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>{% endif %}
-      </li>
-    {% empty %}
-      <li class="muted">Sin preferencias registradas.</li>
-    {% endfor %}
-  </ul>
+  {% if dislikes or likes or text_preferences %}
+    {% if dislikes %}<p class="mt-0"><strong>No le gusta:</strong> {% for p in dislikes %}<span class="badge">{{ p.ingredient }}</span> {% endfor %}</p>{% endif %}
+    {% if likes %}<p class="mt-0"><strong>Le gusta:</strong> {% for p in likes %}<span class="badge ok">{{ p.ingredient }}</span> {% endfor %}</p>{% endif %}
+    {% if text_preferences %}
+    <ul class="list">
+      {% for p in text_preferences %}
+        <li class="row between">
+          <span><span class="badge {% if p.kind == 'like' %}ok{% endif %}">{{ p.get_kind_display }}</span> {{ p.text }}</span>
+          {% if can_edit %}<form method="post" action="{% url 'diners:preference_delete' diner.pk p.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  {% else %}
+    <p class="muted">Sin preferencias registradas.</p>
+  {% endif %}
   {% if can_edit %}
-  <details>
-    <summary class="btn small" style="margin-top:8px">Añadir preferencia</summary>
-    <form method="post" action="{% url 'diners:preference_add' diner.pk %}" style="margin-top:12px">
+  <details class="editor" {% if not dislikes and not likes %}open{% endif %}>
+    <summary class="btn small">Marcar lo que le gusta y lo que no</summary>
+    <form method="post" action="{% url 'diners:preferences_save' diner.pk %}" class="editor-form">
       {% csrf_token %}
-      {% with form=preference_form %}{% include "partials/form_fields.html" %}{% endwith %}
-      <button class="btn primary" type="submit">Guardar preferencia</button>
+      {% include "diners/_checklist.html" with field=preferences_form.dislikes %}
+      {% include "diners/_checklist.html" with field=preferences_form.likes %}
+      <button class="btn primary" type="submit">Guardar gustos</button>
+    </form>
+    <form method="post" action="{% url 'diners:preference_add' diner.pk %}" style="margin-top:16px">
+      {% csrf_token %}
+      <div class="grid-2">
+        {% include "partials/field.html" with field=text_preference_form.kind %}
+        {% include "partials/field.html" with field=text_preference_form.text %}
+      </div>
+      <button class="btn" type="submit">Añadir preferencia</button>
     </form>
   </details>
   {% endif %}
