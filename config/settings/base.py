@@ -35,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "core.middleware.HealthCheckMiddleware",  # first: health probes skip host checks and redirects
+    "core.middleware.RetiredWebhookMiddleware",  # 406 to the removed Mailgun webhook, without logging
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

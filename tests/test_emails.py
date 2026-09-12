@@ -205,9 +205,11 @@ def test_production_console_escape_hatch():
     assert result.stdout.splitlines()[0] == "django.core.mail.backends.console.EmailBackend"
 
 
-def test_there_is_no_mailgun_webhook(client, db, settings):
-    # Removed on purpose: bounces and complaints are read in Mailgun, nothing is received here.
+def test_removed_mailgun_webhook_answers_406_quietly(client, db, settings, caplog):
+    # Removed on purpose: bounces and complaints are read in Mailgun. 406 makes Mailgun stop retrying.
     settings.ADMINS = [("Ops", "ops@example.com")]
     response = client.post("/anymail/mailgun/tracking/", "{}", content_type="application/json")
-    assert response.status_code == 404
+    assert response.status_code == 406
+    assert client.get("/anymail/mailgun/tracking/").status_code == 406
     assert mail.outbox == []
+    assert not [r for r in caplog.records if r.name.startswith("django")]

@@ -126,7 +126,8 @@ Para comprobar el envío, desde la terminal del contenedor `web`:
 `python manage.py send_test_email tu@correo.com`.
 
 La aplicación no tiene webhook de Mailgun: los rebotes y las quejas se consultan en el panel de
-Mailgun (*Sending → Logs* y *Suppressions*).
+Mailgun (*Sending → Logs* y *Suppressions*). Si en Mailgun quedan webhooks apuntando a
+`/anymail/…`, bórralos: la aplicación les responde 406 para que Mailgun no reintente.
 
 ### Pagos con Stripe
 

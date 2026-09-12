@@ -160,7 +160,8 @@ usuario revisa ──► apply_proposal: bloqueo de fila, estado, versión de co
   - errores del servidor a `ADMINS`.
 - Sin webhook de Mailgun: se retiró porque rechazaba todas las llamadas y llenaba el log. Los
   rebotes y las quejas se consultan en el panel de Mailgun. `EmailEvent` y su admin conservan los
-  eventos que ya se hubieran guardado.
+  eventos que ya se hubieran guardado. `RetiredWebhookMiddleware` responde 406 a `/anymail/…`
+  sin escribir en el log: Mailgun no reintenta un 406.
 
 ## Planes y pagos (Stripe)
 
