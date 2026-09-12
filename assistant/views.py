@@ -38,11 +38,14 @@ def chat_send(request):
     if not text:
         messages.error(request, "Escribe qué quieres cambiar.")
         return redirect("assistant:chat")
+    previous = ChatMessage.objects.filter(household=request.household, is_error=False).order_by("-created_at")[:6]
+    history = [(m.role, m.text) for m in reversed(previous)]
     user_message = ChatMessage.objects.create(household=request.household, user=request.user, role=ChatMessage.Role.USER, text=text)
     today = timezone.localdate()
     try:
         proposal = services.request_proposal(
-            request.household, request.user, "chat", today, today + timedelta(days=CHAT_WINDOW_DAYS - 1), text=text
+            request.household, request.user, "chat", today, today + timedelta(days=CHAT_WINDOW_DAYS - 1),
+            text=text, history=history,
         )
     except services.AssistantError as exc:
         reply = ChatMessage.objects.create(

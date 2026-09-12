@@ -63,7 +63,7 @@ def _log(household, user, provider_name, operation, status, started, result=None
     )
 
 
-def request_proposal(household, user, operation, start, end, text="", focus=None):
+def request_proposal(household, user, operation, start, end, text="", focus=None, history=()):
     """Ask the provider for changes and store them as a pending proposal. Never edits meals."""
     started = time.monotonic()
     try:
@@ -72,7 +72,7 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
         _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
         raise AssistantError(exc.user_message) from exc
 
-    context = build_context(household, start, end, operation, user_request=text, focus=focus)
+    context = build_context(household, start, end, operation, user_request=text, focus=focus, history=history)
     base_versions = {
         planning.slot_key(m.date, m.meal_type): m.version
         for m in Meal.objects.filter(household=household, date__gte=start, date__lte=end)
@@ -90,7 +90,7 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
     with transaction.atomic():
         proposal = Proposal.objects.create(
             household=household, created_by=user, operation=operation, provider=provider.name,
-            summary=_summary(result.output.summary, notes), items=items, new_recipes=new_recipes,
+            summary=_summary(context.humanize(result.output.summary), notes), items=items, new_recipes=new_recipes,
             base_versions=base_versions, start_date=start, end_date=end,
         )
     return proposal
@@ -197,7 +197,7 @@ def _people_for_slot(meal, attendee_diners, default_diners):
 
 def validate_output(household, context, output, start, end):
     """Turn provider output into reviewable items. Invalid parts are rejected, never applied."""
-    notes = [w.strip()[:300] for w in output.warnings if w.strip()]
+    notes = [context.humanize(w.strip())[:300] for w in output.warnings if w.strip()]
     new_recipes = {}
     for raw in output.new_recipes[:MAX_NEW_RECIPES]:
         recipe = _validate_new_recipe(household, raw)
@@ -214,7 +214,8 @@ def validate_output(household, context, output, start, end):
         item = {
             "date": change.date, "meal_type": change.meal_type, "mode": change.mode, "recipe_ids": [],
             "recipe_names": [], "new_recipe_refs": [], "attendee_ids": None, "attendee_labels": [],
-            "notes": change.notes.strip()[:300], "reason": change.reason.strip()[:300], "status": ITEM_OK,
+            "notes": context.humanize(change.notes.strip())[:300], "reason": context.humanize(change.reason.strip())[:300],
+            "status": ITEM_OK,
             "issues": [], "current": None,
         }
         items.append(item)

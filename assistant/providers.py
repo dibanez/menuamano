@@ -27,7 +27,9 @@ Rules:
 - Only propose changes for slots listed in `slots`, inside `range`, with a meal type in `enabled_meal_types`.
 - Never change slots with "locked": true.
 - Omit slots that should stay as they are. Keep proposals minimal and focused on the request.
-- People are identified only by codes (C1, C2…). Use `attendee_codes: null` to keep the usual attendees.
+- People are identified only by codes (C1, C2…), also inside `user_request` and `conversation`.
+  Refer to them by code in your texts. Use `attendee_codes: null` to keep the usual attendees.
+- `conversation` holds the previous chat turns (oldest first) for context; act on `user_request`.
 - Mandatory restrictions can never be relaxed. Never assign a recipe whose `blocked_for` contains an attendee.
   Avoid recipes whose `review_for` contains an attendee when an alternative exists.
   If no compatible option exists, use mode "pending", no recipes, and explain it in `warnings`.

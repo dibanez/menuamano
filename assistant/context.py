@@ -5,6 +5,7 @@ weight history or free-text notes. Recipes carry precomputed compatibility per c
 model can avoid blocked options, but the server re-checks everything afterwards.
 """
 
+import re
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -19,8 +20,24 @@ from planning.services import PlanningContext, daterange, diners_queryset, meals
 from recipes import services as recipe_services
 
 MAX_RECIPES = 80
+MAX_HISTORY = 6
 TRAIT_LABELS = dict(Trait.choices)
 WEEKDAY_LABELS = dict(Weekday.choices)
+CODE_RE = re.compile(r"\bC\d+\b")
+
+
+def pseudonymize(text, code_to_diner):
+    """Replace diner names typed by people with their codes before anything leaves the server."""
+    for code, diner in sorted(code_to_diner.items(), key=lambda item: -len(item[1].alias)):
+        alias = diner.alias.strip()
+        if alias:
+            text = re.sub(rf"(?<!\w){re.escape(alias)}(?!\w)", code, text, flags=re.IGNORECASE)
+    return text
+
+
+def depseudonymize(text, code_to_diner):
+    """Show codes returned by the provider as the diners' names."""
+    return CODE_RE.sub(lambda m: code_to_diner[m.group(0)].alias if m.group(0) in code_to_diner else m.group(0), text)
 
 
 @dataclass
@@ -32,8 +49,11 @@ class AssistantContext:
     def diner_for_code(self, code):
         return self.code_to_diner.get(code)
 
+    def humanize(self, text):
+        return depseudonymize(text or "", self.code_to_diner)
 
-def build_context(household, start, end, operation, user_request="", focus=None):
+
+def build_context(household, start, end, operation, user_request="", focus=None, history=()):
     today = timezone.localdate()
     diners = list(diners_queryset(household))
     code_to_diner = {f"C{i + 1}": d for i, d in enumerate(diners)}
@@ -138,6 +158,9 @@ def build_context(household, start, end, operation, user_request="", focus=None)
             Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
         ),
         "units": [u.value for u in Unit],
-        "user_request": user_request[:1000],
+        "conversation": [
+            {"role": role, "text": pseudonymize(text, code_to_diner)[:500]} for role, text in list(history)[-MAX_HISTORY:]
+        ],
+        "user_request": pseudonymize(user_request, code_to_diner)[:1000],
     }
     return AssistantContext(data=data, code_to_diner=code_to_diner, diner_to_code=diner_to_code)
