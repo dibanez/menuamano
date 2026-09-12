@@ -17,6 +17,21 @@ document.addEventListener("click", (event) => {
   if (firstInput) firstInput.focus();
 });
 
+// Copy the value of an input to the clipboard.
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-copy]");
+  if (!button) return;
+  const input = document.getElementById(button.dataset.copy);
+  if (!input) return;
+  input.select();
+  try {
+    await navigator.clipboard.writeText(input.value);
+    button.textContent = "Copiado";
+  } catch {
+    button.textContent = "Selecciónalo y cópialo";
+  }
+});
+
 // Confirmation for destructive buttons, using a native dialog-free approach:
 // buttons with data-confirm are only submitted after a second tap.
 document.addEventListener("click", (event) => {

@@ -11,4 +11,7 @@ urlpatterns = [
     path("miembros/nuevo/", views.add_member, name="add_member"),
     path("miembros/<int:pk>/rol/", views.change_role, name="change_role"),
     path("miembros/<int:pk>/quitar/", views.remove_member, name="remove_member"),
+    path("invitaciones/nueva/", views.invitation_create, name="invitation_create"),
+    path("invitaciones/<int:pk>/anular/", views.invitation_revoke, name="invitation_revoke"),
+    path("invitacion/<str:token>/", views.invitation, name="invitation"),
 ]

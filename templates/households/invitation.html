@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Invitación · menuamano{% endblock %}
+{% block content %}
+<div class="auth">
+  {% if error %}
+    <h1>No se puede usar esta invitación</h1>
+    <div class="notice unknown">{{ error }}</div>
+    <p><a href="{% url 'core:home' %}">Ir al inicio</a></p>
+  {% else %}
+    <h1>Te han invitado a «{{ invitation.household.name }}»</h1>
+    <p class="muted">Entrarás con el rol de {{ invitation.get_role_display|lower }}. La invitación caduca el {{ invitation.expires_at|date:"j \d\e F" }}.</p>
+    {% if anonymous %}
+      <div class="panel">
+        <p>Para unirte necesitas una cuenta de menuamano.</p>
+        <div class="form-actions">
+          <a class="btn primary" href="{% url 'accounts:signup' %}?next={{ request.path|urlencode }}">Crear una cuenta</a>
+          <a class="btn" href="{% url 'accounts:login' %}?next={{ request.path|urlencode }}">Ya tengo cuenta</a>
+        </div>
+      </div>
+    {% elif already %}
+      <div class="notice">Ya eres miembro de este hogar.</div>
+      <form method="post">{% csrf_token %}<button class="btn" type="submit">Abrir el hogar</button></form>
+    {% else %}
+      <form method="post" class="panel">
+        {% csrf_token %}
+        <button class="btn primary block" type="submit">Unirme al hogar</button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

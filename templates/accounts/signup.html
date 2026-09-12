@@ -7,8 +7,9 @@
   <form method="post" class="panel">
     {% csrf_token %}
     {% include "partials/form_fields.html" %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <button class="btn primary block" type="submit">Crear cuenta</button>
   </form>
-  <p>¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}">Entrar</a></p>
+  <p>¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Entrar</a></p>
 </div>
 {% endblock %}
