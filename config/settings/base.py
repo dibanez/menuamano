@@ -67,6 +67,7 @@ TEMPLATES = [
                 "assistant.context_processors.ai_mode",
                 "billing.context_processors.billing",
                 "core.context_processors.analytics",
+                "core.seo.seo_context",
             ],
         },
     },

@@ -89,7 +89,7 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `DJANGO_ADMINS` | Recomendada | Quién recibe los errores del servidor, p. ej. `Ana <ana@example.com>` |
    | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Sí* | Clave secreta y secreto del webhook de Stripe |
    | `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Sí* | Ids de precio de Premium (`price_…`) |
-   | `SITE_URL` | Recomendada | `https://tu-dominio`, para enlaces en correos enviados desde webhooks |
+   | `SITE_URL` | Recomendada | `https://tu-dominio`: URL canónica, `sitemap.xml` y enlaces en correos enviados desde webhooks |
    | `AI_PROVIDER` | No | `demo` (por defecto) u `openai` |
    | `OPENAI_REASONING_EFFORT` | No | `low` por defecto; vacío si el modelo no razona |
    | `GTM_CONTAINER_ID` | No | `GTM-WWR8DTN8` por defecto; vacío para no cargar Tag Manager |

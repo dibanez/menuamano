@@ -1,5 +1,8 @@
 {% extends "base.html" %}
-{% block title %}menuamano · qué comemos, quién come y qué hay que comprar{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block robots %}index, follow{% endblock %}
+{% block seo %}{% include "partials/seo_public.html" %}{{ json_ld }}{% endblock %}
 {% block content %}
 <div class="landing">
 
@@ -94,10 +97,8 @@
 
   <section class="landing-section" aria-labelledby="faq-title">
     <h2 id="faq-title">Preguntas frecuentes</h2>
-    <details class="faq"><summary>¿Tienen que tener cuenta todas las personas de casa?</summary><p>No. Los comensales son perfiles sin cuenta. Solo necesitan cuenta quienes vayan a consultar o editar el menú.</p></details>
-    <details class="faq"><summary>¿Qué datos ve la inteligencia artificial?</summary><p>Solo lo necesario para proponer el menú: códigos en lugar de nombres, grupos de edad, restricciones y recetas. Nunca nombres, fechas de nacimiento ni pesos.</p></details>
-    <details class="faq"><summary>¿Y el registro de peso?</summary><p>Es opcional y privado. Solo lo ve la propia persona y quien ella autorice. menuamano no calcula dietas ni objetivos.</p></details>
-    <details class="faq"><summary>¿Puedo cancelar Premium?</summary><p>Sí, desde la página del plan de tu hogar, en cualquier momento. Mantienes Premium hasta el final del periodo pagado.</p></details>
+    {# Same list as the FAQPage structured data in the head. #}
+    {% for faq in faqs %}<details class="faq"><summary>{{ faq.question }}</summary><p>{{ faq.answer }}</p></details>{% endfor %}
   </section>
 
   <footer class="landing-footer">

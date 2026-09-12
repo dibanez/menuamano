@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from billing.plans import FREE, PREMIUM, get_plan, price_labels
 
+from . import seo
 from .legal import LEGAL_UPDATED, owner
 
 LEGAL_PAGES = {
@@ -18,7 +19,12 @@ LEGAL_PAGES = {
 
 
 def legal_index(request):
-    return render(request, "legal/index.html", {"pages": LEGAL_PAGES, "updated": LEGAL_UPDATED})
+    context = {
+        "pages": LEGAL_PAGES, "updated": LEGAL_UPDATED,
+        "seo_title": "Información legal · menuamano",
+        "seo_description": "Información legal de menuamano: aviso legal, privacidad, cookies y condiciones de uso.",
+    }
+    return render(request, "legal/index.html", context)
 
 
 def legal_page(request, slug):
@@ -35,6 +41,8 @@ def legal_page(request, slug):
         "prices": price_labels(),
         "analytics_configured": bool(settings.GTM_CONTAINER_ID),
         "pages": LEGAL_PAGES,
+        "seo_title": f"{title} · menuamano",
+        "seo_description": f"{title} de menuamano, la aplicación para planificar las comidas de casa y la lista de la compra.",
     }
     return render(request, template, context)
 from planning.calendar import calendar_days
@@ -44,6 +52,7 @@ from shopping.models import ShoppingList
 
 def landing(request):
     context = {"free": get_plan(FREE), "premium": get_plan(PREMIUM), "prices": price_labels()}
+    context.update(seo.landing_seo(request, **context))
     return render(request, "core/landing.html", context)
 
 
