@@ -14,6 +14,7 @@ from core.choices import MEAL_TYPE_ORDER
 from households.models import Membership
 from planning.models import MealMode
 from planning.services import meals_queryset
+from shopping.services import expiring_between
 
 from . import push
 from .models import ReminderPreference
@@ -44,11 +45,18 @@ def tomorrow_message(membership, day):
             note = meal_recipe.recipe.advance_note if meal_recipe.recipe_id else ""
             if note:
                 preparations.append(f"Hoy: {note} ({meal_recipe.name})")
-    if not lines:
+    # What expires today or tomorrow, so it is used in time.
+    batches = expiring_between(membership.household, day - timedelta(days=1), day)
+    expiring = []
+    for label, when in (("Caduca hoy", day - timedelta(days=1)), ("Caduca mañana", day)):
+        names = sorted({b.ingredient.name for b in batches if b.expires_on == when})
+        if names:
+            expiring.append(f"{label}: {', '.join(names)}")
+    if not lines and not expiring:
         return None
     return {
         "title": _title(membership, "Mañana en casa"),
-        "body": "\n".join(preparations + lines),
+        "body": "\n".join(preparations + expiring + lines),
         "url": reverse("planning:day", args=[day.isoformat()]),
         "tag": f"tomorrow-{membership.household_id}",
     }

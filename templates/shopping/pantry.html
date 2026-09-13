@@ -5,8 +5,38 @@
 <div class="page-head">
   <h1>Despensa</h1>
   <a class="btn small" href="{% url 'shopping:current' %}">Volver a la compra</a>
-  <p class="lead">Lo que tenéis en casa. Los básicos salen aparte en la lista para que mires si os queda; las cantidades se descuentan de la compra.</p>
+  <p class="lead">Lo que hay en casa y cuándo caduca. El asistente lo tiene en cuenta para usarlo antes de que caduque.</p>
 </div>
+
+{% if expiring %}
+  <div class="notice unknown">
+    <strong>Caduca pronto</strong>
+    <ul>{% for batch in expiring %}<li>{{ batch.ingredient.name }}{% if batch.quantity %} ({{ batch.quantity|qty:batch.unit }}){% endif %}: {{ batch.expiry_label }}.</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<section class="panel">
+  <h2 class="mt-0">Lo que hay en casa</h2>
+  {% if batches %}
+    <ul class="list batches">
+      {% for batch in batches %}
+        <li class="batch">
+          <div>
+            <strong>{{ batch.ingredient.name }}</strong>{% if batch.quantity %} <span class="muted">{{ batch.quantity|qty:batch.unit }}</span>{% endif %}
+            {% if batch.expires_on %}<span class="badge {% if batch.expiry_state == 'expired' %}conflict{% elif batch.expiry_state == 'soon' %}unknown{% endif %}">{{ batch.expiry_label|capfirst }}</span>{% endif %}
+            <div class="muted small">Comprado el {{ batch.bought_on|date:"j M" }}{% if batch.shopping_item %}, de la lista {{ batch.shopping_item.shopping_list }}{% else %}. Se descuenta de la compra{% endif %}.</div>
+          </div>
+          {% if can_edit %}
+          <form method="post" action="{% url 'shopping:batch_used' batch.pk %}">{% csrf_token %}<button class="btn small" type="submit">Gastado</button></form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted small">Al marcar algo como comprado en la lista, pulsa «Guardar en la despensa» y pon cuándo caduca. También puedes anotarlo aquí.</p>
+  {% endif %}
+  <p class="muted small" style="margin-bottom:0">Nada se gasta solo: cuando se acabe, pulsa «Gastado».</p>
+</section>
 
 <section class="panel">
   <h2 class="mt-0">Siempre en casa</h2>
@@ -39,25 +69,6 @@
   {% endif %}
 </section>
 
-<section class="panel">
-  <h2 class="mt-0">Cantidades en casa</h2>
-  {% if stock %}
-    <ul class="list">
-      {% for entry in stock %}
-        <li class="row between">
-          <span>{{ entry.ingredient.name }} <span class="muted">{{ entry.quantity|qty:entry.unit }}</span></span>
-          {% if can_edit %}
-          <form method="post" action="{% url 'shopping:pantry_delete' entry.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="muted small">Por ejemplo, «tenemos 500 g de arroz»: se descuenta de la compra.</p>
-  {% endif %}
-  <p class="muted small" style="margin-bottom:0">Nada se gasta solo: cuando se acabe, quítalo o cambia la cantidad.</p>
-</section>
-
 {% if can_edit %}
 <form method="post" action="{% url 'shopping:pantry_add' %}" class="panel">
   {% csrf_token %}
@@ -77,7 +88,8 @@
     {% include "partials/field.html" with field=form.quantity %}
     {% include "partials/field.html" with field=form.unit %}
   </div>
-  <p class="muted small mt-0">La cantidad solo hace falta con «{{ form.kind.field.choices.1.1 }}».</p>
+  {% include "partials/field.html" with field=form.expires_on %}
+  <p class="muted small mt-0">Cantidad y caducidad solo con «{{ form.kind.field.choices.1.1 }}».</p>
   <button class="btn primary" type="submit">Guardar en la despensa</button>
 </form>
 {% endif %}

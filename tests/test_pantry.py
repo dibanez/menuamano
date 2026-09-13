@@ -45,31 +45,32 @@ def test_staples_are_listed_apart_to_check_what_is_left(household, admin_user, s
 
 
 def test_quantities_at_home_are_taken_off_the_list(household, admin_user, shopping_list):
-    shopping.set_pantry_item(household, admin_user, ingredient("Espaguetis"), PantryItem.Kind.STOCK, Decimal("150"), "g")
+    first = shopping.add_batch(household, admin_user, ingredient("Espaguetis"), Decimal("150"), "g")
     pasta = item(shopping_list, "Espaguetis")
     assert pasta.needed_quantity == Decimal("50") and pasta.pantry_quantity == Decimal("150")
-    # A whole kilo at home covers the 200 g of the menu: nothing to buy, listed as already at home.
-    shopping.set_pantry_item(household, admin_user, ingredient("Espaguetis"), PantryItem.Kind.STOCK, Decimal("1"), "kg")
+    # Another kilo at home covers the 200 g of the menu: nothing to buy, listed as already at home.
+    second = shopping.add_batch(household, admin_user, ingredient("Espaguetis"), Decimal("1"), "kg")
     pasta = item(shopping_list, "Espaguetis")
     assert pasta.needed_quantity == 0 and pasta.pantry_quantity == Decimal("200") and pasta.is_covered
     staples, covered = shopping.pantry_sections(shopping_list)
     assert [i.name for i in covered] == ["Espaguetis"]
-    # Removing it from the pantry brings the need back.
-    shopping.remove_pantry_item(PantryItem.objects.get(household=household))
+    # Once used up, the need comes back.
+    shopping.use_batch(first)
+    shopping.use_batch(second)
     pasta = item(shopping_list, "Espaguetis")
     assert pasta.needed_quantity == Decimal("200") and pasta.pantry_quantity == 0
 
 
 def test_quantities_in_units_that_do_not_convert_are_not_guessed(household, admin_user, shopping_list):
     # Pieces of pasta have no equivalence in grams: nothing is taken off.
-    shopping.set_pantry_item(household, admin_user, ingredient("Espaguetis"), PantryItem.Kind.STOCK, Decimal("2"), "pack")
+    shopping.add_batch(household, admin_user, ingredient("Espaguetis"), Decimal("2"), "pack")
     assert item(shopping_list, "Espaguetis").needed_quantity == Decimal("200")
 
 
 def test_another_household_pantry_changes_nothing(household, admin_user, shopping_list):
     other_admin = make_user("otra@example.com")
     other = make_household("Otra casa", admin=other_admin)
-    shopping.set_pantry_item(other, other_admin, ingredient("Espaguetis"), PantryItem.Kind.STOCK, Decimal("1"), "kg")
+    shopping.add_batch(other, other_admin, ingredient("Espaguetis"), Decimal("1"), "kg")
     shopping.recalculate(shopping_list)
     assert item(shopping_list, "Espaguetis").needed_quantity == Decimal("200")
 

@@ -239,6 +239,6 @@ Más detalle en [`docs/architecture.md`](docs/architecture.md) y el estado del t
 
 ## Qué no hace todavía
 
-Inventario automático, congelador, caducidades, lotes de sobras, precios, nutrición, códigos de
-barras e integraciones con supermercados. La despensa solo recoge lo que anotáis a mano: los
-básicos salen aparte en la lista y las cantidades se descuentan, pero nada se gasta solo.
+Inventario automático, congelador, lotes de sobras, precios, nutrición e integraciones con
+supermercados. La despensa recoge lo que anotáis: lo comprado se guarda desde la lista con su
+caducidad y el asistente lo usa antes de que caduque, pero nada se gasta solo («Gastado»).

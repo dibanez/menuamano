@@ -51,6 +51,11 @@ Rules:
   `recipes` under the same or a very similar name: use its id instead. New recipes must be common home cooking,
   use ingredient names from `known_ingredients` whenever possible, realistic quantities for `base_servings`,
   units from `units`, and ordered steps. Reference them from changes through `new_recipe_refs`.
+- `pantry` is what the household has at home, with `expires_in_days` when known (0 = expires today).
+  Prefer recipes that use those ingredients, above all the ones that expire within 3 days, and plan
+  them on days before they expire; when you create a new recipe, use them if they fit the request.
+  Say so in `reason` when a choice uses something about to expire. `always_at_home` are staples
+  (salt, oil…) that are always available.
 - Modes: cook (cook at home), eat_out, order (takeaway), leftovers, free, pending. Only "cook" and
   "leftovers" take recipes.
 - Do not invent nutritional values, calorie targets or weight-loss diets. Do not infer diets from age.
@@ -342,6 +347,11 @@ class DemoProvider:
         planned = set(context["recent_recipe_ids"]) | set(context.get("upcoming_recipe_ids", []))
         planned |= {rid for s in context["slots"] if (s["date"], s["meal_type"]) not in targets for rid in s["recipe_ids"]}
         exclude = planned if intent["no_repeat"] else set()
+        # Recipes that use something at home about to expire go first.
+        soon = {
+            row["ingredient"] for row in context.get("pantry", [])
+            if row["expires_in_days"] is not None and row["expires_in_days"] <= 3
+        }
         used, changes, warnings = set(), [], []
         for slot in slots:
             the_date = date.fromisoformat(slot["date"])
@@ -365,7 +375,10 @@ class DemoProvider:
                 and r["id"] not in slot["recipe_ids"]
                 and (intent["max_minutes"] is None or r["minutes"] < intent["max_minutes"])
             ]
-            candidates.sort(key=lambda r: (r["id"] in used, r["id"] in planned, _rank(slot["date"], slot["meal_type"], r["id"])))
+            candidates.sort(key=lambda r: (
+                r["id"] in used, r["id"] in planned, not set(r["ingredients"]) & soon,
+                _rank(slot["date"], slot["meal_type"], r["id"]),
+            ))
             if not candidates:
                 warnings.append(f"No hay recetas compatibles para {slot['weekday'].lower()} ({slot['meal_type']}).")
                 changes.append(MealChange(
@@ -376,6 +389,9 @@ class DemoProvider:
             recipe = candidates[0]
             used.add(recipe["id"])
             reason = f"{recipe['name']}: {recipe['minutes']} minutos, compatible con los asistentes según los datos."
+            expiring = sorted(set(recipe["ingredients"]) & soon)
+            if expiring:
+                reason += f" Aprovecha lo que caduca pronto: {', '.join(expiring)}."
             changes.append(MealChange(
                 date=slot["date"], meal_type=slot["meal_type"], mode="cook", recipe_ids=[recipe["id"]],
                 new_recipe_refs=[], attendee_codes=attendees, plates=[], notes="", reason=reason,

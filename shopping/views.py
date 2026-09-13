@@ -14,8 +14,8 @@ from households.permissions import household_required
 from foods.units import format_quantity
 
 from . import services
-from .forms import ManualItemForm, NewListForm, PantryForm
-from .models import PantryItem, ShoppingItem, ShoppingList
+from .forms import ManualItemForm, NewListForm, PantryForm, StoreForm
+from .models import PantryBatch, PantryItem, ShoppingItem, ShoppingList
 
 MEAL_LABELS = dict(MealType.choices)
 
@@ -77,8 +77,10 @@ def detail(request, pk):
     shopping_list = _list(request, pk)
     groups, surplus = services.grouped_items(shopping_list)
     staples, covered = services.pantry_sections(shopping_list)
-    for item in [*(i for _, items in groups for i in items), *surplus, *staples, *covered]:
+    shown = [*(i for _, items in groups for i in items), *surplus, *staples, *covered]
+    for item in shown:
         decorate(item)
+    services.attach_pantry_batches(shown)
     all_items = [item for _, items in groups for item in items]
     services.attach_label_checks(request.household, [*all_items, *staples])
     done = sum(1 for item in all_items if item.is_done)
@@ -125,8 +127,24 @@ def delete(request, pk):
 def _respond_item(request, item):
     if request.htmx:
         services.attach_label_checks(request.household, [decorate(item)])
+        services.attach_pantry_batches([item])
         return render(request, "shopping/_item.html", {"item": item, "can_edit": True})
     return redirect("shopping:detail", item.shopping_list_id)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def item_store(request, pk):
+    """Save a bought item in the pantry, with its expiry date if known."""
+    item = _item(request, pk)
+    form = StoreForm(request.POST)
+    if item.ingredient_id is None or not form.is_valid():
+        messages.error(request, "Revisa la fecha de caducidad.")
+        return redirect("shopping:detail", item.shopping_list_id)
+    services.store_purchase(item, request.user, form.cleaned_data["expires_on"])
+    if not request.htmx:
+        messages.success(request, f"«{item.name}» guardado en la despensa.")
+    return _respond_item(request, item)
 
 
 @household_required(Role.EDITOR)
@@ -185,10 +203,11 @@ def item_pantry(request, pk):
 
 
 def _pantry_context(request, form):
-    entries = PantryItem.objects.filter(household=request.household).select_related("ingredient")
+    batches = list(services.active_batches(request.household))
     return {
-        "staples": [e for e in entries if e.kind == PantryItem.Kind.STAPLE],
-        "stock": [e for e in entries if e.kind == PantryItem.Kind.STOCK],
+        "staples": PantryItem.objects.filter(household=request.household, kind=PantryItem.Kind.STAPLE).select_related("ingredient"),
+        "batches": batches,
+        "expiring": [b for b in batches if b.expiry_state in ("expired", "soon")],
         "form": form,
         "suggestions": services.pantry_suggestions(request.household),
     }
@@ -207,14 +226,26 @@ def pantry_add(request):
         return render(request, "shopping/pantry.html", _pantry_context(request, form), status=400)
     data = form.cleaned_data
     entry = services.set_pantry_item(
-        request.household, request.user, data["ingredient"], data["kind"], data["quantity"], data["unit"]
+        request.household, request.user, data["ingredient"], data["kind"], data["quantity"], data["unit"],
+        data["expires_on"],
     )
-    if entry.kind == PantryItem.Kind.STAPLE:
-        messages.success(request, f"«{entry.ingredient.name}» es un básico: sale aparte en la lista para que mires si os queda.")
-    else:
+    if isinstance(entry, PantryBatch):
+        expiry = f", {entry.expiry_label}" if entry.expires_on else ""
         messages.success(
-            request, f"Anotado: {format_quantity(entry.quantity, entry.unit)} de {entry.ingredient.name}. Se descuenta de la compra."
+            request,
+            f"Anotado: {format_quantity(entry.quantity, entry.unit)} de {entry.ingredient.name}{expiry}. Se descuenta de la compra.",
         )
+    else:
+        messages.success(request, f"«{entry.ingredient.name}» es un básico: sale aparte en la lista para que mires si os queda.")
+    return redirect("shopping:pantry")
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def batch_used(request, pk):
+    batch = get_object_or_404(PantryBatch.objects.active().select_related("ingredient"), pk=pk, household=request.household)
+    services.use_batch(batch)
+    messages.success(request, f"«{batch.ingredient.name}» marcado como gastado.")
     return redirect("shopping:pantry")
 
 

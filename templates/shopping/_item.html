@@ -28,6 +28,17 @@
       <div class="label-check">Mira la etiqueta por {{ item.label_check }}.{% if can_edit and item.ingredient_id %} <a href="{% url 'foods:review' item.ingredient_id %}?next={% url 'shopping:detail' item.shopping_list_id %}">Revisar</a>{% endif %}</div>
     {% endif %}
   </div>
+  {% if item.pantry_batch %}
+    <div class="store saved">En la despensa{% if item.pantry_batch.expires_on %}, {{ item.pantry_batch.expiry_label }}{% endif %}.</div>
+  {% elif can_edit and item.is_done and item.ingredient_id and not item.is_covered %}
+    {# Bought: keep it in the pantry with its expiry date, so the assistant plans with it in time. #}
+    <form method="post" action="{% url 'shopping:item_store' item.pk %}" hx-post="{% url 'shopping:item_store' item.pk %}" hx-target="#item-{{ item.pk }}" hx-swap="outerHTML" class="store">
+      {% csrf_token %}
+      <label for="expires-{{ item.pk }}">Caduca</label>
+      <input id="expires-{{ item.pk }}" type="date" name="expires_on">
+      <button class="btn small" type="submit">Guardar en la despensa</button>
+    </form>
+  {% endif %}
   {% if item.source_rows or can_edit %}
   <details>
     <summary>{% if item.source_rows %}Para qué comidas{% else %}Anotar cantidad{% endif %}</summary>

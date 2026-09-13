@@ -525,6 +525,12 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
 .faq summary { cursor: pointer; font-weight: 650; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
+/* Pantry batches: a bought list item saved with its expiry date, and the batches at home. */
+.shop-item .store { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.85rem; color: var(--muted); }
+.shop-item .store input[type=date] { width: auto; min-height: 36px; padding: 4px 8px; }
+.shop-item .store.saved { color: var(--leaf-strong); font-weight: 600; }
+.batches .batch { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
+.batches .batch .badge { margin-left: 4px; }
 /* Assistant proposals: a change that needs review is applied only when this is ticked. */
 .review-confirm {
   display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; min-height: 44px;

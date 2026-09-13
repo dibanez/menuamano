@@ -18,7 +18,7 @@ from foods.units import format_number, format_quantity, scale, to_base
 from planning.models import MODES_WITH_SHOPPING, Meal
 from planning.services import meals_queryset, planned_servings
 
-from .models import PantryItem, ShoppingItem, ShoppingList
+from .models import PantryBatch, PantryItem, ShoppingItem, ShoppingList
 
 ZERO = Decimal("0")
 QUANTUM = Decimal("0.001")
@@ -106,14 +106,26 @@ def _stock_in(entry, unit, table):
     return conversions.convert(entry.quantity, entry.unit, unit, table)
 
 
+def _stock_by_ingredient(household):
+    """Batches typed by hand and not expired: what is at home beyond what the lists bought."""
+    stock = {}
+    batches = PantryBatch.objects.active().filter(household=household, shopping_item__isnull=True).exclude(
+        expires_on__lt=timezone.localdate()
+    )
+    for batch in batches:
+        stock.setdefault(batch.ingredient_id, []).append(batch)
+    return stock
+
+
 def recalculate(shopping_list):
     stats = RecalcStats()
     household = shopping_list.household
     needs = compute_needs(household, shopping_list.start_date, shopping_list.end_date)
-    pantry = {entry.ingredient_id: entry for entry in PantryItem.objects.filter(household=household)}
-    stock_tables = conversions.load(
-        household, [i for i, entry in pantry.items() if entry.kind == PantryItem.Kind.STOCK]
-    ) if pantry else {}
+    staples = set(
+        PantryItem.objects.filter(household=household, kind=PantryItem.Kind.STAPLE).values_list("ingredient_id", flat=True)
+    )
+    stock = _stock_by_ingredient(household)
+    stock_tables = conversions.load(household, list(stock)) if stock else {}
     stock_used = set()  # a quantity at home covers one line of the list, never two
     with transaction.atomic():
         # Row lock serialises concurrent recalculations of the same list.
@@ -121,14 +133,15 @@ def recalculate(shopping_list):
         existing = {item.key: item for item in shopping_list.items.filter(is_manual=False)}
         for key, need in needs.items():
             quantity = need.quantity.quantize(QUANTUM)
-            entry = pantry.get(need.ingredient.pk)
+            ingredient_id = need.ingredient.pk
             covered = ZERO
-            if entry is not None and entry.kind == PantryItem.Kind.STOCK and entry.ingredient_id not in stock_used:
-                stock = _stock_in(entry, need.unit, stock_tables.get(entry.ingredient_id, {}))
-                if stock:
-                    covered = min(stock, quantity).quantize(QUANTUM)
-                    stock_used.add(entry.ingredient_id)
-            is_staple = entry is not None and entry.kind == PantryItem.Kind.STAPLE
+            if ingredient_id in stock and ingredient_id not in stock_used:
+                table = stock_tables.get(ingredient_id, {})
+                at_home = sum((q for q in (_stock_in(b, need.unit, table) for b in stock[ingredient_id]) if q), ZERO)
+                if at_home:
+                    covered = min(at_home, quantity).quantize(QUANTUM)
+                    stock_used.add(ingredient_id)
+            is_staple = ingredient_id in staples
             item = existing.pop(key, None)
             if item is None:
                 ShoppingItem.objects.create(
@@ -189,14 +202,93 @@ def recalculate_open_lists(household):
     return len(lists)
 
 
-def set_pantry_item(household, user, ingredient, kind, quantity=None, unit=""):
-    stock = kind == PantryItem.Kind.STOCK
+def set_pantry_item(household, user, ingredient, kind=PantryItem.Kind.STAPLE, quantity=None, unit="", expires_on=None):
+    """A staple («siempre en casa»), or a quantity at home, which is a batch."""
+    if kind == PantryItem.Kind.STOCK:
+        return add_batch(household, user, ingredient, quantity, unit, expires_on)
     entry, _ = PantryItem.objects.update_or_create(
         household=household, ingredient=ingredient,
-        defaults={"kind": kind, "quantity": quantity if stock else None, "unit": unit if stock else "", "updated_by": user},
+        defaults={"kind": PantryItem.Kind.STAPLE, "quantity": None, "unit": "", "updated_by": user},
     )
     recalculate_open_lists(household)
     return entry
+
+
+def active_batches(household):
+    return (
+        PantryBatch.objects.active().filter(household=household)
+        .select_related("ingredient", "shopping_item__shopping_list")
+    )
+
+
+def add_batch(household, user, ingredient, quantity=None, unit="", expires_on=None, note=""):
+    """Typed by hand: it is at home, so the open lists take it off."""
+    batch = PantryBatch.objects.create(
+        household=household, ingredient=ingredient, quantity=quantity, unit=unit if quantity is not None else "",
+        expires_on=expires_on, note=note, created_by=user,
+    )
+    recalculate_open_lists(household)
+    return batch
+
+
+def store_purchase(item, user, expires_on=None, quantity=None):
+    """Save a bought list item in the pantry. One batch per item: saving again updates it.
+
+    It was bought for this plan, so no list takes it off; it tells what is at home and when it expires.
+    """
+    if quantity is None:
+        quantity = item.purchased_quantity or item.needed_quantity or None
+    batch = PantryBatch.objects.active().filter(shopping_item=item).first()
+    if batch is None:
+        batch = PantryBatch.objects.create(
+            household=item.shopping_list.household, ingredient=item.ingredient, quantity=quantity,
+            unit=item.unit if quantity else "", expires_on=expires_on, shopping_item=item, created_by=user,
+        )
+    else:
+        batch.quantity, batch.expires_on = quantity, expires_on
+        batch.save(update_fields=["quantity", "expires_on"])
+    return batch
+
+
+def use_batch(batch):
+    batch.used_at = timezone.now()
+    batch.save(update_fields=["used_at"])
+    if batch.shopping_item_id is None:
+        recalculate_open_lists(batch.household)
+
+
+def attach_pantry_batches(items):
+    """Set `item.pantry_batch`: the batch saved from each bought item, if any."""
+    by_item = {b.shopping_item_id: b for b in PantryBatch.objects.active().filter(shopping_item__in=[i.pk for i in items])}
+    for item in items:
+        item.pantry_batch = by_item.get(item.pk)
+    return items
+
+
+def pantry_for_assistant(household, limit=30):
+    """What is at home for the assistant, soonest to expire first. Expired batches are left out."""
+    today = timezone.localdate()
+    rows = []
+    for batch in active_batches(household).exclude(expires_on__lt=today)[:limit]:
+        rows.append({
+            "ingredient": batch.ingredient.name,
+            "quantity": format_quantity(batch.quantity, batch.unit) if batch.quantity is not None and batch.unit else None,
+            "expires_in_days": (batch.expires_on - today).days if batch.expires_on else None,
+        })
+    return rows
+
+
+def staple_names(household):
+    return sorted(
+        PantryItem.objects.filter(household=household, kind=PantryItem.Kind.STAPLE).values_list("ingredient__name", flat=True)
+    )
+
+
+def expiring_between(household, first, last):
+    return list(
+        PantryBatch.objects.active().filter(household=household, expires_on__gte=first, expires_on__lte=last)
+        .select_related("ingredient")
+    )
 
 
 def remove_pantry_item(entry):

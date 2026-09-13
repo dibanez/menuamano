@@ -19,6 +19,7 @@ from foods.models import Ingredient, Trait, Unit
 from foods.reviews import reviews_for
 from planning.services import PlanningContext, daterange, diners_queryset, meals_by_slot, slot_key
 from recipes import services as recipe_services
+from shopping.services import pantry_for_assistant, staple_names
 
 MAX_RECIPES = 80
 MAX_HISTORY = 6
@@ -175,6 +176,9 @@ def build_context(household, start, end, operation, user_request="", focus=None,
             Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
         ),
         "units": [u.value for u in Unit],
+        # What is at home, soonest to expire first (expired batches are left out), and the staples.
+        "pantry": pantry_for_assistant(household),
+        "always_at_home": staple_names(household),
         "conversation": [
             {"role": role, "text": pseudonymize(text, code_to_diner)[:500]} for role, text in list(history)[-MAX_HISTORY:]
         ],

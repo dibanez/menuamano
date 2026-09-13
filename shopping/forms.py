@@ -44,6 +44,9 @@ class PantryForm(forms.Form):
         widget=forms.NumberInput(attrs={"step": "any", "min": "0", "inputmode": "decimal"}),
     )
     unit = forms.ChoiceField(label="Unidad", required=False, choices=[("", "—")] + list(Unit.choices))
+    expires_on = forms.DateField(
+        label="Caduca (opcional)", required=False, widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
 
     def __init__(self, *args, household, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,3 +58,9 @@ class PantryForm(forms.Form):
         if data.get("kind") == PantryItem.Kind.STOCK and not (data.get("quantity") and data.get("unit")):
             raise forms.ValidationError("Indica cuánto tenéis y en qué unidad.")
         return data
+
+
+class StoreForm(forms.Form):
+    """Saving a bought list item in the pantry: when it expires, if the package says."""
+
+    expires_on = forms.DateField(label="Caduca", required=False, widget=forms.DateInput(attrs={"type": "date"}))
