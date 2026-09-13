@@ -102,6 +102,12 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
             summary=_summary(context.humanize(result.output.summary), notes), items=items, new_recipes=new_recipes,
             base_versions=base_versions, start_date=start, end_date=end,
         )
+    # Statuses and fixed rejection messages only: never names, allergies or the request text.
+    logger.info(
+        "assistant proposal %s created: operation=%s provider=%s items=%s statuses=%s rejected=%s new_recipes=%s",
+        proposal.pk, operation, provider.name, len(items), dict(Counter(i["status"] for i in items)),
+        sorted({i["rejected_reason"] for i in items if i.get("rejected_reason")}), len(new_recipes),
+    )
     return proposal
 
 
@@ -394,10 +400,17 @@ def validate_output(household, context, output, start, end):
                 "attendees": [a.label for a in meal.attendees.all()],
             }
             if meal.locked:
-                if (change.date, change.meal_type) != (focus.get("date"), focus.get("meal_type")):
+                is_focus = (change.date, change.meal_type) == (focus.get("date"), focus.get("meal_type"))
+                if not is_focus and context.data.get("operation") != "chat":
                     _reject(item, "La comida está protegida; no se puede cambiar desde una propuesta.")
                     continue
-                # Set only here, never from provider output: the one locked meal the person asked about.
+                if not is_focus:
+                    # Asked for in the chat: a meal edited by hand may change, but only once confirmed.
+                    item["status"] = ITEM_REVIEW
+                    item["issues"].append(
+                        "Esta comida la editaste a mano y está protegida: marca la casilla si quieres cambiarla."
+                    )
+                # Set only here, never from provider output: a locked meal the person asked about.
                 item["requested_meal"] = True
 
         if change.attendee_codes is not None:
@@ -494,6 +507,7 @@ def validate_output(household, context, output, start, end):
 def _reject(item, reason):
     item["status"] = ITEM_REJECTED
     item["issues"].append(reason)
+    item["rejected_reason"] = reason  # always a fixed message, so it can go to the logs
 
 
 # --- Apply --------------------------------------------------------------------------------------
@@ -587,7 +601,11 @@ def apply_proposal(proposal, user, accepted_review=()):
                     reasons["review_not_confirmed"] += 1
                 elif item["status"] in (ITEM_CONFLICT, ITEM_REJECTED):
                     result.skipped.append(f"{label}: {'; '.join(item['issues'][:2])}")
-                    reasons[item["status"]] += 1
+                    # Rejections carry fixed messages; conflict messages name people, so only the status is logged.
+                    if item["status"] == ITEM_REJECTED:
+                        reasons[f"rejected: {item.get('rejected_reason', '?')}"] += 1
+                    else:
+                        reasons[ITEM_CONFLICT] += 1
                 continue
             outcome = _apply_item(household, user, item, created, accepted_review)
             if outcome is None:

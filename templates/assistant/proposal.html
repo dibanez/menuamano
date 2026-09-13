@@ -38,7 +38,7 @@
         </div>
         {% if item.issues %}<ul class="small" style="margin:6px 0 0;padding-left:18px">{% for i in item.issues %}<li>{{ i }}</li>{% endfor %}</ul>{% endif %}
         {% if item.status == "review" and proposal.status == "pending" and can_edit %}
-          <label class="check small" style="margin-top:6px"><input type="checkbox" name="accept" value="{{ item.slot }}"> He revisado los ingredientes; aplicar este cambio</label>
+          <label class="check small" style="margin-top:6px"><input type="checkbox" name="accept" value="{{ item.slot }}"> Lo he revisado; aplicar este cambio</label>
         {% endif %}
       </div>
     {% endfor %}

@@ -1,8 +1,9 @@
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
+from django.conf import settings
 from django.db import connection
 from django.db.utils import DatabaseError
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponsePermanentRedirect
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -50,6 +51,25 @@ class RetiredWebhookMiddleware:
         response = HttpResponse("webhook removed", status=406, content_type="text/plain")
         response._has_been_logged = True
         return response
+
+
+class CanonicalHostMiddleware:
+    """Send the site's other host (bare domain or www) to SITE_URL's host, keeping the path.
+
+    Only GET and HEAD are redirected, so a form or a webhook posted to the other host still works.
+    Unrelated hosts are left alone.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        target = urlsplit(settings.SITE_URL) if settings.SITE_URL else None
+        if target and target.netloc and request.method in ("GET", "HEAD"):
+            host = request.get_host()
+            if host != target.netloc and target.netloc in (f"www.{host}", host.removeprefix("www.")):
+                return HttpResponsePermanentRedirect(f"{target.scheme}://{target.netloc}{request.get_full_path()}")
+        return self.get_response(request)
 
 
 class LegalConsentMiddleware:

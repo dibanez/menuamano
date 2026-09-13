@@ -25,7 +25,8 @@ You receive a JSON context and must answer with the structured schema only.
 Rules:
 - Write every user-facing text (summary, notes, reason, warnings, recipe fields) in Spanish from Spain.
 - Only propose changes for slots listed in `slots`, inside `range`, with a meal type in `enabled_meal_types`.
-- Never change slots with "locked": true.
+- Never change slots with "locked": true, unless the request is explicitly about that meal: the person
+  will be asked to confirm it before it applies.
 - Omit slots that should stay as they are. Keep proposals minimal and focused on the request.
 - When `focus_slot` is set, the request is about that meal: return a change for it, and reference any
   new recipe created for it from that change through `new_recipe_refs`.

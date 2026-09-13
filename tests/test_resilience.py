@@ -59,7 +59,7 @@ def test_applying_a_proposal_is_logged_without_personal_data(monkeypatch, home, 
     assert proposal.items[0]["status"] == "review"  # unknown ingredient for Nora
     with caplog.at_level(logging.INFO, logger="assistant.services"):
         services.apply_proposal(proposal, home.user)
-    message = next(r.getMessage() for r in caplog.records if "assistant proposal" in r.getMessage())
+    message = next(r.getMessage() for r in caplog.records if " applied: " in r.getMessage())
     assert "applied=0" in message and "review_not_confirmed" in message
     assert "Nora" not in message
 
