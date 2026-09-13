@@ -78,6 +78,8 @@ class LegalConsentMiddleware:
     EXEMPT_PREFIXES = (
         "/legal/", "/cuenta/condiciones/", "/cuenta/salir/", "/static/", "/admin/",
         "/plan/stripe/", HEALTH_PATH,
+        # Fetched by browsers and crawlers, not pages: a redirect would break them.
+        "/sw.js", "/manifest.webmanifest", "/offline/", "/robots.txt", "/sitemap.xml", "/favicon.ico",
     )
 
     def __init__(self, get_response):

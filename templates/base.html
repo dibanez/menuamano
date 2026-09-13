@@ -7,6 +7,13 @@
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="icon" href="{% static 'img/favicon-48.png' %}" sizes="48x48" type="image/png">
   <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  {# Installable web app (see core/pwa.py). #}
+  <link rel="manifest" href="{% url 'core:manifest' %}">
+  <meta name="application-name" content="menuamano">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="menuamano">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>{% block title %}menuamano{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}menuamano planifica las comidas de casa, tiene en cuenta las alergias de cada persona y prepara la lista de la compra.{% endblock %}">
   {# Private by default: public pages override this block and include partials/seo_public.html. #}

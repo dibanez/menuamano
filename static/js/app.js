@@ -130,3 +130,10 @@ document.addEventListener("submit", (event) => {
 window.addEventListener("pageshow", () => {
   document.querySelectorAll("form[data-submitting]").forEach((form) => { delete form.dataset.submitting; });
 });
+
+// Installable web app: the service worker caches static files and an offline page, never pages.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}

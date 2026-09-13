@@ -129,6 +129,20 @@ La aplicación no tiene webhook de Mailgun: los rebotes y las quejas se consulta
 Mailgun (*Sending → Logs* y *Suppressions*). Si en Mailgun quedan webhooks apuntando a
 `/anymail/…`, bórralos: la aplicación les responde 406 para que Mailgun no reintente.
 
+### App instalable (PWA)
+
+menuamano se puede instalar en el móvil y en el ordenador («Añadir a pantalla de inicio» en
+Safari, «Instalar app» en Chrome o Edge) y arranca a pantalla completa, sin la barra del navegador.
+
+- `/manifest.webmanifest`: nombre, colores, iconos (también el adaptable de Android) y accesos
+  directos a Hoy, Calendario, Compra y Asistente.
+- `/sw.js`: el service worker. Solo guarda en caché los estáticos y la página «Sin conexión»
+  (`/offline/`). Las páginas nunca se guardan: llevan los datos de cada hogar y cambian a cada rato.
+  La caché cambia de nombre en cada despliegue que toca los estáticos, así que no hay que vaciarla
+  a mano.
+
+Hace falta HTTPS (o `localhost`) para que el navegador registre el service worker.
+
 ### Pagos con Stripe
 
 Planes: **Gratis** (planificación completa, 7 peticiones de prueba al asistente con IA, que no se

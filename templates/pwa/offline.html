@@ -1,0 +1,23 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ theme_color }}">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sin conexión · menuamano</title>
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+  {# Cached on the device and shown to whoever opens the app offline: no personal data here. #}
+  <main class="page">
+    <div class="empty" style="margin-top:20vh">
+      <p class="wordmark" style="display:inline-block">menuamano</p>
+      <h1>Sin conexión</h1>
+      <p>No hay internet ahora mismo. Tu plan está guardado; en cuanto vuelva la conexión podrás seguir donde lo dejaste.</p>
+      <a class="btn primary" href="/">Reintentar</a>
+    </div>
+  </main>
+</body>
+</html>
