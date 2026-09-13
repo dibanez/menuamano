@@ -17,9 +17,6 @@
     {% for slot in day.slots %}{% include "planning/_slot.html" %}{% endfor %}
   </section>
 {% endfor %}
-
-<p class="muted small" style="text-align:center"><a href="{% url 'planning:subscribe' %}">Ver el menú en tu calendario (Google, iPhone, Outlook)</a></p>
-
 {% if can_edit %}
 <details class="panel more">
   <summary><span>Rellenar la semana<span class="more-hint">Con vuestras recetas{% if ai_status.available and ai_allowed %} o con el asistente{% endif %}</span></span></summary>

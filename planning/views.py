@@ -75,6 +75,11 @@ def _decimal(value):
 # --- Calendar views ---------------------------------------------------------------------------
 
 
+def _has_calendar_feed(request):
+    """The day, week and month views offer adding the menu to calendar apps until it is added."""
+    return CalendarFeed.objects.filter(user=request.user, household=request.household).exists()
+
+
 @household_required()
 def week(request):
     anchor = _parse_date(request.GET.get("fecha"), timezone.localdate())
@@ -89,6 +94,7 @@ def week(request):
         "view": "week",
         "nav_day": anchor,
         "range_form": RangeForm(initial={"start": start, "end": end}),
+        "has_calendar_feed": _has_calendar_feed(request),
     }
     return render(request, "planning/week.html", context)
 
@@ -103,6 +109,7 @@ def day(request, day):
         "next": the_day + timedelta(days=1),
         "view": "day",
         "nav_day": the_day,
+        "has_calendar_feed": _has_calendar_feed(request),
     }
     return render(request, "planning/day.html", context)
 
@@ -124,6 +131,7 @@ def month(request):
         "nav_day": anchor,
         "dows": ["L", "M", "X", "J", "V", "S", "D"],
         "today": timezone.localdate(),
+        "has_calendar_feed": _has_calendar_feed(request),
     }
     return render(request, "planning/month.html", context)
 

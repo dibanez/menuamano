@@ -4,5 +4,10 @@
     <a href="{% url 'planning:week' %}?fecha={{ nav_day|date:'Y-m-d' }}" {% if view == 'week' %}aria-current="page"{% endif %}>Semana</a>
     <a href="{% url 'planning:month' %}?fecha={{ nav_day|date:'Y-m-d' }}" {% if view == 'month' %}aria-current="page"{% endif %}>Mes</a>
   </nav>
-  <a class="small" href="{% url 'planning:rules' %}">Reglas y excepciones</a>
+  <span class="row">
+    <a class="btn small{% if not has_calendar_feed %} calendar-cta{% endif %}" href="{% url 'planning:subscribe' %}">
+      <svg class="icon icon-s" aria-hidden="true"><use href="#i-calendar"/></svg>{% if has_calendar_feed %}En tu calendario{% else %}Añadir a tu calendario{% endif %}
+    </a>
+    <a class="small" href="{% url 'planning:rules' %}">Reglas y excepciones</a>
+  </span>
 </div>

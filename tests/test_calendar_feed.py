@@ -68,6 +68,17 @@ def test_the_subscribe_page_creates_and_replaces_the_link(client, household, adm
     assert not CalendarFeed.objects.exists()
 
 
+def test_the_calendar_views_offer_adding_the_menu_until_it_is_added(client, household, admin_user):
+    assert client.login(email=admin_user.email, password=PASSWORD)
+    subscribe = reverse("planning:subscribe")
+    for name in ("planning:week", "planning:month"):
+        html = client.get(reverse(name)).content.decode()
+        assert f'href="{subscribe}"' in html and "Añadir a tu calendario" in html and "calendar-cta" in html
+    CalendarFeed.objects.create(user=admin_user, household=household, token="another-secret-token")
+    html = client.get(reverse("planning:week")).content.decode()
+    assert "En tu calendario" in html and "Añadir a tu calendario" not in html and "calendar-cta" not in html
+
+
 def test_texts_are_escaped_and_long_lines_folded():
     assert feeds.escape("Pan, tomate; y\\ más\nfruta") == "Pan\\, tomate\\; y\\\\ más\\nfruta"
     folded = feeds.fold("SUMMARY:" + "Crema de calabacín y ñame " * 8)
