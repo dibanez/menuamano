@@ -112,6 +112,8 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+# Repeated or expired forms get a friendly page instead of Django's bare 403.
+CSRF_FAILURE_VIEW = "core.views.csrf_failure"
 
 # --- Email ------------------------------------------------------------------
 # "console" prints emails to the logs (development); "smtp" sends them through an SMTP server

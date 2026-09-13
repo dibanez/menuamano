@@ -9,6 +9,7 @@
 
 import logging
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -481,6 +482,7 @@ def apply_proposal(proposal, user, accepted_review=()):
             proposal.result_message = "El plan cambió después de generar la propuesta."
             proposal.save(update_fields=["status", "result_message"])
             result.stale = True
+            logger.info("assistant proposal %s not applied: the plan changed (operation=%s)", proposal.pk, proposal.operation)
             return result
 
         household = proposal.household
@@ -498,13 +500,17 @@ def apply_proposal(proposal, user, accepted_review=()):
             created[data["ref"]] = _create_recipe(household, user, data)
             result.recipes_created.append(created[data["ref"]])
 
+        # Why items were left out, for the logs: statuses and fixed reasons only, never names or allergies.
+        reasons = Counter()
         for item in proposal.items:
             label = f"{item['date']} {item['meal_type']}"
             if not _applicable(item, accepted_review):
                 if item["status"] == ITEM_REVIEW:
                     result.skipped.append(f"{label}: requiere revisión y no se ha confirmado.")
+                    reasons["review_not_confirmed"] += 1
                 elif item["status"] in (ITEM_CONFLICT, ITEM_REJECTED):
                     result.skipped.append(f"{label}: {'; '.join(item['issues'][:2])}")
+                    reasons[item["status"]] += 1
                 continue
             outcome = _apply_item(household, user, item, created, accepted_review)
             if outcome is None:
@@ -512,6 +518,12 @@ def apply_proposal(proposal, user, accepted_review=()):
                 touched_dates.append(date.fromisoformat(item["date"]))
             else:
                 result.skipped.append(f"{label}: {outcome}")
+                reasons[outcome.rstrip(".")] += 1
+        logger.info(
+            "assistant proposal %s applied: operation=%s provider=%s items=%s applied=%s recipes_created=%s skipped=%s",
+            proposal.pk, proposal.operation, proposal.provider, len(proposal.items), result.applied,
+            len(result.recipes_created), dict(reasons),
+        )
 
         proposal.status = Proposal.Status.APPLIED
         proposal.applied_at = timezone.now()

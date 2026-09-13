@@ -3,7 +3,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from billing.plans import FREE, PREMIUM, get_plan, price_labels
 
@@ -16,6 +18,26 @@ LEGAL_PAGES = {
     "cookies": ("legal/cookies.html", "Política de cookies"),
     "condiciones": ("legal/condiciones.html", "Condiciones de uso y contratación"),
 }
+
+
+def _same_site(request, url, default):
+    if url and url_has_allowed_host_and_scheme(url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return url
+    return default
+
+
+def csrf_failure(request, reason=""):
+    """Friendly answer to a repeated or expired form (CSRF_FAILURE_VIEW).
+
+    A login sent twice fails here because signing in rotates the token: that person is already in,
+    so they land where they were going.
+    """
+    home_url = reverse("core:home")
+    user = getattr(request, "user", None)
+    if user is not None and user.is_authenticated and request.path == reverse("accounts:login"):
+        return redirect(_same_site(request, request.GET.get("next", ""), home_url))
+    back = _same_site(request, request.META.get("HTTP_REFERER", ""), home_url)
+    return render(request, "csrf_failure.html", {"back": back}, status=403)
 
 
 def legal_index(request):

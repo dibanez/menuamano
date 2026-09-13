@@ -10,6 +10,7 @@ from xml.sax.saxutils import escape
 
 from django.conf import settings
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.templatetags.static import static
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -125,6 +126,13 @@ def landing_seo(request, free, premium, prices):
         ],
     }
     return {"seo_title": LANDING_TITLE, "seo_description": LANDING_DESCRIPTION, "faqs": faqs, "json_ld": ld_json(data)}
+
+
+@require_GET
+@cache_control(max_age=86400, public=True)
+def favicon(request):
+    """Browsers and crawlers ask for /favicon.ico whatever the page links."""
+    return redirect(static("img/favicon.ico"))
 
 
 @require_GET

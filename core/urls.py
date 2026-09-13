@@ -6,6 +6,7 @@ app_name = "core"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("favicon.ico", seo.favicon, name="favicon"),
     path("robots.txt", seo.robots_txt, name="robots"),
     path("sitemap.xml", seo.sitemap_xml, name="sitemap"),
     path("legal/", views.legal_index, name="legal"),

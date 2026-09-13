@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}La página ha caducado · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>La página ha caducado</h1>
+  <p class="lead">Pasa si el formulario se envió dos veces o si la página llevaba mucho rato abierta. Este envío no se ha guardado.</p>
+</div>
+<div class="form-actions">
+  <a class="btn primary" href="{{ back }}">Volver e intentarlo de nuevo</a>
+</div>
+{% endblock %}

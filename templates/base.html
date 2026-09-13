@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#2c7a4b">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232c7a4b'/%3E%3Cpath d='M7 20c5-2 10 1 18-3' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="icon" href="{% static 'img/favicon-48.png' %}" sizes="48x48" type="image/png">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
   <title>{% block title %}menuamano{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}menuamano planifica las comidas de casa, tiene en cuenta las alergias de cada persona y prepara la lista de la compra.{% endblock %}">
   {# Private by default: public pages override this block and include partials/seo_public.html. #}

@@ -110,3 +110,23 @@ document.addEventListener("click", (event) => {
     button.textContent = button.dataset.original;
   }, 4000);
 });
+
+// Forms are sent once: another tap while the next page loads would repeat the action (a deleted
+// item then answers 404, a login fails its CSRF check). HTMX forms manage their own requests.
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || form.method !== "post") return;
+  if (form.hasAttribute("hx-post") || form.hasAttribute("hx-get")) return;
+  if (form.dataset.submitting === "1") {
+    event.preventDefault();
+    return;
+  }
+  if (event.defaultPrevented) return;
+  form.dataset.submitting = "1";
+  setTimeout(() => { delete form.dataset.submitting; }, 8000);
+});
+
+// Back/forward restores the page as it was left: let its forms be sent again.
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll("form[data-submitting]").forEach((form) => { delete form.dataset.submitting; });
+});
