@@ -26,7 +26,10 @@ TIMEOUT_SECONDS = 8
 CACHE_SECONDS = 24 * 60 * 60
 RETRY_STATUSES = {502, 503, 504}
 RETRY_PAUSE_SECONDS = 1
-FIELDS = "code,product_name,product_name_es,brands,stores,allergens_tags,traces_tags,ingredients_text_es,ingredients_text"
+FIELDS = (
+    "code,product_name,product_name_es,brands,quantity,stores,allergens_tags,traces_tags,ingredients_text_es,"
+    "ingredients_text"
+)
 BARCODE = re.compile(r"^\d{8,14}$")
 
 # Open Food Facts allergen tags → menuamano traits (the 14 EU allergens).
@@ -80,6 +83,7 @@ def _product(data):
         "code": str(data.get("code") or ""),
         "name": (data.get("product_name_es") or data.get("product_name") or "").strip()[:120] or "Producto sin nombre",
         "brand": (data.get("brands") or "").split(",")[0].strip()[:60],
+        "quantity": (data.get("quantity") or "").strip()[:30],  # e.g. «400 g»: tells sizes of one product apart
         "stores": ", ".join(s.strip() for s in (data.get("stores") or "").split(",") if s.strip())[:120],
         "ingredients": (data.get("ingredients_text_es") or data.get("ingredients_text") or "").strip()[:600],
         "allergens": _traits(allergens),

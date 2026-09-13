@@ -51,8 +51,8 @@
       <ul class="list off-results">
         {% for p in results %}
           <li>
-            <a href="?codigo={{ p.code }}&amp;next={{ next|urlencode }}"><strong>{{ p.name }}</strong>{% if p.brand %} · {{ p.brand }}{% endif %}</a>
-            <div class="muted small">{% if p.stores %}{{ p.stores }}. {% endif %}{% if p.allergens or p.traces %}Declara: {% for t in p.allergens %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if p.traces %}{% if p.allergens %}; {% endif %}trazas de {% for t in p.traces %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.{% else %}Sin alérgenos declarados.{% endif %}</div>
+            <a href="?codigo={{ p.code }}&amp;next={{ next|urlencode }}"><strong>{{ p.name }}</strong>{% if p.brand %} · {{ p.brand }}{% endif %}{% if p.quantity %} · {{ p.quantity }}{% endif %}</a>
+            <div class="muted small">Código {{ p.code }}. {% if p.stores %}{{ p.stores }}. {% endif %}{% if p.allergens or p.traces %}Declara: {% for t in p.allergens %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if p.traces %}{% if p.allergens %}; {% endif %}trazas de {% for t in p.traces %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.{% else %}Sin alérgenos declarados.{% endif %}</div>
           </li>
         {% endfor %}
       </ul>

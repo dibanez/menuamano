@@ -12,7 +12,8 @@ from .factories import PASSWORD, ingredient
 SAUCE = "Tomate triturado"
 CODE = "8480000160447"
 SAMPLE = {
-    "code": CODE, "product_name": "Tomate triturado", "brands": "Hacendado,Mercadona", "stores": "Mercadona",
+    "code": CODE, "product_name": "Tomate triturado", "brands": "Hacendado,Mercadona", "quantity": "800 g",
+    "stores": "Mercadona",
     "allergens_tags": ["en:celery"], "traces_tags": ["en:gluten", "en:kiwi"],
     "ingredients_text_es": "Tomate, sal, apio.",
 }
@@ -54,7 +55,8 @@ def test_the_review_page_finds_the_product_and_fills_the_review(client, househol
     assert client.login(email=admin_user.email, password=PASSWORD)
     url = reverse("foods:review", args=[ingredient(SAUCE).pk])
     html = client.get(url, {"buscar": "tomate hacendado"}).content.decode()
-    assert "Tomate triturado</strong> · Hacendado" in html and f"?codigo={CODE}" in html
+    assert "Tomate triturado</strong> · Hacendado · 800 g" in html and f"?codigo={CODE}" in html
+    assert f"Código {CODE}." in html  # sizes and variants of one product tell apart
     assert "Open Food Facts</a>, con licencia ODbL" in html
 
     response = client.get(url, {"codigo": CODE})
