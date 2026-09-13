@@ -35,6 +35,9 @@ def test_the_landing_invites_to_install_the_app(client, db):
     assert re.search(r"<button[^>]*data-install-direct[^>]*hidden", html)
     assert f'href="{reverse("core:install")}" data-install-guide' in html
     assert "¿Hay app para el móvil?" in html.split("</head>", 1)[0]  # also in the FAQ structured data
+    # The FAQ sends people to the footer link, so it is shown even inside the installed app.
+    footer = html.split('<footer class="landing-footer">', 1)[1]
+    assert f'<a href="{reverse("core:install")}">Instalar la app</a>' in footer
 
 
 def test_the_install_page_is_linked_from_the_menu_and_the_landing(client, household, admin_user):
