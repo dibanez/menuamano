@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Instalar la app · menuamano{% endblock %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block robots %}index, follow{% endblock %}
+{% block seo %}{% include "partials/seo_public.html" %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Instala menuamano</h1>
+  <p class="lead">Se abre como una app: a pantalla completa, con su icono y sin buscarla en el navegador. Tarda un minuto.</p>
+</div>
+
+<div class="notice ok" data-install-installed hidden>
+  <strong>Ya la tienes instalada</strong>
+  Estás usando menuamano como app.
+</div>
+
+<section class="panel" data-install-now hidden>
+  <p class="mt-0">Tu navegador puede instalarla directamente.</p>
+  <button class="btn primary" type="button" data-install-button>Instalar menuamano</button>
+</section>
+
+<div class="install-steps" data-install-steps>
+  <section class="panel install-os" data-os="ios">
+    <h2 class="mt-0">iPhone y iPad <span class="badge ok" data-os-mine hidden>Tu dispositivo</span></h2>
+    <ol class="steps">
+      <li>Abre <strong>www.menuamano.com</strong> en <strong>Safari</strong>.</li>
+      <li>Pulsa el botón <strong>Compartir</strong>: el cuadrado con una flecha hacia arriba, abajo en el iPhone o arriba en el iPad.</li>
+      <li>Baja y elige <strong>Añadir a pantalla de inicio</strong>.</li>
+      <li>Pulsa <strong>Añadir</strong>. El icono verde aparecerá con tus apps.</li>
+    </ol>
+    <p class="muted small">Con iOS 16.4 o posterior también se puede desde Chrome o Edge, en su menú Compartir.</p>
+  </section>
+
+  <section class="panel install-os" data-os="android">
+    <h2 class="mt-0">Android <span class="badge ok" data-os-mine hidden>Tu dispositivo</span></h2>
+    <ol class="steps">
+      <li>Abre <strong>www.menuamano.com</strong> en <strong>Chrome</strong>.</li>
+      <li>Pulsa el menú <strong>⋮</strong>, arriba a la derecha.</li>
+      <li>Elige <strong>Instalar app</strong> (en algunos móviles, <strong>Añadir a pantalla de inicio</strong>) y confirma.</li>
+    </ol>
+    <p class="muted small">Si mantienes pulsado el icono, tienes accesos directos a Hoy, Calendario, Compra y Asistente.</p>
+  </section>
+
+  <section class="panel install-os" data-os="desktop">
+    <h2 class="mt-0">Ordenador <span class="badge ok" data-os-mine hidden>Tu dispositivo</span></h2>
+    <ol class="steps">
+      <li>Abre <strong>www.menuamano.com</strong> en <strong>Chrome</strong> o <strong>Edge</strong>.</li>
+      <li>Pulsa el icono de instalar en la barra de direcciones (una pantalla con una flecha) o, en el menú, <strong>Instalar menuamano</strong>.</li>
+    </ol>
+    <p class="muted small">En Safari para Mac: <strong>Archivo → Añadir al Dock</strong>.</p>
+  </section>
+</div>
+
+<section class="panel flat">
+  <h2 class="mt-0">Qué cambia al instalarla</h2>
+  <ul>
+    <li>Se abre a pantalla completa, con su icono, como cualquier otra app.</li>
+    <li>Tus datos no se quedan guardados en el dispositivo: siempre se leen del servidor, así que ves lo último.</li>
+    <li>Sin conexión verás un aviso; cuando vuelva, sigues donde lo dejaste.</li>
+    <li>Para quitarla, bórrala como cualquier otra app. Tu hogar y tus datos no se borran.</li>
+  </ul>
+</section>
+{% endblock %}

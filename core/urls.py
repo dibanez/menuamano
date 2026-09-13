@@ -10,6 +10,7 @@ urlpatterns = [
     path("manifest.webmanifest", pwa.manifest, name="manifest"),
     path("sw.js", pwa.service_worker, name="service_worker"),
     path("offline/", pwa.offline, name="offline"),
+    path("instalar/", pwa.install, name="install"),
     path("robots.txt", seo.robots_txt, name="robots"),
     path("sitemap.xml", seo.sitemap_xml, name="sitemap"),
     path("legal/", views.legal_index, name="legal"),

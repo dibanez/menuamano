@@ -137,3 +137,49 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
 }
+
+// «Instalar la app» page: the steps for this device first, and a direct install button where the
+// browser offers one (Chrome, Edge, Android). Safari on iOS has no such button, only the steps.
+let installPrompt = null;
+const installedAsApp = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+function deviceKind() {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ios";
+  if (/Android/.test(ua)) return "android";
+  return "desktop";
+}
+
+function setUpInstallPage() {
+  const steps = document.querySelector("[data-install-steps]");
+  if (!steps) return;
+  document.querySelector("[data-install-installed]").hidden = !installedAsApp();
+  const mine = steps.querySelector(`[data-os="${deviceKind()}"]`);
+  if (mine) {
+    steps.prepend(mine);
+    mine.classList.add("mine");
+    mine.querySelector("[data-os-mine]").hidden = false;
+  }
+  document.querySelector("[data-install-now]").hidden = !installPrompt || installedAsApp();
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();  // keep it for our own button
+  installPrompt = event;
+  setUpInstallPage();
+});
+
+window.addEventListener("appinstalled", () => {
+  installPrompt = null;
+  setUpInstallPage();
+});
+
+document.addEventListener("click", async (event) => {
+  if (!event.target.closest("[data-install-button]") || !installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  setUpInstallPage();
+});
+
+document.addEventListener("DOMContentLoaded", setUpInstallPage);

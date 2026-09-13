@@ -251,6 +251,12 @@ details.fold > summary { margin-top: 10px; width: fit-content; }
 .plate-for { margin: 4px 0 0; color: var(--leaf-strong); }
 .plate-pick { flex-basis: 100%; min-width: 0; border: 0; padding: 0; margin: 6px 0 0; }
 .plate-pick legend { padding: 0; margin-bottom: 6px; }
+/* `hidden` must win over any component's own display (badges, panels…). */
+[hidden] { display: none !important; }
+/* «Instalar la app»: the visitor's own device goes first and stands out. */
+.install-os.mine { border-color: var(--leaf); box-shadow: inset 0 0 0 1px var(--leaf); }
+.install-os h2 .badge { vertical-align: middle; margin-left: 6px; }
+@media (display-mode: standalone) { .hide-in-app { display: none !important; } }
 
 /* Secondary actions of a page, folded so the default view stays short. */
 details.more > summary {

@@ -108,6 +108,7 @@
     <span class="row">
       <a href="{% url 'accounts:login' %}">Entrar</a>
       <a href="{% url 'accounts:signup' %}">Crear cuenta</a>
+      <a class="hide-in-app" href="{% url 'core:install' %}">Instalar la app</a>
       {% if gtm_id and cookie_banner %}<a href="#" data-consent-reopen>Configurar cookies</a>{% endif %}
     </span>
     {% include "partials/legal_links.html" %}

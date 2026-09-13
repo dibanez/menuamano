@@ -74,6 +74,18 @@ def service_worker(request):
 
 
 @require_GET
+def install(request):
+    """How to install the app on each kind of device. Public, so it can be shared as a link."""
+    return render(request, "pwa/install.html", {
+        "seo_title": "Instalar menuamano en el móvil o el ordenador",
+        "seo_description": (
+            "Cómo instalar menuamano como app en iPhone, Android y el ordenador: se abre a pantalla "
+            "completa, con su icono, sin buscarla en el navegador."
+        ),
+    })
+
+
+@require_GET
 @cache_control(max_age=86400, public=True)
 def offline(request):
     """Shown by the service worker without connection. Never includes the visitor's data."""

@@ -154,6 +154,7 @@ def sitemap_xml(request):
     entries = [
         (reverse("core:home"), None, "1.0"),
         (reverse("accounts:signup"), None, "0.6"),
+        (reverse("core:install"), None, "0.4"),
         (reverse("core:legal"), updated, "0.3"),
     ]
     entries += [(reverse("core:legal_page", args=[slug]), updated, "0.3") for slug in LEGAL_PAGES]
