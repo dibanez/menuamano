@@ -226,3 +226,22 @@ class DateException(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["household", "date", "meal_type"], name="unique_date_exception")
         ]
+
+
+class CalendarFeed(models.Model):
+    """A person's private calendar link (iCalendar) with the household's planned meals.
+
+    Calendar apps fetch it without a session, so the token is the only key: it can be replaced,
+    which stops the old link, and it stops working when the person leaves the household.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="calendar_feeds")
+    household = models.ForeignKey("households.Household", on_delete=models.CASCADE, related_name="calendar_feeds")
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_fetched_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "enlace de calendario"
+        verbose_name_plural = "enlaces de calendario"
+        constraints = [models.UniqueConstraint(fields=["user", "household"], name="unique_calendar_feed")]

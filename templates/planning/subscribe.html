@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}El menú en tu calendario · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>El menú en tu calendario</h1>
+  <a class="btn small" href="{% url 'planning:week' %}">Volver a la semana</a>
+  <p class="lead">Suscríbete desde Google Calendar, el calendario del iPhone u Outlook y verás las comidas junto a tus citas. Se actualiza solo, cada pocas horas según la app.</p>
+</div>
+
+{% if feed %}
+<section class="panel">
+  <h2 class="mt-0">Tu enlace</h2>
+  <div class="row">
+    <label class="sr-only" for="feed-link">Enlace del calendario</label>
+    <input id="feed-link" type="text" value="{{ https_url }}" readonly style="flex:1;min-width:12rem">
+    <button class="btn small" type="button" data-copy="feed-link">Copiar</button>
+  </div>
+  <div class="form-actions">
+    <a class="btn primary" href="{{ webcal_url }}">Abrir en el calendario del iPhone o Mac</a>
+    <a class="btn" href="{{ google_url }}" target="_blank" rel="noopener">Añadir a Google Calendar</a>
+  </div>
+</section>
+
+<section class="panel flat">
+  <h2 class="mt-0">Cómo añadirlo</h2>
+  <ul>
+    <li><strong>iPhone o Mac:</strong> pulsa «Abrir en el calendario» y confirma la suscripción. O en Ajustes → Calendario → Cuentas → Añadir cuenta → Otra → Añadir calendario suscrito, y pega el enlace.</li>
+    <li><strong>Google Calendar:</strong> pulsa «Añadir a Google Calendar». Si no se abre, en el ordenador ve a Otros calendarios → + → Desde URL y pega el enlace. Aparece también en el móvil.</li>
+    <li><strong>Outlook:</strong> Añadir calendario → Suscribirse desde la web, y pega el enlace.</li>
+  </ul>
+  <p class="muted small">Las comidas salen a horas orientativas: {% for label, start in meal_times %}{{ label|lower }} a las {{ start|time:"G:i" }}{% if not forloop.last %}, {% endif %}{% endfor %}. Incluyen las recetas y cuántas personas comen, nunca quiénes.</p>
+</section>
+
+<section class="panel flat">
+  <h2 class="mt-0">Si lo compartes sin querer</h2>
+  <p class="muted small">Quien tenga el enlace ve el menú de este hogar. Crea uno nuevo y el anterior dejará de funcionar; tendrás que añadir el nuevo a tu calendario.</p>
+  <div class="row">
+    <form method="post">{% csrf_token %}<button class="btn small" type="submit" data-confirm="Pulsa otra vez para cambiarlo">Crear un enlace nuevo</button></form>
+    <form method="post" action="{% url 'planning:unsubscribe' %}">{% csrf_token %}<button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para quitarlo">Dejar de compartir</button></form>
+  </div>
+</section>
+{% else %}
+<section class="panel">
+  <p class="mt-0">Crea tu enlace privado y añádelo a tu calendario. Es solo para ti y para este hogar.</p>
+  <form method="post">{% csrf_token %}<button class="btn primary" type="submit">Crear mi enlace de calendario</button></form>
+  <p class="muted small" style="margin-bottom:0">Las comidas salen a horas orientativas, con las recetas y cuántas personas comen, nunca quiénes.</p>
+</section>
+{% endif %}
+{% endblock %}

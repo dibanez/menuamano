@@ -1,30 +1,34 @@
 import calendar as pycalendar
+import secrets
 from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from core.choices import MealType
+from core.seo import site_url
 from foods.compatibility import LABEL_REMINDER
 from foods.models import Ingredient, Trait
 from foods.reviews import reviews_for
 from foods.units import scale
-from households.models import Role
+from households.models import Membership, Role
 from households.permissions import household_required
 from recipes import services as recipe_services
 from recipes.models import Recipe
 
-from . import services
+from . import feeds, services
 from .calendar import calendar_days
 from .forms import ExceptionForm, MealDetailsForm, MoveForm, RangeForm, RuleForm
 from .models import (
     MODES_WITH_RECIPES,
+    CalendarFeed,
     DateException,
     Meal,
     MealAttendee,
@@ -142,6 +146,57 @@ def slot(request, day, meal_type):
         request, "planning/empty_slot.html",
         {"the_day": the_day, "meal_type": meal_type, "label": MealType(meal_type).label, "defaults": defaults},
     )
+
+
+# --- Calendar apps (iCalendar feed) -------------------------------------------------------------
+
+
+@require_GET
+def calendar_feed(request, token):
+    """Fetched by calendar apps without a session: the token is the key."""
+    feed = CalendarFeed.objects.select_related("household", "user").filter(token=token).first()
+    if feed is None or not feed.user.is_active or not Membership.objects.filter(
+        user=feed.user, household=feed.household
+    ).exists():
+        raise Http404("Unknown calendar link")
+    CalendarFeed.objects.filter(pk=feed.pk).update(last_fetched_at=timezone.now())
+    response = HttpResponse(feeds.calendar(feed.household, site_url(request)), content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = 'inline; filename="menuamano.ics"'
+    response["Cache-Control"] = "private, max-age=900"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response
+
+
+@household_required()
+def calendar_subscribe(request):
+    feed = CalendarFeed.objects.filter(user=request.user, household=request.household).first()
+    if request.method == "POST":
+        token = secrets.token_urlsafe(32)
+        if feed is None:
+            CalendarFeed.objects.create(user=request.user, household=request.household, token=token)
+            messages.success(request, "Enlace creado. Añádelo a tu calendario.")
+        else:
+            feed.token = token
+            feed.save(update_fields=["token"])
+            messages.success(request, "Enlace nuevo creado. El anterior ya no funciona: añade este a tu calendario.")
+        return redirect("planning:subscribe")
+    context = {"feed": feed, "meal_times": [(MealType(mt).label, start) for mt, (start, _) in feeds.MEAL_TIMES.items()]}
+    if feed is not None:
+        https_url = site_url(request) + reverse("planning:feed", args=[feed.token])
+        webcal_url = "webcal://" + https_url.split("://", 1)[1]
+        context.update({
+            "https_url": https_url, "webcal_url": webcal_url,
+            "google_url": "https://calendar.google.com/calendar/render?cid=" + quote(webcal_url, safe=""),
+        })
+    return render(request, "planning/subscribe.html", context)
+
+
+@household_required()
+@require_POST
+def calendar_unsubscribe(request):
+    CalendarFeed.objects.filter(user=request.user, household=request.household).delete()
+    messages.success(request, "El enlace del calendario ya no funciona. El menú deja de verse en tu calendario.")
+    return redirect("planning:subscribe")
 
 
 # --- Meal detail --------------------------------------------------------------------------------
