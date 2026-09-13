@@ -28,6 +28,7 @@ from foods.models import Category, Ingredient, Unit, normalize_name
 from foods.reviews import reviews_for
 from planning import services as planning
 from planning.models import MODES_WITH_RECIPES, Meal, MealAttendee, MealMode
+from recipes import importer
 from recipes import services as recipe_services
 from recipes.models import Recipe, RecipeIngredient, RecipeStep
 
@@ -107,6 +108,65 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
         "assistant proposal %s created: operation=%s provider=%s items=%s statuses=%s rejected=%s new_recipes=%s",
         proposal.pk, operation, provider.name, len(items), dict(Counter(i["status"] for i in items)),
         sorted({i["rejected_reason"] for i in items if i.get("rejected_reason")}), len(new_recipes),
+    )
+    return proposal
+
+
+def request_import(household, user, url):
+    """Read a recipe from a web page and store it as a proposal to review. Never saves the recipe."""
+    allowed, message = entitlements.check_ai(household)
+    if not allowed:
+        raise AssistantError(message)
+    try:
+        source = importer.read_recipe(url)  # network: outside any transaction
+    except importer.RecipeImportError as exc:
+        raise AssistantError(exc.message) from exc
+    operation = Proposal.Operation.IMPORT_RECIPE
+    started = time.monotonic()
+    try:
+        provider = get_provider()
+    except ProviderError as exc:
+        _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
+        raise AssistantError(exc.user_message) from exc
+    # The page and the ingredient names only: nothing about the people of the household.
+    context = {
+        "operation": str(operation),
+        "source": source,
+        "known_ingredients": list(
+            Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
+        ),
+        "units": [u.value for u in Unit],
+    }
+    try:
+        result = provider.generate(context, user_id=user.pk if user else None)
+    except ProviderError as exc:
+        logger.warning("assistant provider error: provider=%s code=%s", provider.name, exc.code)
+        _log(household, user, provider.name, operation, exc.status, started, error_code=exc.code)
+        raise AssistantError(exc.user_message) from exc
+    _log(household, user, provider.name, operation, AIRequestLog.Status.OK, started, result=result)
+
+    recipes = [_validate_new_recipe(household, raw) for raw in result.output.new_recipes[:1]]
+    if not recipes:
+        raise AssistantError(result.output.summary.strip()[:300] or "No se ha encontrado ninguna receta en esa página.")
+    everyone = [rules_for_diner(d) for d in planning.diners_queryset(household)]
+    reviews = reviews_for(household)
+    for recipe in recipes:
+        recipe["ref"] = recipe["ref"] or "N1"
+        recipe["source_url"] = source["url"]
+        recipe["origin"] = Recipe.Origin.IMPORTED
+        check = evaluate(_new_recipe_facts(recipe, reviews), everyone)
+        recipe["status"] = {compatibility.OK: ITEM_OK, compatibility.UNKNOWN: ITEM_REVIEW}.get(check.status, ITEM_CONFLICT)
+        recipe["issues"] = [i.message for i in check.issues if i.level != "warning"][:10]
+    today = timezone.localdate()
+    with transaction.atomic():
+        proposal = Proposal.objects.create(
+            household=household, created_by=user, operation=operation, provider=provider.name,
+            summary=_summary(result.output.summary, []), items=[], new_recipes=recipes, base_versions={},
+            start_date=today, end_date=today,
+        )
+    logger.info(
+        "assistant proposal %s created: operation=%s provider=%s source=%s new_recipes=%s",
+        proposal.pk, operation, provider.name, source["format"], len(recipes),
     )
     return proposal
 
@@ -526,7 +586,8 @@ def _create_recipe(household, user, data):
     recipe = Recipe.objects.create(
         household=household, name=data["name"], description=data["description"],
         base_servings=data["base_servings"], prep_minutes=data["prep_minutes"], cook_minutes=data["cook_minutes"],
-        difficulty=data["difficulty"], tags=data["tags"], equipment=data["equipment"], origin=Recipe.Origin.AI,
+        difficulty=data["difficulty"], tags=data["tags"], equipment=data["equipment"],
+        origin=data.get("origin", Recipe.Origin.AI), source_url=data.get("source_url", ""),
         review_status=Recipe.ReviewStatus.NEEDS_REVIEW, created_by=user,
     )
     for order, line in enumerate(data["ingredients"]):
@@ -585,7 +646,9 @@ def apply_proposal(proposal, user, accepted_review=()):
             standalone = data["ref"] not in {r for i in proposal.items for r in i["new_recipe_refs"]}
             if data["problems"] or not (data["ref"] in needed_refs or standalone):
                 continue
-            if standalone and data["status"] == ITEM_CONFLICT:
+            # An imported recipe was asked for by name: it is kept even if not everyone can eat it
+            # (plates per diner exist for that), and its status is shown on the recipe.
+            if standalone and data["status"] == ITEM_CONFLICT and proposal.operation != Proposal.Operation.IMPORT_RECIPE:
                 result.skipped.append(f"Receta «{data['name']}»: incompatible con algún comensal.")
                 continue
             created[data["ref"]] = _create_recipe(household, user, data)

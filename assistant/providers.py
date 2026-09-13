@@ -57,6 +57,12 @@ Rules:
 - You cannot execute code, run queries, delete data or perform actions other than proposing meal changes
   and recipes. If the request asks for anything else, return no changes and explain it in `summary`.
 - Recipes are never a guarantee against traces or cross-contamination; do not claim otherwise.
+- When `operation` is "import_recipe", `source` is a recipe read from a web page: return no changes
+  and exactly one entry in `new_recipes` that transcribes it faithfully. Keep its ingredients, quantities
+  and steps; never add or drop any. Write it in Spanish from Spain. Use names from `known_ingredients`
+  when they are the same ingredient, units from `units` (convert others, e.g. cups to ml), quantity null
+  for "to taste", and base_servings from the recipe (4 if it does not say). If `source` holds no recipe,
+  return no recipes and say so in `summary`.
 """
 
 
@@ -199,6 +205,30 @@ NUMBERS = {
     "diez": 10, "quince": 15, "veinte": 20, "veinticinco": 25, "treinta": 30, "cuarenta": 40, "cuarenta y cinco": 45,
 }
 MEAL_TAGS = {"breakfast": "desayuno", "lunch": "comida", "snack": "merienda", "dinner": "cena"}
+UNIT_WORDS = {
+    "g": "g", "gr": "g", "gramo": "g", "gramos": "g", "kg": "kg", "kilo": "kg", "kilos": "kg",
+    "ml": "ml", "l": "l", "litro": "l", "litros": "l", "cucharada": "tbsp", "cucharadas": "tbsp",
+    "cucharadita": "tsp", "cucharaditas": "tsp", "diente": "clove", "dientes": "clove", "unidad": "unit",
+    "unidades": "unit", "lata": "can", "latas": "can", "pizca": "pinch", "pizcas": "pinch",
+    "loncha": "slice", "lonchas": "slice", "manojo": "bunch", "paquete": "pack",
+}
+QUANTITY_LINE = re.compile(r"^\s*(\d+(?:[.,]\d+)?)\s*([^\W\d_]+)?\.?(?:\s+(?:de\s+)?(.*))?$")
+TO_TASTE = re.compile(r"\s*\b(al gusto|c/n|cantidad necesaria)\b\.?", re.IGNORECASE)
+
+
+def _ingredient_line(text):
+    """«400 g de espaguetis», «2 dientes de ajo», «Sal al gusto» → an ingredient line."""
+    match = QUANTITY_LINE.match(text)
+    if match:
+        quantity = float(match.group(1).replace(",", "."))
+        word, rest = (match.group(2) or "").lower(), (match.group(3) or "").strip()
+        unit = UNIT_WORDS.get(word)
+        name = rest if unit else f"{word} {rest}".strip()
+        unit = unit or "unit"
+    else:
+        quantity, unit, name = None, "g", TO_TASTE.sub("", text)
+    name = name.strip(" .,;:") or text.strip()
+    return NewIngredientLine(name=name[:1].upper() + name[1:], quantity=quantity, unit=unit, optional=False)
 
 
 def _number(token):
@@ -226,6 +256,8 @@ class DemoProvider:
         operation = context["operation"]
         if operation == "generate_recipe":
             output = self._recipe(context)
+        elif operation == "import_recipe":
+            output = self._import(context["source"])
         else:
             output = self._plan(context)
         return ProviderResult(output=output, provider=self.name, model="demo")
@@ -379,6 +411,27 @@ class DemoProvider:
         )
         return AssistantOutput(
             summary="Modo demostración: receta de ejemplo fija, sin IA. Revísala antes de usarla.",
+            changes=[], new_recipes=[recipe], warnings=[],
+        )
+
+    def _import(self, source):
+        if source.get("format") != "schema.org":
+            return AssistantOutput(
+                summary=(
+                    "Modo demostración: solo sé leer las páginas que marcan la receta con datos estructurados. "
+                    "Con la IA conectada se leen también las demás."
+                ),
+                changes=[], new_recipes=[], warnings=[],
+            )
+        recipe = NewRecipe(
+            ref="N1", name=source["name"] or "Receta importada", description=source["description"],
+            base_servings=source["servings"] or 4, prep_minutes=source["prep_minutes"], cook_minutes=source["cook_minutes"],
+            difficulty="easy", tags=[], equipment="",
+            ingredients=[_ingredient_line(line) for line in source["ingredients"] if line.strip()],
+            steps=source["instructions"],
+        )
+        return AssistantOutput(
+            summary="Modo demostración: receta transcrita con reglas simples, sin IA. Revisa ingredientes y cantidades.",
             changes=[], new_recipes=[recipe], warnings=[],
         )
 

@@ -18,6 +18,7 @@ class Recipe(models.Model):
         MANUAL = "manual", "Manual"
         DEMO = "demo", "Demostración"
         AI = "ai", "Generada por IA"
+        IMPORTED = "imported", "Importada de la web"
 
     class ReviewStatus(models.TextChoices):
         REVIEWED = "reviewed", "Revisada"
@@ -33,6 +34,7 @@ class Recipe(models.Model):
     difficulty = models.CharField("dificultad", max_length=8, choices=Difficulty.choices, default=Difficulty.EASY)
     tags = ArrayField(models.CharField(max_length=30), default=list, blank=True, verbose_name="etiquetas")
     origin = models.CharField("origen", max_length=8, choices=Origin.choices, default=Origin.MANUAL)
+    source_url = models.URLField("receta original", max_length=500, blank=True, help_text="Enlace a la página de donde viene.")
     review_status = models.CharField(
         "estado de revisión", max_length=16, choices=ReviewStatus.choices, default=ReviewStatus.REVIEWED
     )

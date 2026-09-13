@@ -107,6 +107,21 @@ def generate_recipe(request):
     return redirect("assistant:proposal", proposal.pk)
 
 
+@household_required(Role.EDITOR)
+@require_POST
+def import_recipe(request):
+    url = request.POST.get("url", "").strip()[:500]
+    if not url:
+        messages.error(request, "Pega el enlace de la receta.")
+        return redirect("recipes:list")
+    try:
+        proposal = services.request_import(request.household, request.user, url)
+    except services.AssistantError as exc:
+        messages.error(request, exc.message)
+        return redirect("recipes:list")
+    return redirect("assistant:proposal", proposal.pk)
+
+
 @household_required()
 def proposal_detail(request, pk):
     proposal = _proposal(request, pk)

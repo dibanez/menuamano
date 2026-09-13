@@ -9,6 +9,7 @@
     {% if can_edit %}<a class="btn small" href="{% url 'recipes:edit' recipe.pk %}">Editar</a>{% endif %}
   </span>
   {% if recipe.description %}<p class="lead">{{ recipe.description }}</p>{% endif %}
+  {% if recipe.source_url %}<p class="small" style="margin:0"><a href="{{ recipe.source_url }}" target="_blank" rel="noopener noreferrer nofollow">Ver la receta original</a></p>{% endif %}
 </div>
 
 <div class="row" style="margin-bottom:16px">

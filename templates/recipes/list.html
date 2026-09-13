@@ -29,6 +29,16 @@
   </form>
   <p class="muted small" style="margin:6px 0 0">Se comprueba con las restricciones de todos los comensales y se guarda como pendiente de revisión.</p>
 </details>
+<details class="panel">
+  <summary class="link-btn">Importar una receta desde un enlace</summary>
+  <form method="post" action="{% url 'assistant:import_recipe' %}" class="row" style="margin-top:10px" hx-disabled-elt="find button">
+    {% csrf_token %}
+    <label class="sr-only" for="recipe-url">Enlace de la receta</label>
+    <input id="recipe-url" type="url" name="url" maxlength="500" required placeholder="https://…" inputmode="url" style="flex:1">
+    <button class="btn" type="submit">Importar</button>
+  </form>
+  <p class="muted small" style="margin:6px 0 0">{% if ai_status.is_demo %}En modo demostración solo se leen las páginas con la receta marcada como datos estructurados.{% else %}La IA la transcribe con vuestros ingredientes; usa una petición del asistente.{% endif %} La revisas antes de guardarla y se comprueba con las alergias de todos.</p>
+</details>
 {% endif %}
 
 <div class="recipes-grid">

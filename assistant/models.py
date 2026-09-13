@@ -38,6 +38,7 @@ class Proposal(models.Model):
         PLAN_RANGE = "plan_range", "Proponer menú"
         REPLACE_MEAL = "replace_meal", "Reemplazar comida"
         GENERATE_RECIPE = "generate_recipe", "Generar receta"
+        IMPORT_RECIPE = "import_recipe", "Importar receta"
         CHAT = "chat", "Chat"
 
     class Status(models.TextChoices):

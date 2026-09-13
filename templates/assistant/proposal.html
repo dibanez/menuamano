@@ -5,7 +5,7 @@
 <div class="page-head">
   <h1>{{ proposal.get_operation_display }}</h1>
   <span class="row">
-    {% if proposal.provider == "demo" %}<span class="badge demo">Modo demostración, sin IA</span>{% else %}<span class="badge info">Generada por IA</span>{% endif %}
+    {% if proposal.provider == "demo" %}<span class="badge demo">Modo demostración, sin IA</span>{% elif proposal.operation == "import_recipe" %}<span class="badge info">Transcrita por IA</span>{% else %}<span class="badge info">Generada por IA</span>{% endif %}
     <span class="badge {% if proposal.status == 'pending' %}unknown{% elif proposal.status == 'applied' %}ok{% endif %}">{{ proposal.get_status_display }}</span>
   </span>
   {% if proposal.summary %}<p class="lead" style="white-space:pre-line">{{ proposal.summary }}</p>{% endif %}
@@ -47,14 +47,14 @@
 
   {% if proposal.new_recipes %}
   <section class="panel">
-    <h2 class="mt-0">Recetas nuevas</h2>
-    <p class="muted small">Se guardarán en el recetario como «generadas por IA» y pendientes de revisión.</p>
+    <h2 class="mt-0">{% if proposal.operation == "import_recipe" %}Receta importada{% else %}Recetas nuevas{% endif %}</h2>
+    <p class="muted small">{% if proposal.operation == "import_recipe" %}Se guardará en el recetario como importada, pendiente de revisión y con el enlace a la original. Si alguien no puede comerla, se guarda igual y lo verás en la receta.{% else %}Se guardarán en el recetario como «generadas por IA» y pendientes de revisión.{% endif %}</p>
     {% for r in proposal.new_recipes %}
       <article class="proposal-item">
         <div class="row between"><strong>{{ r.name }}</strong>
           {% if r.status == "ok" %}<span class="badge ok">Compatible según los datos</span>{% elif r.status == "review" %}<span class="badge unknown">Requiere revisión</span>{% else %}<span class="badge conflict">Incompatible con algún comensal</span>{% endif %}
         </div>
-        <p class="small muted" style="margin:4px 0">{{ r.description }} {{ r.base_servings }} raciones, {{ r.prep_minutes|add:r.cook_minutes }} minutos.</p>
+        <p class="small muted" style="margin:4px 0">{{ r.description }} {{ r.base_servings }} raciones, {{ r.prep_minutes|add:r.cook_minutes }} minutos.{% if r.source_url %} <a href="{{ r.source_url }}" target="_blank" rel="noopener noreferrer nofollow">Ver la original</a>{% endif %}</p>
         <ul class="ingredients-list small">{% for ln in r.ingredients %}<li><span>{{ ln.name }}{% if not ln.ingredient_id %} <span class="badge unknown">ingrediente nuevo, sin revisar</span>{% endif %}</span><span class="qty">{{ ln.quantity|qty:ln.unit }}</span></li>{% endfor %}</ul>
         <ol class="steps small">{% for s in r.steps %}<li>{{ s }}</li>{% endfor %}</ol>
         {% for i in r.issues %}<div class="small muted">{{ i }}</div>{% endfor %}
@@ -70,7 +70,7 @@
 
   {% if proposal.status == "pending" and can_edit %}
     <div class="form-actions">
-      <button class="btn primary" type="submit" {% if not applicable and not proposal.new_recipes %}disabled{% endif %}>Aplicar cambios</button>
+      <button class="btn primary" type="submit" {% if not applicable and not proposal.new_recipes %}disabled{% endif %}>{% if proposal.operation == "import_recipe" %}Guardar en el recetario{% else %}Aplicar cambios{% endif %}</button>
       <button class="btn ghost" type="submit" formaction="{% url 'assistant:proposal_discard' proposal.pk %}">Descartar</button>
     </div>
     <p class="muted small">Solo se aplican los cambios compatibles y los que marques como revisados. Si el calendario cambia antes de aplicar, la propuesta se bloquea.</p>

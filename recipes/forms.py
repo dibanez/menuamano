@@ -7,10 +7,16 @@ from .models import Recipe, RecipeIngredient, RecipeStep
 
 
 class RecipeForm(forms.ModelForm):
+    source_url = forms.URLField(
+        label="Receta original", required=False, max_length=500, assume_scheme="https",
+        help_text="Enlace a la página de donde viene.",
+    )
+
     class Meta:
         model = Recipe
         fields = (
             "name", "description", "base_servings", "prep_minutes", "cook_minutes", "difficulty", "equipment", "tags",
+            "source_url",
         )
         widgets = {"description": forms.Textarea(attrs={"rows": 2})}
         help_texts = {
