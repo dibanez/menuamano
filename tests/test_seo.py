@@ -39,9 +39,17 @@ def test_landing_structured_data_matches_prices_and_faq(client, db, site):
     assert app["url"] == f"{SITE}/"
     assert [o["price"] for o in app["offers"]] == ["0", "4.99", "49"]
     questions = [q["name"] for q in graph["FAQPage"]["mainEntity"]]
-    assert len(questions) == 7
+    assert len(questions) == 8
     for question in questions:
         assert question in html  # the visible FAQ is the same list
+
+
+def test_landing_presents_the_everyday_features(client, db):
+    html = client.get("/").content.decode()
+    for feature in ("Recordatorios", "Despensa", "La lista, en el súper", "El menú en tu calendario",
+                    "Recetas de cualquier web"):
+        assert f"<h3>{feature}</h3>" in html
+    assert "Despensa, recordatorios en el móvil y el menú en tu calendario" in html  # in the free plan
 
 
 def test_private_pages_are_not_indexed(client, household, admin_user):

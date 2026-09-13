@@ -84,6 +84,14 @@ def landing_faqs(free, premium):
             ),
         },
         {
+            "question": "¿Me avisa de lo que toca cocinar?",
+            "answer": (
+                "Sí, si activas los recordatorios en el móvil: la tarde anterior te dice lo que hay planificado para "
+                "el día siguiente y lo que hay que dejar preparado, y el domingo, si la semana siguiente está sin "
+                "planificar. Los avisos nombran las recetas, nunca a las personas. En iPhone, con la app instalada."
+            ),
+        },
+        {
             "question": "¿Qué datos ve la inteligencia artificial?",
             "answer": (
                 "Solo lo necesario para proponer el menú: códigos en lugar de nombres, grupos de edad, restricciones y "

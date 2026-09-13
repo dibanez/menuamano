@@ -57,6 +57,37 @@
     </ol>
   </section>
 
+  <section class="landing-section" aria-labelledby="extras-title">
+    <h2 id="extras-title">Y en el día a día</h2>
+    <ul class="features">
+      <li>
+        <svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>
+        <h3>Recordatorios</h3>
+        <p>La tarde anterior te avisa en el móvil de lo que toca mañana y de lo que hay que dejar preparado: el remojo, descongelar.</p>
+      </li>
+      <li>
+        <svg class="icon" aria-hidden="true"><use href="#i-home"/></svg>
+        <h3>Despensa</h3>
+        <p>Lo que ya tenéis en casa se descuenta de la lista, y la sal o el aceite salen aparte para que solo mires si queda.</p>
+      </li>
+      <li>
+        <svg class="icon" aria-hidden="true"><use href="#i-basket"/></svg>
+        <h3>La lista, en el súper</h3>
+        <p>Se ve aunque no haya cobertura, la marcáis entre varios y se envía por WhatsApp en un toque.</p>
+      </li>
+      <li>
+        <svg class="icon" aria-hidden="true"><use href="#i-calendar"/></svg>
+        <h3>El menú en tu calendario</h3>
+        <p>Las comidas de la semana en Google Calendar, el iPhone u Outlook, junto a tus citas.</p>
+      </li>
+      <li>
+        <svg class="icon" aria-hidden="true"><use href="#i-book"/></svg>
+        <h3>Recetas de cualquier web</h3>
+        <p>Pega el enlace de una receta y el asistente la pasa a tu recetario, con las alergias ya comprobadas.</p>
+      </li>
+    </ul>
+  </section>
+
   <section class="landing-section install-cta hide-in-app" aria-labelledby="install-title">
     <div>
       <h2 id="install-title">En el móvil, como una app</h2>
@@ -96,6 +127,7 @@
           <li>Calendario de desayunos, comidas, meriendas y cenas</li>
           <li>Comensales ilimitados, con alergias y gustos</li>
           <li>Recetario, sobras y lista de la compra automática</li>
+          <li>Despensa, recordatorios en el móvil y el menú en tu calendario</li>
           {% if free.has_ai %}<li>Asistente con IA para probarlo: {{ free.ai_total_limit }} peticiones</li>{% endif %}
           <li>Hasta {{ free.max_members }} personas con cuenta en el hogar</li>
           <li>{% if free.max_owned_households == 1 %}Un hogar{% else %}Hasta {{ free.max_owned_households }} hogares{% endif %}</li>
@@ -109,6 +141,7 @@
         <ul class="plan-features">
           <li>Todo lo del plan gratuito</li>
           <li>Asistente con IA: propone menús y cambios que revisas antes de aplicar</li>
+          <li>Recetas de cualquier web, pasadas a tu recetario con un enlace</li>
           <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
           <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar</li>
           <li>Todos los hogares que necesites</li>

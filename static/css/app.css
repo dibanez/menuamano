@@ -521,6 +521,20 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
 .faq summary { cursor: pointer; font-weight: 650; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
+/* Everyday features on the landing: one card each, icon beside the title. */
+.features { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
+@media (min-width: 640px) { .features { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .features { grid-template-columns: repeat(3, 1fr); } }
+.features li {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 16px;
+}
+.features .icon {
+  grid-row: span 2; width: 40px; height: 40px; padding: 9px; border-radius: 12px;
+  background: var(--leaf-soft); color: var(--leaf-strong);
+}
+.features h3 { margin: 0; font-size: 1.02rem; }
+.features p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 /* Installing the app, from the landing: a hint under the hero buttons and its own section. */
 .install-hint {
   display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 10px 14px;
