@@ -31,6 +31,10 @@ class Recipe(models.Model):
     prep_minutes = models.PositiveSmallIntegerField("preparación (min)", default=0)
     cook_minutes = models.PositiveSmallIntegerField("cocción (min)", default=0)
     equipment = models.CharField("equipamiento", max_length=200, blank=True)
+    advance_note = models.CharField(
+        "preparar la víspera", max_length=120, blank=True,
+        help_text="Por ejemplo: poner los garbanzos en remojo, sacar el pescado del congelador. Sale en el recordatorio del día anterior.",
+    )
     difficulty = models.CharField("dificultad", max_length=8, choices=Difficulty.choices, default=Difficulty.EASY)
     tags = ArrayField(models.CharField(max_length=30), default=list, blank=True, verbose_name="etiquetas")
     origin = models.CharField("origen", max_length=8, choices=Origin.choices, default=Origin.MANUAL)

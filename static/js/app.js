@@ -372,6 +372,74 @@ function offlineItem(list, item) {
   return row;
 }
 
+// Reminders page: this device subscribes to the server's notifications (web push).
+function vapidKeyBytes(value) {
+  const base64 = (value + "=".repeat((4 - (value.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+}
+
+async function postJSON(url, data) {
+  return fetch(url, {
+    method: "POST", credentials: "same-origin",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+    body: JSON.stringify(data),
+  });
+}
+
+async function setUpPush() {
+  const box = document.querySelector("[data-push]");
+  if (!box) return;
+  const status = box.querySelector("[data-push-status]");
+  const enable = box.querySelector("[data-push-enable]");
+  const disable = box.querySelector("[data-push-disable]");
+  if (!("serviceWorker" in navigator && "PushManager" in window && "Notification" in window)) {
+    const ios = deviceKind() === "ios" && !installedAsApp();
+    box.querySelector("[data-push-ios]").hidden = !ios;
+    status.textContent = ios ? "Instala la app para recibir avisos en este dispositivo." : "Este navegador no puede recibir avisos.";
+    return;
+  }
+  const registration = await navigator.serviceWorker.ready;
+  const current = await registration.pushManager.getSubscription();
+  if (Notification.permission === "denied") {
+    status.textContent = "Has bloqueado los avisos de menuamano: permítelos en los ajustes del navegador.";
+    return;
+  }
+  status.textContent = current ? "Los avisos están activados en este dispositivo." : "Los avisos están desactivados en este dispositivo.";
+  enable.hidden = Boolean(current);
+  disable.hidden = !current;
+
+  enable.addEventListener("click", async () => {
+    enable.disabled = true;
+    try {
+      if (await Notification.requestPermission() !== "granted") {
+        status.textContent = "Sin permiso no se pueden enviar avisos. Puedes darlo en los ajustes del navegador.";
+        return;
+      }
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true, applicationServerKey: vapidKeyBytes(box.dataset.publicKey),
+      });
+      const response = await postJSON(box.dataset.subscribeUrl, subscription.toJSON());
+      if (!response.ok) throw new Error(String(response.status));
+      window.location.reload();
+    } catch {
+      status.textContent = "No se han podido activar los avisos. Inténtalo de nuevo.";
+    } finally {
+      enable.disabled = false;
+    }
+  });
+
+  disable.addEventListener("click", async () => {
+    const subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      await postJSON(box.dataset.unsubscribeUrl, { endpoint: subscription.endpoint });
+      await subscription.unsubscribe();
+    }
+    window.location.reload();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", setUpPush);
+
 function toggleOffline(list, item, row, tick) {
   item.done = !item.done;
   store.set(SHOPPING_KEY, list);

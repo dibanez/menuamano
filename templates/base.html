@@ -53,6 +53,7 @@
           <a href="{% url 'households:onboarding' %}">Crear otro hogar</a>
           <a href="{% url 'accounts:password_change' %}">Cambiar la contraseña</a>
           <a class="hide-in-app" href="{% url 'core:install' %}">Instalar la app</a>
+          {% if household %}<a href="{% url 'reminders:settings' %}">Recordatorios</a>{% endif %}
           <a href="{% url 'core:legal' %}">Información legal y privacidad</a>
           <hr>
           <form method="post" action="{% url 'accounts:logout' %}">

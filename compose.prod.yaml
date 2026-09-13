@@ -29,7 +29,8 @@ services:
   menuamano-web:
     build: .
     restart: unless-stopped
-    environment:
+    # Shared with menuamano-reminders: both run the same Django settings.
+    environment: &app-env
       DJANGO_SETTINGS_MODULE: config.settings.production
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in Dokploy}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?Set DJANGO_ALLOWED_HOSTS in Dokploy (e.g. menuamano.example.com)}
@@ -92,6 +93,11 @@ services:
       SERVER_EMAIL: ${SERVER_EMAIL:-}
       DJANGO_ADMINS: ${DJANGO_ADMINS:-}
       EMAIL_TIMEOUT_SECONDS: ${EMAIL_TIMEOUT_SECONDS:-15}
+      # Reminders (web push). Generate the pair with `python manage.py generate_vapid_keys`.
+      # Empty = no reminders.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     command: >-
       sh -c "python manage.py migrate --noinput
       && python manage.py collectstatic --noinput
@@ -108,6 +114,16 @@ services:
       start_period: 40s
     depends_on:
       menuamano-db:
+        condition: service_healthy
+
+  # Sends the reminders that are due, every five minutes. No port, no domain.
+  menuamano-reminders:
+    build: .
+    restart: unless-stopped
+    environment: *app-env
+    command: python manage.py send_reminders --loop 300
+    depends_on:
+      menuamano-web:
         condition: service_healthy
 
 volumes:

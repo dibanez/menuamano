@@ -143,6 +143,20 @@ Safari, «Instalar app» en Chrome o Edge) y arranca a pantalla completa, sin la
 
 Hace falta HTTPS (o `localhost`) para que el navegador registre el service worker.
 
+### Recordatorios (notificaciones)
+
+Avisos en el móvil con lo que hay mañana (y lo que hay que preparar la víspera) y, los domingos,
+si la semana siguiente está sin planificar. Cada persona los activa en «Recordatorios» del menú.
+
+1. Genera las claves una vez: `docker compose exec web python manage.py generate_vapid_keys`.
+2. Copia `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY` en Environment de Dokploy (la privada es
+   secreta; si cambias el par, cada dispositivo tiene que volver a activarlos). Opcional:
+   `VAPID_SUBJECT=mailto:…` (por defecto, `LEGAL_CONTACT_EMAIL`).
+3. Redespliega. El servicio `menuamano-reminders` los envía cada cinco minutos; sin claves no
+   envía nada.
+
+En iPhone y iPad solo llegan con la app instalada (iOS 16.4 o posterior).
+
 ### Pagos con Stripe
 
 Planes: **Gratis** (planificación completa, 7 peticiones de prueba al asistente con IA, que no se

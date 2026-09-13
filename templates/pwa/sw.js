@@ -3,6 +3,7 @@
 const CACHE = "{{ cache_name }}";
 const PRECACHE = {{ precache|safe }};
 const OFFLINE_URL = {{ offline_url|safe }};
+const ICON_URL = {{ icon_url|safe }};
 
 self.addEventListener("install", (event) => {
   // Straight from the server, never from the browser's HTTP cache: a new worker must store current files.
@@ -35,6 +36,33 @@ self.addEventListener("fetch", (event) => {
     const hashed = /\.[0-9a-f]{12}\.[a-z0-9]+$/.test(url.pathname);
     event.respondWith(hashed ? cacheFirst(request) : networkFirst(request));
   }
+});
+
+// Reminders sent by the server (web push). Only same-site links are opened.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(self.registration.showNotification(data.title || "menuamano", {
+    body: data.body || "", icon: ICON_URL, badge: ICON_URL, tag: data.tag || "menuamano", lang: "es",
+    data: { url: data.url || "/" },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((client) => "focus" in client);
+      if (!open) return self.clients.openWindow(url.href);
+      return open.focus().then((client) => client.navigate(url.href)).catch(() => self.clients.openWindow(url.href));
+    }),
+  );
 });
 
 async function cacheFirst(request) {

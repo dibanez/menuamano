@@ -29,6 +29,7 @@
   </div>
 {% endif %}
 {% if recipe.is_archived %}<div class="notice">Receta archivada: no se propone al planificar.</div>{% endif %}
+{% if recipe.advance_note %}<div class="notice"><strong>La víspera</strong>{{ recipe.advance_note|capfirst }}.</div>{% endif %}
 
 <section class="panel">
   <div class="row between">

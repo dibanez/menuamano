@@ -18,7 +18,7 @@ from django.views.decorators.http import require_GET
 THEME_COLOR = "#2c7a4b"
 BACKGROUND_COLOR = "#f5f7f1"
 # Bump when the service worker's own logic changes; static changes bump the cache by themselves.
-SW_REVISION = "2"
+SW_REVISION = "3"
 SHELL = ["css/app.css", "js/app.js", "js/htmx.min.js", "img/favicon.svg", "img/icon-192.png"]
 
 
@@ -66,6 +66,7 @@ def service_worker(request):
     version = hashlib.sha256("|".join([SW_REVISION, *precache]).encode()).hexdigest()[:12]
     body = render_to_string("pwa/sw.js", {
         "cache_name": f"menuamano-{version}", "precache": json.dumps(precache), "offline_url": json.dumps(offline_url),
+        "icon_url": json.dumps(static("img/icon-192.png")),
     })
     response = HttpResponse(body, content_type="text/javascript; charset=utf-8")
     response["Cache-Control"] = "no-cache"  # browsers must check for a new worker on every visit

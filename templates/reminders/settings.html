@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Recordatorios · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Recordatorios</h1>
+  <p class="lead">Un aviso en el móvil con lo que hay mañana y lo que hay que dejar preparado, y otro el domingo si la semana siguiente está sin planificar.</p>
+</div>
+
+{% if not configured %}
+  <div class="notice">
+    <strong>Los recordatorios no están activados</strong>
+    Este servidor aún no tiene las claves de notificaciones configuradas.
+  </div>
+{% else %}
+<section class="panel" data-push data-public-key="{{ public_key }}" data-subscribe-url="{% url 'reminders:subscribe' %}" data-unsubscribe-url="{% url 'reminders:unsubscribe' %}">
+  <h2 class="mt-0">Este dispositivo</h2>
+  <p data-push-status>Comprobando si este dispositivo puede recibir avisos…</p>
+  <div class="form-actions" style="margin-top:0">
+    <button class="btn primary" type="button" data-push-enable hidden>Activar en este dispositivo</button>
+    <button class="btn" type="button" data-push-disable hidden>Desactivar en este dispositivo</button>
+  </div>
+  <p class="muted small" data-push-ios hidden>En iPhone y iPad, primero <a href="{% url 'core:install' %}">instala la app</a> y ábrela desde su icono: solo así puede recibir avisos.</p>
+  {% if devices %}
+    <form method="post" action="{% url 'reminders:test' %}" style="margin-top:12px">
+      {% csrf_token %}
+      <button class="btn small" type="submit">Enviar una prueba</button>
+      <span class="muted small">{{ devices }} dispositivo{{ devices|pluralize }} con avisos.</span>
+    </form>
+  {% endif %}
+</section>
+
+<form method="post" class="panel">
+  {% csrf_token %}
+  <h2 class="mt-0">Qué avisos</h2>
+  {% include "partials/form_fields.html" %}
+  <button class="btn" type="submit">Guardar</button>
+  <p class="muted small" style="margin-bottom:0">Solo para ti y para este hogar. Los avisos nombran las recetas, nunca a las personas.</p>
+</form>
+{% endif %}
+{% endblock %}

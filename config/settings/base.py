@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "shopping",
     "assistant",
     "billing",
+    "reminders",
 ]
 
 MIDDLEWARE = [
@@ -191,6 +192,14 @@ PREMIUM_MAX_MEMBERS = env_int("PREMIUM_MAX_MEMBERS", 8)
 PREMIUM_AI_MONTHLY_LIMIT = env_int("PREMIUM_AI_MONTHLY_LIMIT", 150)
 PREMIUM_PRICE_MONTHLY_LABEL = env_str("PREMIUM_PRICE_MONTHLY_LABEL", "4,99 €")
 PREMIUM_PRICE_YEARLY_LABEL = env_str("PREMIUM_PRICE_YEARLY_LABEL", "49 €")
+
+# --- Reminders (web push) ---------------------------------------------------
+# VAPID keys sign the notifications sent to people's devices. Generate them once with
+# `python manage.py generate_vapid_keys`. Empty = reminders are off.
+VAPID_PUBLIC_KEY = env_str("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = env_str("VAPID_PRIVATE_KEY", "")
+# Contact for the push services (mailto: or https:). Defaults to LEGAL_CONTACT_EMAIL, then SITE_URL.
+VAPID_SUBJECT = env_str("VAPID_SUBJECT", "")
 
 # --- AI assistant -----------------------------------------------------------
 # "demo" runs a deterministic local provider; "openai" calls the OpenAI API from the backend.

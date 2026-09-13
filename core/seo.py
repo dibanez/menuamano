@@ -28,7 +28,7 @@ LANDING_DESCRIPTION = (
 # Areas that need an account: never worth crawling.
 PRIVATE_PREFIXES = (
     "/admin/", "/calendario/", "/compra/", "/asistente/", "/hogar/", "/comensales/",
-    "/recetas/", "/ingredientes/", "/plan/", "/cuenta/",
+    "/recetas/", "/ingredientes/", "/plan/", "/cuenta/", "/recordatorios/",
 )
 
 
