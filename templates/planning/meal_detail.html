@@ -96,7 +96,7 @@
         <p class="muted">No hay comensales. <a href="{% url 'diners:create' %}">Añade uno</a>.</p>
       {% endfor %}
     </div>
-    {% if diners %}
+    {% if diners or guests %}
     <details class="fold att-portions" id="att-portions" hx-preserve>
       <summary class="link-btn">Ajustar raciones</summary>
       <ul class="list">
@@ -105,6 +105,13 @@
             <label for="portion-{{ row.diner.pk }}">{{ row.diner.alias }}</label>
             <input id="portion-{{ row.diner.pk }}" name="portion-{{ row.diner.pk }}" type="number" step="0.05" min="0.1" max="5" inputmode="decimal" style="width:84px"
               value="{% if row.attendee %}{{ row.attendee.portion|input_num }}{% else %}{{ row.diner.portion_factor|input_num }}{% endif %}">
+          </li>
+        {% endfor %}
+        {% for g in guests %}
+          <li class="row between">
+            <label for="guest-portion-{{ g.pk }}">{{ g.guest_name }} <span class="muted small">invitado</span></label>
+            <input id="guest-portion-{{ g.pk }}" name="guest-portion-{{ g.pk }}" type="number" step="0.05" min="0.1" max="5" inputmode="decimal" style="width:84px"
+              value="{{ g.portion|input_num }}">
           </li>
         {% endfor %}
       </ul>

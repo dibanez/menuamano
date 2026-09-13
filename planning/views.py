@@ -277,7 +277,14 @@ def meal_attendees(request, pk):
         value = _decimal(request.POST.get(f"portion-{diner.pk}"))
         if value is not None and value > 0:
             portions[diner.pk] = value
-    meal = services.set_attendees(meal, request.user, diners, portions)
+    guest_portions = {}
+    for key, raw in request.POST.items():
+        attendee_id = key.removeprefix("guest-portion-")
+        if attendee_id != key and attendee_id.isdigit():
+            value = _decimal(raw)
+            if value is not None and 0 < value < 100:
+                guest_portions[int(attendee_id)] = value
+    meal = services.set_attendees(meal, request.user, diners, portions, guest_portions=guest_portions)
     _report_safety(request, meal)
     return redirect("planning:meal", meal.pk)
 

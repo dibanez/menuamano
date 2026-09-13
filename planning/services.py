@@ -406,9 +406,14 @@ def set_locked(meal, user, locked):
 
 
 @transaction.atomic
-def set_attendees(meal, user, diners, portions=None, lock=True):
-    """Replace household attendees (guests are kept). Recomputes servings and revalidates."""
+def set_attendees(meal, user, diners, portions=None, lock=True, guest_portions=None):
+    """Replace household attendees (guests are kept, with new portions if given). Revalidates."""
     portions = portions or {}
+    # Only this meal's guests: ids from elsewhere are ignored.
+    for guest in meal.attendees.filter(diner__isnull=True, pk__in=list(guest_portions or {})):
+        if guest.portion != guest_portions[guest.pk]:
+            guest.portion = guest_portions[guest.pk]
+            guest.save(update_fields=["portion"])
     wanted = {d.pk: d for d in diners}
     meal.attendees.filter(diner__isnull=False).exclude(diner_id__in=wanted).delete()
     existing = {a.diner_id: a for a in meal.attendees.filter(diner__isnull=False)}
