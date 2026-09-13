@@ -436,14 +436,27 @@ class DemoProvider:
         )
 
 
-def get_provider():
+PLANNING_OPERATIONS = frozenset({"plan_range", "replace_meal", "chat"})
+RECIPE_OPERATIONS = frozenset({"generate_recipe", "import_recipe"})
+
+
+def model_for(operation=None):
+    """The OpenAI model for a kind of request: its own setting when there is one, else OPENAI_MODEL."""
+    if operation in PLANNING_OPERATIONS and settings.OPENAI_MODEL_PLANNING:
+        return settings.OPENAI_MODEL_PLANNING
+    if operation in RECIPE_OPERATIONS and settings.OPENAI_MODEL_RECIPES:
+        return settings.OPENAI_MODEL_RECIPES
+    return settings.OPENAI_MODEL
+
+
+def get_provider(operation=None):
     status = ai_status()
     if status.mode == MODE_DEMO:
         return DemoProvider()
     if status.mode == MODE_OPENAI:
         return OpenAIProvider(
             api_key=settings.OPENAI_API_KEY,
-            model=settings.OPENAI_MODEL,
+            model=model_for(operation),
             timeout=settings.OPENAI_TIMEOUT_SECONDS,
             max_retries=settings.OPENAI_MAX_RETRIES,
             max_output_tokens=settings.OPENAI_MAX_OUTPUT_TOKENS,

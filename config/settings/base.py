@@ -206,6 +206,10 @@ VAPID_SUBJECT = env_str("VAPID_SUBJECT", "")
 AI_PROVIDER = env_str("AI_PROVIDER", "demo")
 OPENAI_API_KEY = env_str("OPENAI_API_KEY", "")
 OPENAI_MODEL = env_str("OPENAI_MODEL", "")
+# Optional model per kind of request; empty = OPENAI_MODEL. Planning (week proposals, replacing a
+# meal, chat) needs more reasoning than writing a recipe.
+OPENAI_MODEL_PLANNING = env_str("OPENAI_MODEL_PLANNING", "")
+OPENAI_MODEL_RECIPES = env_str("OPENAI_MODEL_RECIPES", "")
 OPENAI_TIMEOUT_SECONDS = env_float("OPENAI_TIMEOUT_SECONDS", 45.0)
 OPENAI_MAX_RETRIES = env_int("OPENAI_MAX_RETRIES", 2)
 # Reasoning tokens count against the output budget: keep effort low and the budget roomy.

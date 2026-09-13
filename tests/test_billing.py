@@ -131,7 +131,7 @@ def test_free_households_get_trial_ai_requests_that_never_renew(billing_on, hous
     assert not allowed
     assert "2 peticiones de prueba" in message and "pasad a Premium: 3 peticiones al mes" in message
     assert "día 1" not in message
-    monkeypatch.setattr(assistant_services, "get_provider", lambda: NeverCalled())
+    monkeypatch.setattr(assistant_services, "get_provider", lambda operation=None: NeverCalled())
     with pytest.raises(assistant_services.AssistantError, match="pasad a Premium"):
         assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
 
@@ -146,7 +146,7 @@ def test_premium_lifts_the_trial_limit(billing_on, household):
 
 def test_free_ai_can_be_turned_off(billing_on, household, admin_user, monday, monkeypatch):
     billing_on.FREE_AI_TOTAL_LIMIT = 0
-    monkeypatch.setattr(assistant_services, "get_provider", lambda: NeverCalled())
+    monkeypatch.setattr(assistant_services, "get_provider", lambda operation=None: NeverCalled())
     with pytest.raises(assistant_services.AssistantError, match="Premium"):
         assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
 

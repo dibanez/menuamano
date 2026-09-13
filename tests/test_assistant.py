@@ -52,7 +52,7 @@ class FakeProvider:
 
 
 def use_provider(monkeypatch, provider):
-    monkeypatch.setattr(services, "get_provider", lambda: provider)
+    monkeypatch.setattr(services, "get_provider", lambda operation=None: provider)
 
 
 def change(day, recipe_ids=(), mode="cook", attendees=None, refs=(), plates=()):

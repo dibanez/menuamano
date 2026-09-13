@@ -77,7 +77,7 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
         raise AssistantError(message)  # enforced here too, not only by hiding buttons
     started = time.monotonic()
     try:
-        provider = get_provider()
+        provider = get_provider(operation)
     except ProviderError as exc:
         _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
         raise AssistantError(exc.user_message) from exc
@@ -105,8 +105,8 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
         )
     # Statuses and fixed rejection messages only: never names, allergies or the request text.
     logger.info(
-        "assistant proposal %s created: operation=%s provider=%s items=%s statuses=%s rejected=%s new_recipes=%s",
-        proposal.pk, operation, provider.name, len(items), dict(Counter(i["status"] for i in items)),
+        "assistant proposal %s created: operation=%s provider=%s model=%s items=%s statuses=%s rejected=%s new_recipes=%s",
+        proposal.pk, operation, provider.name, result.model, len(items), dict(Counter(i["status"] for i in items)),
         sorted({i["rejected_reason"] for i in items if i.get("rejected_reason")}), len(new_recipes),
     )
     return proposal
@@ -124,7 +124,7 @@ def request_import(household, user, url):
     operation = Proposal.Operation.IMPORT_RECIPE
     started = time.monotonic()
     try:
-        provider = get_provider()
+        provider = get_provider(operation)
     except ProviderError as exc:
         _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
         raise AssistantError(exc.user_message) from exc
@@ -293,6 +293,51 @@ def _link_new_recipes_to_focus(changes, new_recipes, focus):
     )]
 
 
+def _resolve_new_recipe_refs(changes, new_recipes, saved_by_name):
+    """Point every change at a new recipe that exists, forgiving how the model wrote the reference.
+
+    Models sometimes reference a new recipe with other case or spacing, by its name instead of its
+    ref, or name a recipe of the book as if it were new. A ref that still matches nothing stays as
+    it is, and the change is rejected as before.
+    """
+    by_key = {ref.strip().lower(): ref for ref in new_recipes}
+    by_name = {normalize_name(recipe["name"]): ref for ref, recipe in new_recipes.items()}
+    only = next(iter(new_recipes)) if len(new_recipes) == 1 else None
+
+    def resolve(ref):
+        """(new recipe ref, None), (None, saved recipe id) or (the ref as it was, None)."""
+        if ref is None or ref in new_recipes:
+            return ref, None
+        found = by_key.get(ref.strip().lower()) or by_name.get(normalize_name(ref))
+        if found:
+            return found, None
+        saved = saved_by_name.get(normalize_name(ref))
+        if saved is not None:
+            return None, saved.pk
+        return (only, None) if only else (ref, None)  # one new recipe: an unknown ref can only be it
+
+    out = []
+    for change in changes:
+        refs, ids = [], list(change.recipe_ids)
+        for ref in change.new_recipe_refs:
+            new_ref, saved_id = resolve(ref)
+            if saved_id is not None:
+                ids.append(saved_id)
+            elif new_ref is not None:
+                refs.append(new_ref)
+        plates = []
+        for plate in change.plates:
+            new_ref, saved_id = resolve(plate.new_recipe_ref)
+            if saved_id is not None:
+                plates.append(plate.model_copy(update={"recipe_id": saved_id, "new_recipe_ref": None}))
+            else:
+                plates.append(plate.model_copy(update={"new_recipe_ref": new_ref}))
+        out.append(change.model_copy(update={
+            "new_recipe_refs": list(dict.fromkeys(refs)), "recipe_ids": list(dict.fromkeys(ids)), "plates": plates,
+        }))
+    return out
+
+
 def _plate_key(plate):
     """("id", recipe id) or ("ref", new recipe ref), from a schema Plate or a stored item plate."""
     recipe_id = plate["recipe_id"] if isinstance(plate, dict) else plate.recipe_id
@@ -398,9 +443,10 @@ def validate_output(household, context, output, start, end):
     """Turn provider output into reviewable items. Invalid parts are rejected, never applied."""
     notes = [context.humanize(w.strip())[:300] for w in output.warnings if w.strip()]
     new_recipes = {}
-    for raw in output.new_recipes[:MAX_NEW_RECIPES]:
+    for index, raw in enumerate(output.new_recipes[:MAX_NEW_RECIPES], start=1):
         recipe = _validate_new_recipe(household, raw)
-        if recipe["ref"] and recipe["ref"] not in new_recipes:
+        recipe["ref"] = recipe["ref"] or f"N{index}"  # a recipe without ref is still usable
+        if recipe["ref"] not in new_recipes:
             new_recipes[recipe["ref"]] = recipe
 
     existing = {
@@ -408,11 +454,11 @@ def validate_output(household, context, output, start, end):
     }
     reviews = reviews_for(household)
     focus = context.data.get("focus_slot") or {}
-    changes = list(output.changes[:MAX_CHANGES])
+    saved_by_name = {normalize_name(r.name): r for r in existing.values()}
+    changes = _resolve_new_recipe_refs(list(output.changes[:MAX_CHANGES]), new_recipes, saved_by_name)
     if focus:
         changes = _link_new_recipes_to_focus(changes, new_recipes, focus)
     # A "new" recipe named like a saved one is that recipe: reuse it instead of creating a duplicate.
-    saved_by_name = {normalize_name(r.name): r for r in existing.values()}
     reused = {}
     for ref, recipe in list(new_recipes.items()):
         saved = saved_by_name.get(normalize_name(recipe["name"]))
