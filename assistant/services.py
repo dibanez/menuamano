@@ -626,6 +626,8 @@ class ApplyResult:
     recipes_created: list = field(default_factory=list)
     stale: bool = False
     already_done: bool = False
+    # Every change waits for «He revisado los avisos» and none was ticked: nothing was done.
+    needs_confirmation: bool = False
 
 
 def _create_recipe(household, user, data):
@@ -683,14 +685,27 @@ def apply_proposal(proposal, user, accepted_review=()):
             logger.info("assistant proposal %s not applied: the plan changed (operation=%s)", proposal.pk, proposal.operation)
             return result
 
+        # Applying would change nothing because every change waits for a confirmation: keep the
+        # proposal pending, so the person can tick it instead of losing it.
+        waiting = [i for i in proposal.items if i["status"] == ITEM_REVIEW and i.get("slot") not in accepted_review]
+        if waiting and not any(_applicable(i, accepted_review) for i in proposal.items):
+            result.needs_confirmation = True
+            logger.info(
+                "assistant proposal %s not applied: %s change(s) wait for review confirmation (operation=%s)",
+                proposal.pk, len(waiting), proposal.operation,
+            )
+            return result
+
         household = proposal.household
         created = {}
         needed_refs = {
             ref for item in proposal.items if _applicable(item, accepted_review) for ref in item["new_recipe_refs"]
         }
+        # Recipes of changes left for review are kept in the recipe book (pending review), never lost.
+        kept_refs = {ref for item in waiting for ref in item["new_recipe_refs"]}
         for data in proposal.new_recipes:
             standalone = data["ref"] not in {r for i in proposal.items for r in i["new_recipe_refs"]}
-            if data["problems"] or not (data["ref"] in needed_refs or standalone):
+            if data["problems"] or not (data["ref"] in needed_refs or data["ref"] in kept_refs or standalone):
                 continue
             # An imported recipe was asked for by name: it is kept even if not everyone can eat it
             # (plates per diner exist for that), and its status is shown on the recipe.
@@ -703,10 +718,17 @@ def apply_proposal(proposal, user, accepted_review=()):
         # Why items were left out, for the logs: statuses and fixed reasons only, never names or allergies.
         reasons = Counter()
         for item in proposal.items:
-            label = f"{item['date']} {item['meal_type']}"
+            try:
+                label = _slot_label(date.fromisoformat(item["date"]), item["meal_type"])
+            except (ValueError, KeyError):
+                label = f"{item['date']} {item['meal_type']}"
             if not _applicable(item, accepted_review):
                 if item["status"] == ITEM_REVIEW:
-                    result.skipped.append(f"{label}: requiere revisión y no se ha confirmado.")
+                    kept = [created[ref].name for ref in item["new_recipe_refs"] if ref in created]
+                    result.skipped.append(
+                        f"{label}: requiere revisión y no se marcó «He revisado los avisos»."
+                        + (f" «{kept[0]}» queda en el recetario, pendiente de revisión." if kept else "")
+                    )
                     reasons["review_not_confirmed"] += 1
                 elif item["status"] in (ITEM_CONFLICT, ITEM_REJECTED):
                     result.skipped.append(f"{label}: {'; '.join(item['issues'][:2])}")

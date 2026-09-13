@@ -525,6 +525,12 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
 .faq summary { cursor: pointer; font-weight: 650; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
+/* Assistant proposals: a change that needs review is applied only when this is ticked. */
+.review-confirm {
+  display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; min-height: 44px;
+  border-radius: var(--radius-m); background: var(--unknown-soft); color: var(--unknown); font-weight: 650; cursor: pointer;
+}
+.review-confirm input { flex: none; }
 /* Calendar views: adding the menu to calendar apps stands out until it is done. */
 .calendar-cta { border-color: var(--leaf); color: var(--leaf-strong); background: var(--leaf-soft); }
 /* Label review: products from Open Food Facts and the barcode scanner. */

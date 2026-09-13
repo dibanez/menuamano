@@ -1,6 +1,7 @@
 """Repeated or expired forms, the favicon and the assistant's apply log."""
 
 import logging
+from datetime import timedelta
 
 from django.test import Client
 from django.urls import reverse
@@ -53,20 +54,24 @@ def test_the_favicon_is_served_and_linked(client, db):
 
 
 def test_applying_a_proposal_is_logged_without_personal_data(monkeypatch, home, caplog):
-    output = AssistantOutput(summary="", warnings=[], new_recipes=[], changes=[change(home.monday, [home.crema.pk])])
+    tuesday = home.monday + timedelta(days=1)
+    output = AssistantOutput(summary="", warnings=[], new_recipes=[], changes=[
+        change(home.monday, [home.crema.pk]), change(tuesday, [home.arroz.pk]),
+    ])
     use_provider(monkeypatch, FakeProvider(output))
-    proposal = services.request_proposal(home.household, home.user, "plan_range", home.monday, home.monday)
-    assert proposal.items[0]["status"] == "review"  # unknown ingredient for Nora
+    proposal = services.request_proposal(home.household, home.user, "plan_range", home.monday, tuesday)
+    assert [i["status"] for i in proposal.items] == ["review", "ok"]  # unknown ingredient for Nora
     with caplog.at_level(logging.INFO, logger="assistant.services"):
         services.apply_proposal(proposal, home.user)
     message = next(r.getMessage() for r in caplog.records if " applied: " in r.getMessage())
-    assert "applied=0" in message and "review_not_confirmed" in message
+    assert "applied=1" in message and "review_not_confirmed" in message
     assert "Nora" not in message
 
 
 def test_replacing_a_meal_goes_back_to_it_even_when_nothing_applies(client, monkeypatch, home):
     planning.get_or_create_meal(home.household, home.monday, "dinner")
-    output = AssistantOutput(summary="", warnings=[], new_recipes=[], changes=[change(home.monday, [home.crema.pk])])
+    # Egg for Nora: incompatible, never applied. (A change that only needs review stays on the proposal.)
+    output = AssistantOutput(summary="", warnings=[], new_recipes=[], changes=[change(home.monday, [home.tortilla.pk])])
     use_provider(monkeypatch, FakeProvider(output))
     proposal = services.request_proposal(
         home.household, home.user, "replace_meal", home.monday, home.monday, focus=(home.monday, "dinner"),

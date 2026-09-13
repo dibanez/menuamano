@@ -153,6 +153,12 @@ def proposal_apply(request, pk):
     if result.stale:
         messages.error(request, "El plan ha cambiado desde que se generó la propuesta. Pide una nueva para no pisar esos cambios.")
         return redirect("assistant:proposal", proposal.pk)
+    if result.needs_confirmation:
+        messages.error(
+            request,
+            "No se ha cambiado nada: marca «He revisado los avisos» en el cambio para aplicarlo, o descarta la propuesta.",
+        )
+        return redirect("assistant:proposal", proposal.pk)
     text = f"Propuesta aplicada: {result.applied} comida{'s' if result.applied != 1 else ''} actualizada{'s' if result.applied != 1 else ''}."
     if result.recipes_created:
         text += f" {len(result.recipes_created)} receta(s) nueva(s) pendiente(s) de revisión."
