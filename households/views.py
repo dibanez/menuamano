@@ -21,15 +21,24 @@ NEW_LINK_SESSION_KEY = "new_invitation_link"
 @login_required
 def onboarding(request):
     form = NewHouseholdForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        with transaction.atomic():
-            household = form.save()
-            Membership.objects.create(user=request.user, household=household, role=Role.ADMIN)
-        request.session[SESSION_KEY] = household.pk
-        messages.success(request, f"Hogar «{household.name}» creado. Añade ahora a quienes coméis en casa.")
-        return redirect("diners:create")
+    can_create = entitlements.can_create_household(request.user)
+    if request.method == "POST":
+        if not can_create:  # enforced here, not only by hiding the form
+            messages.error(request, entitlements.household_limit_message())
+            return redirect("households:onboarding")
+        if form.is_valid():
+            with transaction.atomic():
+                household = form.save()
+                Membership.objects.create(user=request.user, household=household, role=Role.ADMIN)
+            request.session[SESSION_KEY] = household.pk
+            messages.success(request, f"Hogar «{household.name}» creado. Añade ahora a quienes coméis en casa.")
+            return redirect("diners:create")
     memberships = Membership.objects.filter(user=request.user).select_related("household")
-    return render(request, "households/onboarding.html", {"form": form, "memberships": memberships})
+    context = {
+        "form": form, "memberships": memberships, "can_create": can_create,
+        "limit_message": "" if can_create else entitlements.household_limit_message(),
+    }
+    return render(request, "households/onboarding.html", context)
 
 
 @login_required

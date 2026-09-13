@@ -15,6 +15,7 @@ class Plan:
     max_members: int
     ai_monthly_limit: int = 0  # AI requests per calendar month, renewed on day 1
     ai_total_limit: int = 0  # trial AI requests for the household's whole life, never renewed
+    max_owned_households: int = 0  # households an account may create; 0 = as many as needed
 
     @property
     def has_ai(self):
@@ -32,7 +33,10 @@ class Plan:
 def get_plan(code):
     if code == PREMIUM:
         return Plan(PREMIUM, "Premium", settings.PREMIUM_MAX_MEMBERS, ai_monthly_limit=settings.PREMIUM_AI_MONTHLY_LIMIT)
-    return Plan(FREE, "Gratis", settings.FREE_MAX_MEMBERS, ai_total_limit=settings.FREE_AI_TOTAL_LIMIT)
+    return Plan(
+        FREE, "Gratis", settings.FREE_MAX_MEMBERS, ai_total_limit=settings.FREE_AI_TOTAL_LIMIT,
+        max_owned_households=settings.FREE_MAX_OWNED_HOUSEHOLDS,
+    )
 
 
 def price_labels():

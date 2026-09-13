@@ -183,6 +183,8 @@ STRIPE_AUTOMATIC_TAX = env_bool("STRIPE_AUTOMATIC_TAX", False)
 # Without billing (local development) every household gets Premium features.
 BILLING_ENABLED = env_bool("BILLING_ENABLED", bool(STRIPE_SECRET_KEY))
 FREE_MAX_MEMBERS = env_int("FREE_MAX_MEMBERS", 2)
+# Households a free account may create (as their admin). Administering a Premium household lifts it.
+FREE_MAX_OWNED_HOUSEHOLDS = env_int("FREE_MAX_OWNED_HOUSEHOLDS", 1)
 FREE_AI_TOTAL_LIMIT = env_int("FREE_AI_TOTAL_LIMIT", 7)  # trial requests per household, never renewed; 0 = none
 PREMIUM_MAX_MEMBERS = env_int("PREMIUM_MAX_MEMBERS", 8)
 PREMIUM_AI_MONTHLY_LIMIT = env_int("PREMIUM_AI_MONTHLY_LIMIT", 150)

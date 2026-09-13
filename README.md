@@ -134,7 +134,8 @@ Mailgun (*Sending → Logs* y *Suppressions*). Si en Mailgun quedan webhooks apu
 Planes: **Gratis** (planificación completa, 7 peticiones de prueba al asistente con IA, que no se
 renuevan, y hasta 2 personas con cuenta) y **Premium**
 (4,99 €/mes o 49 €/año por hogar: asistente con IA con 150 peticiones al mes y hasta 8 personas
-con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `FREE_AI_TOTAL_LIMIT`
+con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `FREE_MAX_OWNED_HOUSEHOLDS` (hogares que puede crear una
+cuenta gratuita; administrar un hogar Premium quita el límite), `FREE_AI_TOTAL_LIMIT`
 (peticiones de prueba en total; 0 quita el asistente del plan gratuito), `PREMIUM_MAX_MEMBERS` y `PREMIUM_AI_MONTHLY_LIMIT`. En producción la facturación está activa por defecto (`*` en la tabla:
 obligatorias salvo `BILLING_ENABLED=false`).
 

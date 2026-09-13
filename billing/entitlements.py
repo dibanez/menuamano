@@ -62,6 +62,34 @@ def check_ai(household):
     return True, ""
 
 
+def administered_households(user):
+    from households.models import Household, Role
+
+    return Household.objects.filter(memberships__user=user, memberships__role=Role.ADMIN).distinct()
+
+
+def can_create_household(user):
+    """A free account creates up to its limit; administering any Premium household lifts the limit.
+
+    Joining a household through an invitation is not creating one, so it never counts.
+    """
+    if not settings.BILLING_ENABLED:
+        return True
+    owned = list(administered_households(user))
+    if len(owned) < get_plan(FREE).max_owned_households:
+        return True
+    return any(household_plan(household).code == PREMIUM for household in owned)
+
+
+def household_limit_message():
+    limit = get_plan(FREE).max_owned_households
+    allowed = "un hogar" if limit == 1 else f"{limit} hogares"
+    return (
+        f"Con el plan gratuito puedes crear {allowed}. Con Premium en uno de tus hogares puedes crear "
+        "todos los que necesites."
+    )
+
+
 def can_add_member(household):
     return household.memberships.count() < household_plan(household).max_members
 

@@ -76,6 +76,7 @@
           <li>Recetario, sobras y lista de la compra automática</li>
           {% if free.has_ai %}<li>Asistente con IA para probarlo: {{ free.ai_total_limit }} peticiones</li>{% endif %}
           <li>Hasta {{ free.max_members }} personas con cuenta en el hogar</li>
+          <li>{% if free.max_owned_households == 1 %}Un hogar{% else %}Hasta {{ free.max_owned_households }} hogares{% endif %}</li>
         </ul>
         <a class="btn block" href="{% url 'accounts:signup' %}">Empezar gratis</a>
       </article>
@@ -88,6 +89,7 @@
           <li>Asistente con IA: propone menús y cambios que revisas antes de aplicar</li>
           <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
           <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar</li>
+          <li>Todos los hogares que necesites</li>
         </ul>
         <a class="btn primary block" href="{% url 'accounts:signup' %}">Probar menuamano</a>
         <p class="muted small">Te suscribes desde tu hogar cuando quieras. Cancelas cuando quieras.</p>
