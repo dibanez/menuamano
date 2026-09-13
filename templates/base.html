@@ -24,7 +24,7 @@
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' data-user="{% if user.is_authenticated %}{{ user.pk }}{% endif %}">
   {% include "partials/icons.html" %}
   {% with section=request.resolver_match.app_name %}
   <header class="topbar">

@@ -18,7 +18,7 @@ from django.views.decorators.http import require_GET
 THEME_COLOR = "#2c7a4b"
 BACKGROUND_COLOR = "#f5f7f1"
 # Bump when the service worker's own logic changes; static changes bump the cache by themselves.
-SW_REVISION = "1"
+SW_REVISION = "2"
 SHELL = ["css/app.css", "js/app.js", "js/htmx.min.js", "img/favicon.svg", "img/icon-192.png"]
 
 
@@ -86,7 +86,10 @@ def install(request):
 
 
 @require_GET
-@cache_control(max_age=86400, public=True)
+@cache_control(no_cache=True)
 def offline(request):
-    """Shown by the service worker without connection. Never includes the visitor's data."""
+    """Shown by the service worker without connection. Never includes the visitor's data.
+
+    Not kept in the HTTP cache: the worker stores its own copy, and it must be the current one.
+    """
     return render(request, "pwa/offline.html", {"theme_color": THEME_COLOR})

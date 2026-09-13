@@ -9,13 +9,19 @@
 
 <div class="panel">
   <div class="row between"><strong>{{ done }} de {{ total }} comprados</strong>
-    {% if can_edit %}
-    <form method="post" action="{% url 'shopping:recalculate' shopping_list.pk %}">{% csrf_token %}<button class="btn small" type="submit">Recalcular</button></form>
-    {% endif %}
+    <span class="row">
+      {# Shown by app.js where the device can share or copy text. #}
+      {% if total %}<button class="btn small" type="button" data-share-list hidden>Enviar lista</button>{% endif %}
+      {% if can_edit %}
+      <form method="post" action="{% url 'shopping:recalculate' shopping_list.pk %}">{% csrf_token %}<button class="btn small" type="submit">Recalcular</button></form>
+      {% endif %}
+    </span>
   </div>
   <div class="progress" style="margin-top:8px" role="progressbar" aria-label="Progreso de la compra" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span style="width:{{ percent }}%"></span></div>
   <p class="muted small" style="margin:8px 0 0">menuamano todavía no gestiona la despensa: la lista no descuenta lo que ya tengáis en casa. Los ingredientes «al gusto» no aparecen.</p>
+  <p class="muted small" style="margin:6px 0 0" data-offline-saved hidden>Guardada en este dispositivo: podrás verla y marcarla aunque no haya conexión en la tienda.</p>
 </div>
+{{ snapshot|json_script:"shopping-data" }}
 
 {% for label, items in groups %}
   <section class="shop-group">

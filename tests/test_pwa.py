@@ -25,6 +25,11 @@ def test_the_service_worker_is_served_from_the_root_and_never_stale(client, db):
     body = response.content.decode()
     assert 'const CACHE = "menuamano-' in body and '"/offline/"' in body
     assert 'request.method !== "GET"' in body  # forms are never touched
+    assert 'cache: "reload"' in body  # a new worker stores current files, not the HTTP cache's
+
+
+def test_the_offline_page_is_never_stale(client, db):
+    assert "no-cache" in client.get("/offline/")["Cache-Control"]
 
 
 def test_the_offline_page_carries_no_personal_data(client, household, admin_user):

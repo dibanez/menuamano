@@ -8,16 +8,27 @@
   <title>Sin conexión · menuamano</title>
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body>
+<body data-offline>
   {# Cached on the device and shown to whoever opens the app offline: no personal data here. #}
+  {# The last shopping list opened on this device is drawn by app.js from the browser's storage. #}
   <main class="page">
-    <div class="empty" style="margin-top:20vh">
+    <div class="empty" style="margin-top:20vh" data-offline-empty>
       <p class="wordmark" style="display:inline-block">menuamano</p>
       <h1>Sin conexión</h1>
       <p>No hay internet ahora mismo. Tu plan está guardado; en cuanto vuelva la conexión podrás seguir donde lo dejaste.</p>
       <a class="btn primary" href="/">Reintentar</a>
     </div>
+    <section class="offline-list" data-offline-list hidden>
+      <div class="page-head">
+        <p class="wordmark" style="display:inline-block">menuamano</p>
+        <h1>Sin conexión</h1>
+        <p class="lead" data-offline-lead></p>
+      </div>
+      <div data-offline-groups></div>
+      <div class="form-actions"><a class="btn primary" href="/">Reintentar</a></div>
+    </section>
   </main>
 </body>
 </html>

@@ -183,3 +183,203 @@ document.addEventListener("click", async (event) => {
 });
 
 document.addEventListener("DOMContentLoaded", setUpInstallPage);
+
+// Shopping list on this device. The last list opened is kept in the browser, so it can be read and
+// ticked in the shop without connection; ticks made offline are sent when the connection returns.
+// It belongs to whoever opened it: it is dropped as soon as another person, or nobody, is signed in.
+const SHOPPING_KEY = "menuamano:shopping";
+const QUEUE_KEY = "menuamano:shopping-queue";
+
+const store = {
+  get(key) { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } },
+  drop(key) { try { localStorage.removeItem(key); } catch {} },
+};
+
+function csrfToken() {
+  try { return JSON.parse(document.body.getAttribute("hx-headers") || "{}")["X-CSRFToken"] || ""; } catch { return ""; }
+}
+
+function forgetOtherPeoplesList() {
+  const user = document.body.dataset.user || "";
+  const saved = store.get(SHOPPING_KEY);
+  const queue = store.get(QUEUE_KEY);
+  if ((saved && saved.user !== user) || (queue && queue.user !== user)) {
+    store.drop(SHOPPING_KEY);
+    store.drop(QUEUE_KEY);
+  }
+}
+
+// Sends the ticks made offline. Returns how many were saved.
+async function syncShoppingQueue() {
+  const queue = store.get(QUEUE_KEY);
+  const token = csrfToken();
+  if (!queue || !navigator.onLine || !token) return 0;
+  let sent = 0;
+  for (const [id, change] of Object.entries(queue.items || {})) {
+    let response;
+    try {
+      response = await fetch(change.url, {
+        method: "POST", credentials: "same-origin", redirect: "manual",
+        headers: { "X-CSRFToken": token, "Content-Type": "application/x-www-form-urlencoded" },
+        body: `done=${change.done ? 1 : 0}`,
+      });
+    } catch { break; }  // still offline: keep the rest for later
+    if (response.type === "opaqueredirect") break;  // signed out: keep them until signed in again
+    if (response.ok) sent += 1;
+    // Any other answer is final (the item is gone, or it can no longer be edited).
+    delete queue.items[id];
+  }
+  if (Object.keys(queue.items || {}).length) store.set(QUEUE_KEY, queue); else store.drop(QUEUE_KEY);
+  return sent;
+}
+
+// The list of this page with the ticks as they are now on screen.
+function currentShoppingList() {
+  const data = document.getElementById("shopping-data");
+  if (!data) return null;
+  const list = JSON.parse(data.textContent);
+  for (const group of list.groups) {
+    for (const item of group.items) {
+      const row = document.getElementById(`item-${item.id}`);
+      if (row) item.done = row.classList.contains("done");
+    }
+  }
+  return list;
+}
+
+function shoppingText(list) {
+  const lines = [`Lista de la compra: ${list.title}`];
+  for (const group of list.groups) {
+    const pending = group.items.filter((item) => !item.done);
+    if (!pending.length) continue;
+    lines.push("", group.label);
+    for (const item of pending) lines.push(`• ${item.name}${item.amount ? `: ${item.amount}` : ""}`);
+  }
+  return lines.join("\n");
+}
+
+async function setUpShoppingList() {
+  const list = currentShoppingList();
+  if (!list) return;
+  if (await syncShoppingQueue()) {
+    window.location.reload();  // show what was ticked offline
+    return;
+  }
+  const saved = document.querySelector("[data-offline-saved]");
+  if (store.set(SHOPPING_KEY, list) && saved) saved.hidden = false;
+  const share = document.querySelector("[data-share-list]");
+  if (share && (navigator.share || navigator.clipboard)) share.hidden = false;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.body.hasAttribute("data-offline")) {
+    renderOfflineList();
+    return;
+  }
+  forgetOtherPeoplesList();
+  if (document.getElementById("shopping-data")) setUpShoppingList();
+  else syncShoppingQueue();
+});
+
+window.addEventListener("online", () => {
+  if (!document.body.hasAttribute("data-offline")) syncShoppingQueue();
+});
+
+// Ticks made online (HTMX) keep the saved copy up to date.
+document.addEventListener("htmx:afterSettle", () => {
+  const list = currentShoppingList();
+  const saved = store.get(SHOPPING_KEY);
+  if (list && saved && saved.id === list.id) store.set(SHOPPING_KEY, list);
+});
+
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-share-list]");
+  if (!button) return;
+  const list = currentShoppingList();
+  if (!list) return;
+  const text = shoppingText(list);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `Lista de la compra: ${list.title}`, text });
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;  // closed by the person
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    button.textContent = "Lista copiada";
+  } catch {
+    button.textContent = "No se ha podido copiar";
+  }
+});
+
+// Offline page: the saved list, drawn with DOM methods only (its texts come from the household).
+function renderOfflineList() {
+  const section = document.querySelector("[data-offline-list]");
+  const list = store.get(SHOPPING_KEY);
+  if (!section || !list || !list.groups || !list.groups.length) return;
+  const savedAt = new Date(list.saved_at).toLocaleString("es-ES", {
+    day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+  });
+  section.querySelector("[data-offline-lead]").textContent =
+    `Tu última lista de la compra, ${list.title}, guardada el ${savedAt}.` +
+    (list.can_edit ? " Lo que marques se guardará cuando vuelva la conexión." : "");
+  const container = section.querySelector("[data-offline-groups]");
+  container.replaceChildren();
+  for (const group of list.groups) {
+    const block = document.createElement("section");
+    block.className = "shop-group";
+    const title = document.createElement("h2");
+    title.textContent = group.label;
+    const items = document.createElement("ul");
+    items.className = "list";
+    for (const item of group.items) items.append(offlineItem(list, item));
+    block.append(title, items);
+    container.append(block);
+  }
+  document.querySelector("[data-offline-empty]").hidden = true;
+  section.hidden = false;
+}
+
+function offlineItem(list, item) {
+  const row = document.createElement("li");
+  row.className = `shop-item${item.done ? " done" : ""}`;
+  const tick = document.createElement(list.can_edit ? "button" : "span");
+  tick.className = `tick${item.done ? " on" : ""}`;
+  tick.textContent = "✓";
+  if (list.can_edit) {
+    tick.type = "button";
+    tick.setAttribute("aria-pressed", String(item.done));
+    tick.setAttribute("aria-label", `${item.done ? "Desmarcar" : "Marcar comprado"}: ${item.name}`);
+    tick.addEventListener("click", () => toggleOffline(list, item, row, tick));
+  } else {
+    tick.setAttribute("aria-hidden", "true");
+  }
+  const text = document.createElement("div");
+  const name = document.createElement("div");
+  name.className = "name";
+  name.textContent = item.name;
+  text.append(name);
+  if (item.amount) {
+    const amount = document.createElement("div");
+    amount.className = "amounts";
+    amount.textContent = item.amount;
+    text.append(amount);
+  }
+  row.append(tick, text);
+  return row;
+}
+
+function toggleOffline(list, item, row, tick) {
+  item.done = !item.done;
+  store.set(SHOPPING_KEY, list);
+  const queue = store.get(QUEUE_KEY) || { user: list.user, items: {} };
+  queue.items[item.id] = { done: item.done, url: item.state_url };
+  store.set(QUEUE_KEY, queue);
+  row.classList.toggle("done", item.done);
+  tick.classList.toggle("on", item.done);
+  tick.setAttribute("aria-pressed", String(item.done));
+  tick.setAttribute("aria-label", `${item.done ? "Desmarcar" : "Marcar comprado"}: ${item.name}`);
+}

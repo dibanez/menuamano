@@ -14,5 +14,6 @@ urlpatterns = [
     path("listas/<int:pk>/articulos/", views.manual_add, name="manual_add"),
     path("articulos/<int:pk>/marcar/", views.item_toggle, name="item_toggle"),
     path("articulos/<int:pk>/comprado/", views.item_purchased, name="item_purchased"),
+    path("articulos/<int:pk>/estado/", views.item_state, name="item_state"),
     path("articulos/<int:pk>/borrar/", views.item_delete, name="item_delete"),
 ]

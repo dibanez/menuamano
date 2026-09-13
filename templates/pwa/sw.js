@@ -5,7 +5,9 @@ const PRECACHE = {{ precache|safe }};
 const OFFLINE_URL = {{ offline_url|safe }};
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // Straight from the server, never from the browser's HTTP cache: a new worker must store current files.
+  const fresh = PRECACHE.map((url) => new Request(url, { cache: "reload" }));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {

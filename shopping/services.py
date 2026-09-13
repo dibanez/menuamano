@@ -9,11 +9,12 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 
 from foods import conversions
 from foods.models import CATEGORY_ORDER, Category
-from foods.units import scale, to_base
+from foods.units import format_number, format_quantity, scale, to_base
 from planning.models import MODES_WITH_SHOPPING, Meal
 from planning.services import meals_queryset, planned_servings
 
@@ -213,3 +214,45 @@ def grouped_items(shopping_list):
         else:
             groups.setdefault(item.category, []).append(item)
     return [(labels.get(c, c), items) for c, items in groups.items() if items], surplus
+
+
+def amount_text(item):
+    """How much to buy, as one short line: «500 g», «≈ 2 unidades, compra 2 unidades»."""
+    if item.unit and item.needed_quantity > 0:
+        text = ("≈ " if item.is_approximate else "") + format_quantity(item.needed_quantity, item.unit)
+        if item.suggested_purchase:
+            text += f", compra {format_quantity(item.suggested_purchase, item.unit)}"
+    elif item.needed_quantity > 0:
+        text = format_number(item.needed_quantity)
+    else:
+        text = ""
+    if item.manual_note:
+        text = f"{text} ({item.manual_note})" if text else item.manual_note
+    return text
+
+
+def list_snapshot(shopping_list, groups, user, can_edit):
+    """The list as plain data for the device: shared as text, and readable in the shop without connection.
+
+    Belongs to `user`: the browser drops it as soon as someone else (or nobody) is signed in.
+    """
+    return {
+        "id": shopping_list.pk,
+        "user": str(user.pk),
+        "title": str(shopping_list),
+        "can_edit": can_edit,
+        "saved_at": timezone.now().isoformat(),
+        "groups": [
+            {
+                "label": label,
+                "items": [
+                    {
+                        "id": item.pk, "name": item.name, "amount": amount_text(item), "done": item.is_done,
+                        "state_url": reverse("shopping:item_state", args=[item.pk]),
+                    }
+                    for item in items
+                ],
+            }
+            for label, items in groups
+        ],
+    }

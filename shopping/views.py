@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -90,6 +91,7 @@ def detail(request, pk):
         "percent": int(done * 100 / len(all_items)) if all_items else 0,
         "manual_form": ManualItemForm(),
         "meal_labels": MEAL_LABELS,
+        "snapshot": services.list_snapshot(shopping_list, groups, request.user, request.membership.can_edit),
     }
     return render(request, "shopping/detail.html", context)
 
@@ -145,6 +147,18 @@ def item_purchased(request, pk):
         return redirect("shopping:detail", item.shopping_list_id)
     services.set_purchased(item, request.user, quantity)
     return _respond_item(request, item)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def item_state(request, pk):
+    """Set an item as bought or not. Idempotent: ticks made offline are sent again when back online."""
+    item = _item(request, pk)
+    done = request.POST.get("done") == "1"
+    if done != item.is_done:
+        quantity = (item.needed_quantity if item.needed_quantity > 0 else Decimal("1")) if done else Decimal("0")
+        services.set_purchased(item, request.user, quantity)
+    return HttpResponse(status=204)
 
 
 @household_required(Role.EDITOR)
