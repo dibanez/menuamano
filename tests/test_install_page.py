@@ -28,6 +28,15 @@ def test_the_install_page_is_indexable_and_in_the_sitemap(client, db, settings):
     assert "<loc>https://www.menuamano.com/instalar/</loc>" in client.get("/sitemap.xml").content.decode()
 
 
+def test_the_landing_invites_to_install_the_app(client, db):
+    html = client.get("/").content.decode()
+    assert 'class="install-hint hide-in-app"' in html and "En el móvil, como una app" in html
+    # The direct button waits for the browser to offer installing; the steps are always linked.
+    assert re.search(r"<button[^>]*data-install-direct[^>]*hidden", html)
+    assert f'href="{reverse("core:install")}" data-install-guide' in html
+    assert "¿Hay app para el móvil?" in html.split("</head>", 1)[0]  # also in the FAQ structured data
+
+
 def test_the_install_page_is_linked_from_the_menu_and_the_landing(client, household, admin_user):
     assert f'href="{reverse("core:install")}">Instalar la app' in client.get("/").content.decode()  # landing
     assert client.login(email=admin_user.email, password=PASSWORD)

@@ -39,7 +39,7 @@ def test_landing_structured_data_matches_prices_and_faq(client, db, site):
     assert app["url"] == f"{SITE}/"
     assert [o["price"] for o in app["offers"]] == ["0", "4.99", "49"]
     questions = [q["name"] for q in graph["FAQPage"]["mainEntity"]]
-    assert len(questions) == 6
+    assert len(questions) == 7
     for question in questions:
         assert question in html  # the visible FAQ is the same list
 

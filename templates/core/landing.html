@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ seo_title }}{% endblock %}
 {% block meta_description %}{{ seo_description }}{% endblock %}
 {% block robots %}index, follow{% endblock %}
@@ -15,6 +16,10 @@
         <a class="btn" href="{% url 'accounts:login' %}">Entrar</a>
       </div>
       <p class="muted small">Gratis para planificar a mano. Sin tarjeta para empezar.</p>
+      <a class="install-hint hide-in-app" href="{% url 'core:install' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+        <span><strong>También en el móvil.</strong> Instálala como una app, sin tienda de apps.</span>
+      </a>
     </div>
 
     <div class="hero-visual" aria-label="Ejemplo de un día planificado en menuamano">
@@ -50,6 +55,23 @@
         <p>La lista suma las cantidades de cada receta según quién come, se ordena por secciones y se actualiza sola si cambias el menú.</p>
       </li>
     </ol>
+  </section>
+
+  <section class="landing-section install-cta hide-in-app" aria-labelledby="install-title">
+    <div>
+      <h2 id="install-title">En el móvil, como una app</h2>
+      <p>Sin tienda de apps ni descargas: se instala desde el navegador en un minuto. Se abre a pantalla completa, con su icono, y la lista de la compra sigue a mano aunque no haya cobertura en el súper.</p>
+      <div class="form-actions">
+        {# Shown by app.js where the browser can install it directly (Chrome, Edge, Android). #}
+        <button class="btn primary" type="button" data-install-button data-install-direct hidden>Instalar menuamano</button>
+        <a class="btn primary" href="{% url 'core:install' %}" data-install-guide>Cómo instalarla</a>
+      </div>
+      <p class="muted small">En iPhone, Android y el ordenador.</p>
+    </div>
+    <div class="install-phone" aria-hidden="true">
+      <img src="{% static 'img/icon-192.png' %}" alt="" width="64" height="64">
+      <span>menuamano</span>
+    </div>
   </section>
 
   <section class="landing-section safety" aria-labelledby="safety-title">

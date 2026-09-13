@@ -76,6 +76,14 @@ def landing_faqs(free, premium):
         },
         {"question": "¿La cuenta gratuita incluye el asistente con IA?", "answer": ai_answer},
         {
+            "question": "¿Hay app para el móvil?",
+            "answer": (
+                "Sí. menuamano se instala desde el navegador en iPhone, Android y el ordenador, sin pasar por la "
+                "tienda de apps: se abre a pantalla completa, con su icono. Los pasos están en «Instalar la app», "
+                "al pie de esta página."
+            ),
+        },
+        {
             "question": "¿Qué datos ve la inteligencia artificial?",
             "answer": (
                 "Solo lo necesario para proponer el menú: códigos en lugar de nombres, grupos de edad, restricciones y "

@@ -163,15 +163,25 @@ function setUpInstallPage() {
   document.querySelector("[data-install-now]").hidden = !installPrompt || installedAsApp();
 }
 
+// Other pages (the landing): a direct «Instalar» button where the browser offers it; the link to
+// the steps stays, and stops being the main button then.
+function showDirectInstall() {
+  const available = Boolean(installPrompt) && !installedAsApp();
+  document.querySelectorAll("[data-install-direct]").forEach((button) => { button.hidden = !available; });
+  document.querySelectorAll("[data-install-guide]").forEach((link) => link.classList.toggle("primary", !available));
+}
+
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();  // keep it for our own button
   installPrompt = event;
   setUpInstallPage();
+  showDirectInstall();
 });
 
 window.addEventListener("appinstalled", () => {
   installPrompt = null;
   setUpInstallPage();
+  showDirectInstall();
 });
 
 document.addEventListener("click", async (event) => {
@@ -180,6 +190,7 @@ document.addEventListener("click", async (event) => {
   await installPrompt.userChoice;
   installPrompt = null;
   setUpInstallPage();
+  showDirectInstall();
 });
 
 document.addEventListener("DOMContentLoaded", setUpInstallPage);

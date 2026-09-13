@@ -507,6 +507,26 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
 .faq summary { cursor: pointer; font-weight: 650; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
+/* Installing the app, from the landing: a hint under the hero buttons and its own section. */
+.install-hint {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 4px; padding: 10px 14px;
+  border-radius: var(--radius-m); background: var(--leaf-soft); color: var(--leaf-strong);
+  text-decoration: none; font-size: 0.95rem; line-height: 1.35;
+}
+.install-hint:hover span { text-decoration: underline; }
+.install-hint svg { flex: none; width: 24px; height: 24px; }
+.install-cta { display: grid; gap: 24px; align-items: center; }
+.install-cta .form-actions { margin-top: 4px; }
+.install-phone {
+  justify-self: center; width: 104px; max-width: 100%; aspect-ratio: 9 / 17; border: 3px solid var(--ink);
+  border-radius: 26px; background: var(--paper); display: grid; place-content: center; justify-items: center;
+  gap: 8px; font-weight: 700; font-size: 0.85rem;
+}
+.install-phone img { border-radius: 16px; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12); }
+@media (min-width: 760px) {
+  .install-cta { grid-template-columns: minmax(0, 1fr) auto; }
+  .install-phone { width: 140px; }
+}
 .landing-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 28px 0 8px; border-top: 1px solid var(--line); }
 .landing-footer .wordmark { font-size: 1.1rem; }
 
