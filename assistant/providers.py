@@ -42,8 +42,12 @@ Rules:
   Avoid recipes whose `review_for` contains an attendee when an alternative exists.
   If no compatible option exists, use mode "pending", no recipes, and explain it in `warnings`.
 - Prefer the household's existing recipes (by id). Respect `dislikes` and `likes` when possible.
-  If the request asks not to repeat recent recipes, avoid `recent_recipe_ids`.
-- Only create `new_recipes` when needed or explicitly requested. New recipes must be common home cooking,
+- Do not repeat recipes unless the request asks for it: never use a recipe already planned in another
+  slot of `slots`, in `recent_recipe_ids` (the two weeks before) or in `upcoming_recipe_ids` (the two
+  weeks after), and never use the same recipe twice in one proposal. If no compatible alternative
+  exists, repeat the one planned furthest away and say so in `warnings`. Leftovers are not a repeat.
+- Only create `new_recipes` when needed or explicitly requested, and never one that already exists in
+  `recipes` under the same or a very similar name: use its id instead. New recipes must be common home cooking,
   use ingredient names from `known_ingredients` whenever possible, realistic quantities for `base_servings`,
   units from `units`, and ordered steps. Reference them from changes through `new_recipe_refs`.
 - Modes: cook (cook at home), eat_out, order (takeaway), leftovers, free, pending. Only "cook" and
@@ -300,7 +304,11 @@ class DemoProvider:
             )
         codes = [p["code"] for p in context["people"]]
         recipes = context["recipes"]
-        exclude = set(context["recent_recipe_ids"]) if intent["no_repeat"] else set()
+        # Planned recipes are avoided by default; «no repitas» turns that into a hard rule.
+        targets = {(s["date"], s["meal_type"]) for s in slots}
+        planned = set(context["recent_recipe_ids"]) | set(context.get("upcoming_recipe_ids", []))
+        planned |= {rid for s in context["slots"] if (s["date"], s["meal_type"]) not in targets for rid in s["recipe_ids"]}
+        exclude = planned if intent["no_repeat"] else set()
         used, changes, warnings = set(), [], []
         for slot in slots:
             the_date = date.fromisoformat(slot["date"])
@@ -324,7 +332,7 @@ class DemoProvider:
                 and r["id"] not in slot["recipe_ids"]
                 and (intent["max_minutes"] is None or r["minutes"] < intent["max_minutes"])
             ]
-            candidates.sort(key=lambda r: (r["id"] in used, _rank(slot["date"], slot["meal_type"], r["id"])))
+            candidates.sort(key=lambda r: (r["id"] in used, r["id"] in planned, _rank(slot["date"], slot["meal_type"], r["id"])))
             if not candidates:
                 warnings.append(f"No hay recetas compatibles para {slot['weekday'].lower()} ({slot['meal_type']}).")
                 changes.append(MealChange(

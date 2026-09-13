@@ -22,6 +22,8 @@ from recipes import services as recipe_services
 
 MAX_RECIPES = 80
 MAX_HISTORY = 6
+# How far before and after the range planned recipes count as a repeat.
+REPEAT_WINDOW_DAYS = 14
 TRAIT_LABELS = dict(Trait.choices)
 WEEKDAY_LABELS = dict(Weekday.choices)
 CODE_RE = re.compile(r"\bC\d+\b")
@@ -152,9 +154,11 @@ def build_context(household, start, end, operation, user_request="", focus=None,
             }
         )
 
-    recent_start = start - timedelta(days=7)
-    recent = meals_by_slot(household, recent_start, start - timedelta(days=1))
+    # Recipes already in the calendar just before and after the range: the model avoids repeating them.
+    recent = meals_by_slot(household, start - timedelta(days=REPEAT_WINDOW_DAYS), start - timedelta(days=1))
     recent_ids = sorted({mr.recipe_id for m in recent.values() for mr in m.recipes.all() if mr.recipe_id})
+    upcoming = meals_by_slot(household, end + timedelta(days=1), end + timedelta(days=REPEAT_WINDOW_DAYS))
+    upcoming_ids = sorted({mr.recipe_id for m in upcoming.values() for mr in m.recipes.all() if mr.recipe_id})
 
     data = {
         "today": today.isoformat(),
@@ -166,6 +170,7 @@ def build_context(household, start, end, operation, user_request="", focus=None,
         "slots": slots,
         "recipes": recipe_rows,
         "recent_recipe_ids": recent_ids,
+        "upcoming_recipe_ids": upcoming_ids,
         "known_ingredients": list(
             Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
         ),

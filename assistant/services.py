@@ -11,14 +11,16 @@ import logging
 import time
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from billing import entitlements
+from core.choices import MealType
 from diners.models import Diner
 from foods import compatibility
 from foods.compatibility import evaluate, facts_for_ingredient, rules_for_attendee, rules_for_diner
@@ -268,6 +270,64 @@ def _describe_plates(item, plates, existing, new_recipes):
     ]
 
 
+REPEAT_WINDOW_DAYS = 14
+
+
+def _reuse_saved_recipes(changes, reused):
+    """Point changes at the saved recipe when a "new" one only duplicates it ({ref: recipe id})."""
+    if not reused:
+        return changes
+    out = []
+    for change in changes:
+        refs = [ref for ref in change.new_recipe_refs if ref in reused]
+        if not refs:
+            out.append(change)
+            continue
+        plates = [
+            plate.model_copy(update={"recipe_id": reused[plate.new_recipe_ref], "new_recipe_ref": None})
+            if plate.new_recipe_ref in reused else plate
+            for plate in change.plates
+        ]
+        out.append(change.model_copy(update={
+            "recipe_ids": [*change.recipe_ids, *(reused[ref] for ref in refs)],
+            "new_recipe_refs": [ref for ref in change.new_recipe_refs if ref not in reused],
+            "plates": plates,
+        }))
+    return out
+
+
+def _planned_recipes(household, start, end):
+    """{recipe id: [(date, meal type)]} in the calendar around the range, to spot repeats."""
+    window = planning.meals_by_slot(
+        household, start - timedelta(days=REPEAT_WINDOW_DAYS), end + timedelta(days=REPEAT_WINDOW_DAYS),
+    )
+    planned = {}
+    for meal in window.values():
+        for meal_recipe in meal.recipes.all():
+            if meal_recipe.recipe_id:
+                planned.setdefault(meal_recipe.recipe_id, []).append((meal.date, meal.meal_type))
+    return planned
+
+
+def _slot_label(day, meal_type):
+    return f"el {date_format(day, 'l j')} ({MealType(meal_type).label.lower()})"
+
+
+def _repeat_notes(item, the_date, meal_type, planned, changed_slots, proposed, existing):
+    """Soft warnings for recipes already planned nearby or proposed twice: variety is a preference."""
+    notes = []
+    for rid in item["recipe_ids"]:
+        # Slots this proposal changes do not count: their current recipes are being replaced.
+        elsewhere = [(day, mt) for day, mt in planned.get(rid, []) if (day.isoformat(), mt) not in changed_slots]
+        if elsewhere:
+            day, mt = min(elsewhere, key=lambda slot: abs((slot[0] - the_date).days))
+            notes.append(f"«{existing[rid].name}» se repite: ya está {_slot_label(day, mt)}.")
+        elif rid in proposed:
+            notes.append(f"«{existing[rid].name}» se repite: también se propone {_slot_label(*proposed[rid])}.")
+        proposed.setdefault(rid, (the_date, meal_type))
+    return notes
+
+
 def validate_output(household, context, output, start, end):
     """Turn provider output into reviewable items. Invalid parts are rejected, never applied."""
     notes = [context.humanize(w.strip())[:300] for w in output.warnings if w.strip()]
@@ -285,6 +345,19 @@ def validate_output(household, context, output, start, end):
     changes = list(output.changes[:MAX_CHANGES])
     if focus:
         changes = _link_new_recipes_to_focus(changes, new_recipes, focus)
+    # A "new" recipe named like a saved one is that recipe: reuse it instead of creating a duplicate.
+    saved_by_name = {normalize_name(r.name): r for r in existing.values()}
+    reused = {}
+    for ref, recipe in list(new_recipes.items()):
+        saved = saved_by_name.get(normalize_name(recipe["name"]))
+        if saved is not None:
+            reused[ref] = saved.pk
+            del new_recipes[ref]
+            notes.append(f"«{saved.name}» ya está en tu recetario: se usa la receta guardada.")
+    changes = _reuse_saved_recipes(changes, reused)
+    planned = _planned_recipes(household, start, end)
+    changed_slots = {(c.date, c.meal_type) for c in changes}
+    proposed = {}
     meals = planning.meals_by_slot(household, start, end)
     planning_context = planning.PlanningContext.load(household, start, end)
     items, seen = [], set()
@@ -361,6 +434,10 @@ def validate_output(household, context, output, start, end):
             if any(new_recipes[ref]["problems"] for ref in item["new_recipe_refs"]):
                 _reject(item, "La receta nueva propuesta está incompleta.")
                 continue
+            if change.mode != MealMode.LEFTOVERS:  # leftovers eat the same dish on purpose
+                item["issues"].extend(
+                    _repeat_notes(item, the_date, change.meal_type, planned, changed_slots, proposed, existing)
+                )
         elif change.recipe_ids or change.new_recipe_refs:
             item["issues"].append("Esta modalidad no lleva recetas; se ignoran las propuestas.")
 
