@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from households.models import Role
 from households.permissions import household_required
 
-from . import reviews
+from . import openfoodfacts, reviews
 from .forms import ConversionForm, IngredientForm, IngredientReviewForm
 from .models import Ingredient, IngredientReview, UnitConversion
 
@@ -108,13 +108,40 @@ def _safe_next(request, default):
     return default
 
 
+def _product_lookup(request, ingredient):
+    """Open Food Facts search (?buscar=) or barcode lookup (?codigo=) shown on the review page."""
+    query = request.GET.get("buscar", "").strip()
+    code = request.GET.get("codigo", "").strip()
+    lookup = {"query": query or ingredient.name, "code": code, "results": None, "product": None, "lookup_error": ""}
+    try:
+        if code:
+            lookup["product"] = openfoodfacts.product(code)
+            if lookup["product"] is None:
+                lookup["lookup_error"] = "Open Food Facts no conoce ese código. Prueba a buscar por nombre y marca."
+        elif query:
+            lookup["results"] = openfoodfacts.search(query)
+    except openfoodfacts.OpenFoodFactsError as exc:
+        lookup["lookup_error"] = exc.message
+    return lookup
+
+
+def _product_note(product):
+    name = f"{product['brand']} · {product['name']}" if product["brand"] else product["name"]
+    return f"{name} ({product['code']})"[:120]
+
+
 @household_required()
 def ingredient_review(request, pk):
     """Record what the label of the product this household buys says it contains."""
     ingredient = get_object_or_404(Ingredient.objects.for_household(request.household), pk=pk)
     review = IngredientReview.objects.filter(household=request.household, ingredient=ingredient).first()
     next_url = _safe_next(request, reverse("foods:list"))
+    lookup = _product_lookup(request, ingredient) if request.method == "GET" else {}
     initial = {"traits": (review.traits if review else ingredient.traits), "note": review.note if review else ""}
+    if lookup.get("product"):
+        # What the product declares, allergens and traces alike; the person still checks the label.
+        product = lookup["product"]
+        initial = {"traits": sorted(set(product["allergens"]) | set(product["traces"])), "note": _product_note(product)}
     form = IngredientReviewForm(request.POST or None, initial=initial)
     if request.method == "POST":
         if not request.membership.can_edit:
@@ -125,7 +152,10 @@ def ingredient_review(request, pk):
             )
             messages.success(request, f"Etiqueta de «{ingredient.name}» revisada. Las comidas previstas se han vuelto a comprobar.")
             return redirect(next_url)
-    return render(request, "foods/review.html", {"ingredient": ingredient, "review": review, "form": form, "next": next_url})
+    return render(
+        request, "foods/review.html",
+        {"ingredient": ingredient, "review": review, "form": form, "next": next_url, **lookup},
+    )
 
 
 @household_required(Role.EDITOR)

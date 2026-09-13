@@ -451,6 +451,60 @@ async function setUpPush() {
 
 document.addEventListener("DOMContentLoaded", setUpPush);
 
+// Label review: read a product's barcode with the camera where the browser can (Chrome on Android).
+// Elsewhere (Safari on iPhone) the button stays hidden and the code is typed.
+function setUpBarcodeScanner() {
+  const button = document.querySelector("[data-barcode-scan]");
+  if (!button || !("BarcodeDetector" in window) || !navigator.mediaDevices?.getUserMedia) return;
+  const box = document.querySelector("[data-barcode-scanner]");
+  const video = box.querySelector("video");
+  const status = box.querySelector("[data-barcode-status]");
+  const form = document.querySelector("[data-barcode-form]");
+  let stream = null;
+  let active = false;
+  button.hidden = false;
+
+  const stop = () => {
+    active = false;
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    box.hidden = true;
+  };
+  box.querySelector("[data-barcode-stop]").addEventListener("click", stop);
+
+  button.addEventListener("click", async () => {
+    let detector;
+    try {
+      detector = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    } catch {
+      box.hidden = false;
+      status.textContent = "No se puede usar la cámara: escribe el código a mano.";
+      return;
+    }
+    video.srcObject = stream;
+    box.hidden = false;
+    active = true;
+    await video.play();
+    const scan = async () => {
+      if (!active) return;
+      try {
+        const [code] = await detector.detect(video);
+        if (code && /^\d{8,14}$/.test(code.rawValue)) {
+          stop();
+          form.querySelector('[name="codigo"]').value = code.rawValue;
+          form.submit();
+          return;
+        }
+      } catch {}
+      setTimeout(scan, 250);
+    };
+    scan();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", setUpBarcodeScanner);
+
 function toggleOffline(list, item, row, tick) {
   item.done = !item.done;
   store.set(SHOPPING_KEY, list);

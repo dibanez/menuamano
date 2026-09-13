@@ -521,6 +521,12 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; max-width: 46rem; }
 .faq summary { cursor: pointer; font-weight: 650; }
 .faq p { margin: 8px 0 0; color: var(--muted); }
+/* Label review: products from Open Food Facts and the barcode scanner. */
+.off-results { margin-top: 12px; }
+.off-results a { text-decoration: none; }
+.off-results a:hover strong { text-decoration: underline; }
+.scanner { margin-top: 12px; }
+.scanner video { display: block; width: 100%; max-height: 50vh; object-fit: cover; border-radius: var(--radius-m); background: #000; margin-bottom: 8px; }
 /* Everyday features on the landing: one card each, icon beside the title. */
 .features { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
 @media (min-width: 640px) { .features { grid-template-columns: repeat(2, 1fr); } }

@@ -21,6 +21,59 @@
   </div>
 {% endif %}
 
+<section class="panel">
+  <h2 class="mt-0">Buscar el producto que compráis</h2>
+  <p class="muted small">En Open Food Facts, una base de datos abierta de alimentos. Si lo encuentras, marcamos lo que declara su etiqueta; compruébalo siempre con el paquete.</p>
+  <form method="get" class="row">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="sr-only" for="off-query">Nombre y marca</label>
+    <input id="off-query" type="search" name="buscar" value="{{ query }}" placeholder="Por ejemplo: tomate triturado Hacendado" style="flex:1;min-width:12rem">
+    <button class="btn" type="submit">Buscar</button>
+  </form>
+  <form method="get" class="row" style="margin-top:8px" data-barcode-form>
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="sr-only" for="off-code">Código de barras</label>
+    <input id="off-code" type="text" name="codigo" value="{{ code }}" inputmode="numeric" pattern="[0-9]{8,14}" autocomplete="off" placeholder="Código de barras" style="flex:1;min-width:10rem">
+    <button class="btn" type="submit">Buscar el código</button>
+    {# Shown by app.js where the browser can read barcodes with the camera. #}
+    <button class="btn" type="button" data-barcode-scan hidden>Escanear</button>
+  </form>
+  <div class="scanner" data-barcode-scanner hidden>
+    <video playsinline muted></video>
+    <div class="row between">
+      <span class="muted small" data-barcode-status>Apunta al código de barras del paquete.</span>
+      <button class="btn small" type="button" data-barcode-stop>Cerrar la cámara</button>
+    </div>
+  </div>
+  {% if lookup_error %}<div class="notice unknown" style="margin:12px 0 0">{{ lookup_error }}</div>{% endif %}
+  {% if results is not None %}
+    {% if results %}
+      <ul class="list off-results">
+        {% for p in results %}
+          <li>
+            <a href="?codigo={{ p.code }}&amp;next={{ next|urlencode }}"><strong>{{ p.name }}</strong>{% if p.brand %} · {{ p.brand }}{% endif %}</a>
+            <div class="muted small">{% if p.stores %}{{ p.stores }}. {% endif %}{% if p.allergens or p.traces %}Declara: {% for t in p.allergens %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if p.traces %}{% if p.allergens %}; {% endif %}trazas de {% for t in p.traces %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.{% else %}Sin alérgenos declarados.{% endif %}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted small" style="margin-bottom:0">No hay resultados. Prueba con la marca y menos palabras, o con el código de barras.</p>
+    {% endif %}
+  {% endif %}
+  <p class="muted small" style="margin:12px 0 0">Datos de <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a>, con licencia ODbL. Los aporta la gente: pueden tener errores o estar desactualizados.</p>
+</section>
+
+{% if product %}
+  <div class="notice">
+    <strong>{{ product.name }}{% if product.brand %} · {{ product.brand }}{% endif %}</strong>
+    {% if product.stores %}Se vende en {{ product.stores }}.<br>{% endif %}
+    {% if product.ingredients %}Ingredientes: {{ product.ingredients }}<br>{% endif %}
+    Alérgenos: {% for t in product.allergens %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% empty %}ninguno declarado{% endfor %}. Trazas: {% for t in product.traces %}{{ t|trait_label|lower }}{% if not forloop.last %}, {% endif %}{% empty %}ninguna declarada{% endfor %}.
+    {% if product.other_allergens %}<br>También declara: {{ product.other_allergens|join:", " }}.{% endif %}
+    <br><span class="small">Lo hemos marcado abajo. Compruébalo con la etiqueta antes de guardar. <a href="{{ product.url }}" target="_blank" rel="noopener">Ver en Open Food Facts</a></span>
+  </div>
+{% endif %}
+
 {% if can_edit %}
 <form method="post" class="panel">
   {% csrf_token %}
