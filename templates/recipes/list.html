@@ -21,7 +21,7 @@
 {% if can_edit and ai_status.available and ai_allowed %}
 <details class="panel">
   <summary class="link-btn">Pedir una receta al asistente{% if ai_status.is_demo %} <span class="badge demo">Modo demostración</span>{% endif %}</summary>
-  <form method="post" action="{% url 'assistant:generate_recipe' %}" class="row" style="margin-top:10px" hx-disabled-elt="find button">
+  <form method="post" action="{% url 'assistant:generate_recipe' %}" class="row" style="margin-top:10px" data-busy="Escribiendo la receta…">
     {% csrf_token %}
     <label class="sr-only" for="recipe-idea">Qué receta quieres</label>
     <input id="recipe-idea" type="text" name="message" maxlength="500" placeholder="Algo rápido con verduras para cenar" style="flex:1">
@@ -31,7 +31,7 @@
 </details>
 <details class="panel">
   <summary class="link-btn">Importar una receta desde un enlace</summary>
-  <form method="post" action="{% url 'assistant:import_recipe' %}" class="row" style="margin-top:10px" hx-disabled-elt="find button">
+  <form method="post" action="{% url 'assistant:import_recipe' %}" class="row" style="margin-top:10px" data-busy="Leyendo la receta…">
     {% csrf_token %}
     <label class="sr-only" for="recipe-url">Enlace de la receta</label>
     <input id="recipe-url" type="url" name="url" maxlength="500" required placeholder="https://…" inputmode="url" style="flex:1">

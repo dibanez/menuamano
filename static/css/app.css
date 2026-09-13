@@ -463,6 +463,10 @@ ol.steps li::marker { font-weight: 800; color: var(--leaf); }
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* Waiting for the assistant (app.js, forms with data-busy): the button stays lit and says what it does. */
+form.is-busy .btn[aria-disabled="true"] { opacity: 1; cursor: progress; gap: 8px; }
+form.is-busy .btn .spinner { flex: none; }
+.busy-note { flex-basis: 100%; margin: 8px 0 0; font-size: 0.88rem; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 
 table.simple { width: 100%; border-collapse: collapse; font-size: 0.95rem; }

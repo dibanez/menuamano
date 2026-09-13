@@ -131,6 +131,49 @@ window.addEventListener("pageshow", () => {
   document.querySelectorAll("form[data-submitting]").forEach((form) => { delete form.dataset.submitting; });
 });
 
+// Forms that wait for the assistant (data-busy): it takes 10 to 20 seconds, so the button shows it is
+// working and a note says how long it usually takes. Nobody should think nothing happened.
+const busyButtons = new WeakMap();
+
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || !form.dataset.busy || event.defaultPrevented) return;
+  const button = event.submitter || form.querySelector('button[type="submit"], button:not([type])');
+  if (!button || form.classList.contains("is-busy")) return;
+  busyButtons.set(button, [...button.childNodes].map((node) => node.cloneNode(true)));
+  const spinner = document.createElement("span");
+  spinner.className = "spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  const label = document.createElement("span");
+  label.textContent = form.dataset.busy;
+  button.replaceChildren(spinner, label);
+  button.setAttribute("aria-disabled", "true");
+  form.classList.add("is-busy");
+  form.setAttribute("aria-busy", "true");
+  const note = document.createElement("p");
+  note.className = "busy-note";
+  note.setAttribute("role", "status");
+  note.textContent = "El asistente está trabajando: suele tardar entre 10 y 20 segundos.";
+  form.append(note);
+  form.busyTimer = setTimeout(() => {
+    note.textContent = "Está tardando más de lo normal. No cierres la página: en cuanto responda, verás la propuesta.";
+  }, 25000);
+});
+
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll("form.is-busy").forEach((form) => {
+    clearTimeout(form.busyTimer);
+    form.classList.remove("is-busy");
+    form.removeAttribute("aria-busy");
+    form.querySelectorAll(".busy-note").forEach((note) => note.remove());
+    form.querySelectorAll("button").forEach((button) => {
+      const original = busyButtons.get(button);
+      if (original) button.replaceChildren(...original);
+      button.removeAttribute("aria-disabled");
+    });
+  });
+});
+
 // Installable web app: the service worker caches static files and an offline page, never pages.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
