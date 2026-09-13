@@ -9,16 +9,25 @@ DATE_WIDGET = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
 
 
 class MealDetailsForm(forms.ModelForm):
+    """Mode, notes and what was eaten. The lock has its own button at the top of the meal page."""
+
     class Meta:
         model = Meal
-        fields = ("mode", "notes", "locked", "outcome", "outcome_notes")
-        widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
+        fields = ("mode", "notes", "outcome", "outcome_notes")
+        widgets = {
+            "mode": forms.RadioSelect,
+            "outcome": forms.RadioSelect,
+            "notes": forms.Textarea(attrs={"rows": 2, "placeholder": "Por ejemplo: cumpleaños, cenamos antes…"}),
+            "outcome_notes": forms.TextInput(attrs={"placeholder": "Detalle (opcional): qué se comió en su lugar"}),
+        }
 
 
 class MoveForm(forms.Form):
-    target_date = forms.DateField(label="Nuevo día", widget=DATE_WIDGET)
-    target_type = forms.ChoiceField(label="Comida")
-    copy = forms.BooleanField(label="Copiar (mantener también la original)", required=False)
+    action = forms.ChoiceField(
+        label="Qué hacer", choices=[("move", "Mover"), ("copy", "Copiar")], initial="move", widget=forms.RadioSelect,
+    )
+    target_date = forms.DateField(label="Día", widget=DATE_WIDGET)
+    target_type = forms.ChoiceField(label="Comida", widget=forms.RadioSelect)
     overwrite = forms.BooleanField(label="Sustituir si ya hay algo planificado", required=False)
 
     def __init__(self, *args, household, **kwargs):

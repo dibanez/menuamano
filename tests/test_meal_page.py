@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 
 from django.urls import reverse
 
@@ -26,7 +27,7 @@ def folded(html):
 def test_secondary_options_are_folded_by_default(client, household, admin_user, monday):
     html = meal_page(client, admin_user, household, monday)
     more = folded(html)
-    for title in ("Modalidad, notas y lo que se comió", "Mover o copiar"):
+    for title in ("¿Cómo es esta comida?", "¿Qué se comió?", "Mover o copiar"):
         assert title in more
     assert '<details class="panel more" open' not in html
     # Clearing the meal stays in sight, outside the fold, and still asks for a second tap.
@@ -36,6 +37,34 @@ def test_secondary_options_are_folded_by_default(client, household, admin_user, 
     assert "Cambiar esta receta" in html and "Ajustar raciones" in html
     assert ">Ajustar</summary>" not in html  # ingredient changes live in one fold per recipe
 
+
+
+def test_the_options_are_one_tap_choices(client, household, admin_user, monday):
+    more = folded(meal_page(client, admin_user, household, monday))
+    assert more.count('type="radio" name="mode"') == 6 and more.count('type="radio" name="outcome"') == 4
+    assert 'type="radio" name="action" value="copy"' in more and 'type="radio" name="target_type"' in more
+    assert 'name="locked"' not in more  # the lock has its own button at the top of the page
+
+
+def test_saving_the_options_keeps_the_lock_as_it_is(client, household, admin_user, monday):
+    meal_page(client, admin_user, household, monday)
+    meal = planning.get_or_create_meal(household, monday, MealType.DINNER)[0]
+    planning.set_locked(meal, admin_user, True)
+    client.post(reverse("planning:meal_update", args=[meal.pk]), {"mode": "eat_out", "notes": "", "outcome": "pending"})
+    meal.refresh_from_db()
+    assert meal.mode == "eat_out" and meal.locked
+
+
+def test_a_meal_is_copied_with_the_copy_choice(client, household, admin_user, monday):
+    meal_page(client, admin_user, household, monday)
+    meal = planning.get_or_create_meal(household, monday, MealType.DINNER)[0]
+    target = monday + timedelta(days=1)
+    client.post(reverse("planning:meal_move", args=[meal.pk]), {
+        "action": "copy", "target_date": target.isoformat(), "target_type": MealType.DINNER,
+    })
+    assert meal.recipes.count() == 1  # the original stays
+    copied = planning.get_or_create_meal(household, target, MealType.DINNER)[0]
+    assert [r.name for r in copied.recipes.all()] == ["Tortilla"]
 
 
 def test_readers_see_the_details_folded_without_forms(client, household, admin_user, monday):

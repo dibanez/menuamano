@@ -278,7 +278,7 @@ def meal_update(request, pk):
     if form.is_valid():
         data = form.cleaned_data
         services.update_meal_details(
-            meal, request.user, mode=data["mode"], notes=data["notes"], locked=data["locked"],
+            meal, request.user, mode=data["mode"], notes=data["notes"], locked=meal.locked,  # the lock button decides
             outcome=data["outcome"], outcome_notes=data["outcome_notes"],
         )
         messages.success(request, "Comida guardada.")
@@ -509,12 +509,13 @@ def meal_move(request, pk):
     data = form.cleaned_data
     try:
         new_meal = services.move_or_copy(
-            meal, request.user, data["target_date"], data["target_type"], copy=data["copy"], overwrite=data["overwrite"]
+            meal, request.user, data["target_date"], data["target_type"], copy=data["action"] == "copy",
+            overwrite=data["overwrite"],
         )
     except services.PlanningError as exc:
         messages.error(request, str(exc))
         return redirect("planning:meal", meal.pk)
-    messages.success(request, "Comida copiada." if data["copy"] else "Comida movida.")
+    messages.success(request, "Comida copiada." if data["action"] == "copy" else "Comida movida.")
     _report_safety(request, new_meal)
     return redirect("planning:meal", new_meal.pk)
 

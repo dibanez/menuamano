@@ -274,6 +274,20 @@ details.more > section { border-top: 1px solid var(--line); margin-top: 16px; }
 details.more > section > h3 { margin-top: 14px; }
 details.more > section:last-child { padding-top: 14px; }
 details.more > section:has(h3):last-child { padding-top: 0; }
+details.more > .more-form > section { border-top: 1px solid var(--line); margin-top: 16px; }
+details.more > .more-form > section > h3 { margin: 14px 0 10px; }
+details.more > .more-form > .btn { margin-top: 16px; }
+/* Large one-tap choices (radio buttons): two per row on phones, three on wider screens. */
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 560px) { .choice-grid { grid-template-columns: repeat(3, 1fr); } }
+.choice {
+  display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: var(--radius-m); background: var(--surface); cursor: pointer; font-weight: 600; font-size: 0.92rem;
+  line-height: 1.25;
+}
+.choice input { flex: none; margin: 0; }
+.choice:has(input:checked) { border-color: var(--leaf); background: var(--leaf-soft); color: var(--leaf-strong); }
+.choice:focus-within { outline: 2px solid var(--leaf); outline-offset: 2px; }
 .editor-form { margin-top: 14px; }
 
 /* Compact rows used in formsets */

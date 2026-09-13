@@ -269,32 +269,51 @@
 <details class="panel more">
   <summary>
     <span>Más opciones
-      <span class="more-hint">{% if can_edit %}Cocinar en casa o comer fuera, notas, lo que se comió, mover o copiar{% else %}Modalidad, notas y lo que se comió{% endif %}</span>
+      <span class="more-hint">{% if can_edit %}Cómo es, notas, qué se comió, mover o copiar{% else %}Modalidad, notas y lo que se comió{% endif %}</span>
     </span>
   </summary>
-  <section>
-    <h3>Modalidad, notas y lo que se comió</h3>
-    {% if can_edit %}
-    <form method="post" action="{% url 'planning:meal_update' meal.pk %}">
-      {% csrf_token %}
-      {% with form=details_form %}{% include "partials/form_fields.html" %}{% endwith %}
-      <button class="btn" type="submit">Guardar</button>
-    </form>
-    {% else %}
-      <p>{{ meal.get_mode_display }}. {{ meal.notes|default:"Sin notas." }}</p>
-      <p class="muted">Consumo: {{ meal.get_outcome_display }}{% if meal.outcome_notes %}, {{ meal.outcome_notes }}{% endif %}.</p>
-    {% endif %}
-  </section>
   {% if can_edit %}
+  {# One tap per choice: radio buttons drawn as large buttons, two per row on phones. #}
+  <form method="post" action="{% url 'planning:meal_update' meal.pk %}" class="more-form">
+    {% csrf_token %}
+    <section>
+      <h3>¿Cómo es esta comida?</h3>
+      <div class="choice-grid">{% for radio in details_form.mode %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+    </section>
+    <section>
+      <h3><label for="{{ details_form.notes.id_for_label }}">Notas</label></h3>
+      {{ details_form.notes }}
+    </section>
+    <section>
+      <h3>¿Qué se comió?</h3>
+      <div class="choice-grid">{% for radio in details_form.outcome %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+      <label class="sr-only" for="{{ details_form.outcome_notes.id_for_label }}">{{ details_form.outcome_notes.label }}</label>
+      <div style="margin-top:8px">{{ details_form.outcome_notes }}</div>
+    </section>
+    <button class="btn primary block" type="submit">Guardar</button>
+  </form>
   <section>
-    <h3>Mover o copiar</h3>
+    <h3>Mover o copiar a otro día</h3>
     <form method="post" action="{% url 'planning:meal_move' meal.pk %}">
       {% csrf_token %}
-      <div class="grid-2">{% include "partials/field.html" with field=move_form.target_date %}{% include "partials/field.html" with field=move_form.target_type %}</div>
-      {% include "partials/field.html" with field=move_form.copy %}
-      {% include "partials/field.html" with field=move_form.overwrite %}
-      <button class="btn" type="submit">Mover o copiar</button>
+      <div class="choice-grid" role="radiogroup" aria-label="{{ move_form.action.label }}">{% for radio in move_form.action %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+      <div class="field" style="margin-top:12px">
+        <label for="{{ move_form.target_date.id_for_label }}">{{ move_form.target_date.label }}</label>
+        {{ move_form.target_date }}
+      </div>
+      <fieldset class="field">
+        <legend>{{ move_form.target_type.label }}</legend>
+        <div class="choice-grid">{% for radio in move_form.target_type %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+      </fieldset>
+      <label class="check small" style="margin-bottom:12px">{{ move_form.overwrite }} {{ move_form.overwrite.label }}</label>
+      <button class="btn block" type="submit">Mover o copiar</button>
     </form>
+  </section>
+  {% else %}
+  <section>
+    <h3>Modalidad, notas y lo que se comió</h3>
+    <p>{{ meal.get_mode_display }}. {{ meal.notes|default:"Sin notas." }}</p>
+    <p class="muted">Consumo: {{ meal.get_outcome_display }}{% if meal.outcome_notes %}, {{ meal.outcome_notes }}{% endif %}.</p>
   </section>
   {% endif %}
 </details>
