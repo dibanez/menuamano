@@ -11,14 +11,14 @@
   <div class="row between"><strong>{{ done }} de {{ total }} comprados</strong>
     <span class="row">
       {# Shown by app.js where the device can share or copy text. #}
-      {% if total %}<button class="btn small" type="button" data-share-list hidden>Enviar lista</button>{% endif %}
+      {% if total or staples %}<button class="btn small" type="button" data-share-list hidden>Enviar lista</button>{% endif %}
       {% if can_edit %}
       <form method="post" action="{% url 'shopping:recalculate' shopping_list.pk %}">{% csrf_token %}<button class="btn small" type="submit">Recalcular</button></form>
       {% endif %}
     </span>
   </div>
   <div class="progress" style="margin-top:8px" role="progressbar" aria-label="Progreso de la compra" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ percent }}"><span style="width:{{ percent }}%"></span></div>
-  <p class="muted small" style="margin:8px 0 0">menuamano todavía no gestiona la despensa: la lista no descuenta lo que ya tengáis en casa. Los ingredientes «al gusto» no aparecen.</p>
+  <p class="muted small" style="margin:8px 0 0">Los básicos de la <a href="{% url 'shopping:pantry' %}">despensa</a> salen aparte y lo que tenéis en casa se descuenta. Los ingredientes «al gusto» no aparecen.</p>
   <p class="muted small" style="margin:6px 0 0" data-offline-saved hidden>Guardada en este dispositivo: podrás verla y marcarla aunque no haya conexión en la tienda.</p>
 </div>
 {{ snapshot|json_script:"shopping-data" }}
@@ -28,12 +28,29 @@
     <h2>{{ label }}</h2>
     <ul class="list">{% for item in items %}{% include "shopping/_item.html" %}{% endfor %}</ul>
   </section>
-{% empty %}
+{% endfor %}
+{% if not groups and not staples and not covered %}
   <div class="empty">
     <p><strong>La lista está vacía.</strong> Solo las comidas con la modalidad «cocinar en casa» y con recetas generan compra.</p>
     <a class="btn" href="{% url 'planning:week' %}?fecha={{ shopping_list.start_date|date:'Y-m-d' }}">Ir al calendario</a>
   </div>
-{% endfor %}
+{% endif %}
+
+{% if staples %}
+  <section class="shop-group">
+    <h2>{{ staples_label }}</h2>
+    <p class="muted small">Los tenéis siempre en casa: márcalos solo si hay que comprar.</p>
+    <ul class="list">{% for item in staples %}{% include "shopping/_item.html" %}{% endfor %}</ul>
+  </section>
+{% endif %}
+
+{% if covered %}
+  <section class="shop-group">
+    <h2>Ya lo tenéis en casa</h2>
+    <p class="muted small">Lo cubre lo anotado en la <a href="{% url 'shopping:pantry' %}">despensa</a>.</p>
+    <ul class="list">{% for item in covered %}{% include "shopping/_item.html" %}{% endfor %}</ul>
+  </section>
+{% endif %}
 
 {% if surplus %}
   <section class="shop-group">

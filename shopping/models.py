@@ -44,6 +44,10 @@ class ShoppingItem(models.Model):
     is_manual = models.BooleanField(default=False)
     # True when part of the quantity comes from an approximate piece/volume ↔ grams equivalence.
     is_approximate = models.BooleanField(default=False)
+    # Pantry: staples («siempre en casa») are listed apart, to check whether some is left;
+    # `pantry_quantity` is the part of the plan's need already at home, not in `needed_quantity`.
+    is_staple = models.BooleanField(default=False)
+    pantry_quantity = models.DecimalField(max_digits=12, decimal_places=3, default=Decimal("0"))
     manual_note = models.CharField("nota", max_length=120, blank=True)
     sources = models.JSONField(default=list, blank=True)
     purchased_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
@@ -92,3 +96,39 @@ class ShoppingItem(models.Model):
     def is_surplus(self):
         """Bought but no longer needed by the plan (kept, never deleted)."""
         return not self.is_manual and self.surplus_quantity > 0
+
+    @property
+    def is_covered(self):
+        """Everything the plan needs is already at home, and nothing was bought."""
+        return (
+            not self.is_manual and self.needed_quantity == 0 and self.pantry_quantity > 0
+            and self.purchased_quantity == 0
+        )
+
+
+class PantryItem(models.Model):
+    """What a household has at home. Typed by people; nothing is consumed automatically."""
+
+    class Kind(models.TextChoices):
+        STAPLE = "staple", "Siempre en casa"
+        STOCK = "stock", "Tenemos una cantidad"
+
+    household = models.ForeignKey("households.Household", on_delete=models.CASCADE, related_name="pantry_items")
+    ingredient = models.ForeignKey("foods.Ingredient", on_delete=models.CASCADE, related_name="+")
+    kind = models.CharField("cómo", max_length=10, choices=Kind.choices, default=Kind.STAPLE)
+    quantity = models.DecimalField(
+        "cantidad", max_digits=10, decimal_places=3, null=True, blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    unit = models.CharField("unidad", max_length=8, choices=Unit.choices, blank=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "artículo de la despensa"
+        verbose_name_plural = "despensa"
+        ordering = ["ingredient__name"]
+        constraints = [models.UniqueConstraint(fields=["household", "ingredient"], name="unique_pantry_ingredient")]
+
+    def __str__(self):
+        return f"{self.ingredient} ({self.household})"

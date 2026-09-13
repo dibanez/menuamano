@@ -18,9 +18,11 @@ from foods.units import format_number, format_quantity, scale, to_base
 from planning.models import MODES_WITH_SHOPPING, Meal
 from planning.services import meals_queryset, planned_servings
 
-from .models import ShoppingItem, ShoppingList
+from .models import PantryItem, ShoppingItem, ShoppingList
 
 ZERO = Decimal("0")
+QUANTUM = Decimal("0.001")
+STAPLES_LABEL = "Básicos: mira si te queda"
 
 
 @dataclass
@@ -94,37 +96,68 @@ class RecalcStats:
     removed: int = 0
 
 
+def _stock_in(entry, unit, table):
+    """The pantry quantity in the list's unit, or None when it cannot be converted."""
+    if entry.quantity is None or not entry.unit:
+        return None
+    base_unit, quantity = to_base(entry.quantity, entry.unit)
+    if str(base_unit) == str(unit):
+        return quantity
+    return conversions.convert(entry.quantity, entry.unit, unit, table)
+
+
 def recalculate(shopping_list):
     stats = RecalcStats()
-    needs = compute_needs(shopping_list.household, shopping_list.start_date, shopping_list.end_date)
+    household = shopping_list.household
+    needs = compute_needs(household, shopping_list.start_date, shopping_list.end_date)
+    pantry = {entry.ingredient_id: entry for entry in PantryItem.objects.filter(household=household)}
+    stock_tables = conversions.load(
+        household, [i for i, entry in pantry.items() if entry.kind == PantryItem.Kind.STOCK]
+    ) if pantry else {}
+    stock_used = set()  # a quantity at home covers one line of the list, never two
     with transaction.atomic():
         # Row lock serialises concurrent recalculations of the same list.
         ShoppingList.objects.select_for_update().get(pk=shopping_list.pk)
         existing = {item.key: item for item in shopping_list.items.filter(is_manual=False)}
         for key, need in needs.items():
-            quantity = need.quantity.quantize(Decimal("0.001"))
+            quantity = need.quantity.quantize(QUANTUM)
+            entry = pantry.get(need.ingredient.pk)
+            covered = ZERO
+            if entry is not None and entry.kind == PantryItem.Kind.STOCK and entry.ingredient_id not in stock_used:
+                stock = _stock_in(entry, need.unit, stock_tables.get(entry.ingredient_id, {}))
+                if stock:
+                    covered = min(stock, quantity).quantize(QUANTUM)
+                    stock_used.add(entry.ingredient_id)
+            is_staple = entry is not None and entry.kind == PantryItem.Kind.STAPLE
             item = existing.pop(key, None)
             if item is None:
                 ShoppingItem.objects.create(
                     shopping_list=shopping_list, key=key, ingredient=need.ingredient, name=need.ingredient.name,
-                    category=need.ingredient.category, unit=need.unit, needed_quantity=quantity, sources=need.sources,
-                    is_approximate=need.approximate,
+                    category=need.ingredient.category, unit=need.unit, needed_quantity=quantity - covered,
+                    pantry_quantity=covered, is_staple=is_staple, sources=need.sources, is_approximate=need.approximate,
                 )
                 stats.created += 1
             else:
-                item.needed_quantity = quantity
+                item.needed_quantity = quantity - covered
+                item.pantry_quantity = covered
+                item.is_staple = is_staple
                 item.sources = need.sources
                 item.name = need.ingredient.name
                 item.category = need.ingredient.category
                 item.is_approximate = need.approximate
-                item.save(update_fields=["needed_quantity", "sources", "name", "category", "is_approximate", "updated_at"])
+                item.save(update_fields=[
+                    "needed_quantity", "pantry_quantity", "is_staple", "sources", "name", "category", "is_approximate",
+                    "updated_at",
+                ])
                 stats.updated += 1
         for item in existing.values():
             if item.purchased_quantity > 0:
                 # Keep the purchase record; it shows up as surplus of the plan.
                 item.needed_quantity = ZERO
+                item.pantry_quantity = ZERO
+                item.is_staple = False
                 item.sources = []
-                item.save(update_fields=["needed_quantity", "sources", "updated_at"])
+                item.save(update_fields=["needed_quantity", "pantry_quantity", "is_staple", "sources", "updated_at"])
                 stats.surplus += 1
             else:
                 item.delete()
@@ -146,6 +179,46 @@ def recalculate_for_dates(household, dates):
             recalculate(shopping_list)
             count += 1
     return count
+
+
+def recalculate_open_lists(household):
+    """Lists that still matter (not finished) follow the pantry."""
+    lists = list(ShoppingList.objects.filter(household=household, end_date__gte=timezone.localdate()))
+    for shopping_list in lists:
+        recalculate(shopping_list)
+    return len(lists)
+
+
+def set_pantry_item(household, user, ingredient, kind, quantity=None, unit=""):
+    stock = kind == PantryItem.Kind.STOCK
+    entry, _ = PantryItem.objects.update_or_create(
+        household=household, ingredient=ingredient,
+        defaults={"kind": kind, "quantity": quantity if stock else None, "unit": unit if stock else "", "updated_by": user},
+    )
+    recalculate_open_lists(household)
+    return entry
+
+
+def remove_pantry_item(entry):
+    household = entry.household
+    entry.delete()
+    recalculate_open_lists(household)
+
+
+def pantry_suggestions(household, limit=12):
+    """Spices and pantry goods of the household's recipes that are not in the pantry yet."""
+    from foods.models import Ingredient
+    from recipes.models import RecipeIngredient
+
+    used = (
+        RecipeIngredient.objects.filter(
+            recipe__household=household, recipe__is_archived=False,
+            ingredient__category__in=[Category.SPICES, Category.PANTRY],
+        )
+        .exclude(ingredient_id__in=PantryItem.objects.filter(household=household).values("ingredient_id"))
+        .values("ingredient_id")
+    )
+    return list(Ingredient.objects.filter(pk__in=used).order_by("name")[:limit])
 
 
 @transaction.atomic
@@ -204,16 +277,30 @@ def attach_label_checks(household, items):
 
 
 def grouped_items(shopping_list):
-    """Items grouped by category in aisle order, with surplus items listed separately."""
+    """Items to buy grouped by category in aisle order, with surplus items listed separately.
+
+    Pantry staples and needs already covered at home are left to `pantry_sections`.
+    """
     labels = dict(Category.choices)
     groups = OrderedDict((c, []) for c in CATEGORY_ORDER)
     surplus = []
     for item in shopping_list.items.select_related("ingredient").order_by("name"):
         if item.is_surplus and item.needed_quantity == 0:
             surplus.append(item)
+        elif item.is_staple or item.is_covered:
+            continue
         else:
             groups.setdefault(item.category, []).append(item)
     return [(labels.get(c, c), items) for c, items in groups.items() if items], surplus
+
+
+def pantry_sections(shopping_list):
+    """(staples to check, needs already covered at home)."""
+    items = [
+        item for item in shopping_list.items.filter(is_manual=False).select_related("ingredient").order_by("name")
+        if not (item.is_surplus and item.needed_quantity == 0)
+    ]
+    return [i for i in items if i.is_staple], [i for i in items if not i.is_staple and i.is_covered]
 
 
 def amount_text(item):
@@ -231,11 +318,13 @@ def amount_text(item):
     return text
 
 
-def list_snapshot(shopping_list, groups, user, can_edit):
+def list_snapshot(shopping_list, groups, user, can_edit, staples=()):
     """The list as plain data for the device: shared as text, and readable in the shop without connection.
 
     Belongs to `user`: the browser drops it as soon as someone else (or nobody) is signed in.
     """
+    if staples:
+        groups = [*groups, (STAPLES_LABEL, staples)]
     return {
         "id": shopping_list.pk,
         "user": str(user.pk),

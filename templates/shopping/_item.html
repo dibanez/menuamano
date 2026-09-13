@@ -1,6 +1,6 @@
 {% load menu %}
 <li class="shop-item{% if item.is_done %} done{% endif %}" id="item-{{ item.pk }}">
-  {% if can_edit %}
+  {% if can_edit and not item.is_covered %}
     <form method="post" action="{% url 'shopping:item_toggle' item.pk %}" hx-post="{% url 'shopping:item_toggle' item.pk %}" hx-target="#item-{{ item.pk }}" hx-swap="outerHTML">
       {% csrf_token %}
       <button class="tick{% if item.is_done %} on{% endif %}" type="submit" aria-pressed="{% if item.is_done %}true{% else %}false{% endif %}" aria-label="{% if item.is_done %}Desmarcar{% else %}Marcar comprado{% endif %}: {{ item.name }}">
@@ -15,8 +15,10 @@
     <div class="amounts">
       {% if item.is_surplus and item.needed_quantity == 0 %}
         Comprado {{ item.purchased_quantity|qty:item.unit }}. Ya no hace falta según el plan.
+      {% elif item.is_covered %}
+        El menú pide {{ item.pantry_quantity|qty:item.unit }} y ya lo tenéis en casa.
       {% elif item.unit %}
-        Hace falta {% if item.is_approximate %}≈ {% endif %}{{ item.needed_quantity|qty:item.unit }}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}{% if item.suggested_purchase %}. <strong>Compra {{ item.suggested_purchase|qty:item.unit }}</strong>{% endif %}
+        Hace falta {% if item.is_approximate %}≈ {% endif %}{{ item.needed_quantity|qty:item.unit }}{% if item.pantry_quantity %} (y {{ item.pantry_quantity|qty:item.unit }} que ya tenéis){% endif %}{% if item.purchased_quantity %}, comprado {{ item.purchased_quantity|qty:item.unit }}{% endif %}{% if item.pending_quantity and item.purchased_quantity %}, falta {{ item.pending_quantity|qty:item.unit }}{% endif %}{% if item.surplus_quantity and item.needed_quantity %}, sobra {{ item.surplus_quantity|qty:item.unit }}{% endif %}{% if item.suggested_purchase %}. <strong>Compra {{ item.suggested_purchase|qty:item.unit }}</strong>{% endif %}
       {% elif item.needed_quantity %}
         Cantidad: {{ item.needed_quantity|num }}
       {% endif %}
@@ -44,6 +46,8 @@
     </form>
     {% if item.is_manual %}
       <form method="post" action="{% url 'shopping:item_delete' item.pk %}" style="margin-top:6px">{% csrf_token %}<button class="link-btn" type="submit">Quitar de la lista</button></form>
+    {% elif item.ingredient_id %}
+      <form method="post" action="{% url 'shopping:item_pantry' item.pk %}" style="margin-top:6px">{% csrf_token %}<button class="link-btn" type="submit">{% if item.is_staple %}Ya no lo tenemos siempre en casa{% else %}Lo tenemos siempre en casa{% endif %}</button></form>
     {% endif %}
     {% endif %}
   </details>

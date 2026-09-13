@@ -15,5 +15,9 @@ urlpatterns = [
     path("articulos/<int:pk>/marcar/", views.item_toggle, name="item_toggle"),
     path("articulos/<int:pk>/comprado/", views.item_purchased, name="item_purchased"),
     path("articulos/<int:pk>/estado/", views.item_state, name="item_state"),
+    path("articulos/<int:pk>/despensa/", views.item_pantry, name="item_pantry"),
+    path("despensa/", views.pantry, name="pantry"),
+    path("despensa/anadir/", views.pantry_add, name="pantry_add"),
+    path("despensa/<int:pk>/quitar/", views.pantry_delete, name="pantry_delete"),
     path("articulos/<int:pk>/borrar/", views.item_delete, name="item_delete"),
 ]

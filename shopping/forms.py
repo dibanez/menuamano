@@ -1,6 +1,8 @@
 from django import forms
 
-from foods.models import Category, Unit
+from foods.models import Category, Ingredient, Unit
+
+from .models import PantryItem
 
 DATE_WIDGET = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
 
@@ -29,3 +31,27 @@ class ManualItemForm(forms.Form):
     unit = forms.ChoiceField(label="Unidad", required=False, choices=[("", "—")] + list(Unit.choices))
     category = forms.ChoiceField(label="Sección", choices=Category.choices, initial=Category.OTHER)
     note = forms.CharField(label="Nota", max_length=120, required=False)
+
+
+class PantryForm(forms.Form):
+    ingredient = forms.ModelChoiceField(label="Ingrediente", queryset=Ingredient.objects.none(), empty_label="Elige…")
+    kind = forms.ChoiceField(
+        label="¿Cómo lo tenéis?", choices=PantryItem.Kind.choices, initial=PantryItem.Kind.STAPLE,
+        widget=forms.RadioSelect,
+    )
+    quantity = forms.DecimalField(
+        label="Cantidad", required=False, min_value=0, max_digits=10, decimal_places=3,
+        widget=forms.NumberInput(attrs={"step": "any", "min": "0", "inputmode": "decimal"}),
+    )
+    unit = forms.ChoiceField(label="Unidad", required=False, choices=[("", "—")] + list(Unit.choices))
+
+    def __init__(self, *args, household, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only the shared catalogue and this household's ingredients.
+        self.fields["ingredient"].queryset = Ingredient.objects.for_household(household).order_by("name")
+
+    def clean(self):
+        data = super().clean()
+        if data.get("kind") == PantryItem.Kind.STOCK and not (data.get("quantity") and data.get("unit")):
+            raise forms.ValidationError("Indica cuánto tenéis y en qué unidad.")
+        return data

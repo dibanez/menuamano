@@ -225,5 +225,6 @@ Más detalle en [`docs/architecture.md`](docs/architecture.md) y el estado del t
 
 ## Qué no hace todavía
 
-Despensa y congelador, caducidades, lotes de sobras, precios, nutrición, códigos de barras e
-integraciones con supermercados. La lista de compra lo indica: no descuenta existencias.
+Inventario automático, congelador, caducidades, lotes de sobras, precios, nutrición, códigos de
+barras e integraciones con supermercados. La despensa solo recoge lo que anotáis a mano: los
+básicos salen aparte en la lista y las cantidades se descuentan, pero nada se gasta solo.

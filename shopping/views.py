@@ -11,9 +11,11 @@ from core.choices import MealType
 from households.models import Role
 from households.permissions import household_required
 
+from foods.units import format_quantity
+
 from . import services
-from .forms import ManualItemForm, NewListForm
-from .models import ShoppingItem, ShoppingList
+from .forms import ManualItemForm, NewListForm, PantryForm
+from .models import PantryItem, ShoppingItem, ShoppingList
 
 MEAL_LABELS = dict(MealType.choices)
 
@@ -74,24 +76,27 @@ def create(request):
 def detail(request, pk):
     shopping_list = _list(request, pk)
     groups, surplus = services.grouped_items(shopping_list)
-    for _, items in groups:
-        for item in items:
-            decorate(item)
-    for item in surplus:
+    staples, covered = services.pantry_sections(shopping_list)
+    for item in [*(i for _, items in groups for i in items), *surplus, *staples, *covered]:
         decorate(item)
     all_items = [item for _, items in groups for item in items]
-    services.attach_label_checks(request.household, all_items)
+    services.attach_label_checks(request.household, [*all_items, *staples])
     done = sum(1 for item in all_items if item.is_done)
     context = {
         "shopping_list": shopping_list,
         "groups": groups,
         "surplus": surplus,
+        "staples": staples,
+        "covered": covered,
+        "staples_label": services.STAPLES_LABEL,
         "done": done,
         "total": len(all_items),
         "percent": int(done * 100 / len(all_items)) if all_items else 0,
         "manual_form": ManualItemForm(),
         "meal_labels": MEAL_LABELS,
-        "snapshot": services.list_snapshot(shopping_list, groups, request.user, request.membership.can_edit),
+        "snapshot": services.list_snapshot(
+            shopping_list, groups, request.user, request.membership.can_edit, staples=staples
+        ),
     }
     return render(request, "shopping/detail.html", context)
 
@@ -159,6 +164,67 @@ def item_state(request, pk):
         quantity = (item.needed_quantity if item.needed_quantity > 0 else Decimal("1")) if done else Decimal("0")
         services.set_purchased(item, request.user, quantity)
     return HttpResponse(status=204)
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def item_pantry(request, pk):
+    """From the list: the item's ingredient is always at home (listed apart), or no longer."""
+    item = _item(request, pk)
+    if item.ingredient_id is None:
+        messages.error(request, "Solo los ingredientes que vienen del menú pueden ir a la despensa.")
+        return redirect("shopping:detail", item.shopping_list_id)
+    entry = PantryItem.objects.filter(household=request.household, ingredient_id=item.ingredient_id).first()
+    if entry is not None and entry.kind == PantryItem.Kind.STAPLE:
+        services.remove_pantry_item(entry)
+        messages.success(request, f"«{item.name}» vuelve a la lista como un artículo más.")
+    else:
+        services.set_pantry_item(request.household, request.user, item.ingredient, PantryItem.Kind.STAPLE)
+        messages.success(request, f"«{item.name}» es un básico de la despensa: sale aparte para que mires si os queda.")
+    return redirect("shopping:detail", item.shopping_list_id)
+
+
+def _pantry_context(request, form):
+    entries = PantryItem.objects.filter(household=request.household).select_related("ingredient")
+    return {
+        "staples": [e for e in entries if e.kind == PantryItem.Kind.STAPLE],
+        "stock": [e for e in entries if e.kind == PantryItem.Kind.STOCK],
+        "form": form,
+        "suggestions": services.pantry_suggestions(request.household),
+    }
+
+
+@household_required()
+def pantry(request):
+    return render(request, "shopping/pantry.html", _pantry_context(request, PantryForm(household=request.household)))
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def pantry_add(request):
+    form = PantryForm(request.POST, household=request.household)
+    if not form.is_valid():
+        return render(request, "shopping/pantry.html", _pantry_context(request, form), status=400)
+    data = form.cleaned_data
+    entry = services.set_pantry_item(
+        request.household, request.user, data["ingredient"], data["kind"], data["quantity"], data["unit"]
+    )
+    if entry.kind == PantryItem.Kind.STAPLE:
+        messages.success(request, f"«{entry.ingredient.name}» es un básico: sale aparte en la lista para que mires si os queda.")
+    else:
+        messages.success(
+            request, f"Anotado: {format_quantity(entry.quantity, entry.unit)} de {entry.ingredient.name}. Se descuenta de la compra."
+        )
+    return redirect("shopping:pantry")
+
+
+@household_required(Role.EDITOR)
+@require_POST
+def pantry_delete(request, pk):
+    entry = get_object_or_404(PantryItem.objects.select_related("ingredient"), pk=pk, household=request.household)
+    services.remove_pantry_item(entry)
+    messages.success(request, f"«{entry.ingredient.name}» ya no está en la despensa.")
+    return redirect("shopping:pantry")
 
 
 @household_required(Role.EDITOR)

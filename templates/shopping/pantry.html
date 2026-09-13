@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load menu %}
+{% block title %}Despensa · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Despensa</h1>
+  <a class="btn small" href="{% url 'shopping:current' %}">Volver a la compra</a>
+  <p class="lead">Lo que tenéis en casa. Los básicos salen aparte en la lista para que mires si os queda; las cantidades se descuentan de la compra.</p>
+</div>
+
+<section class="panel">
+  <h2 class="mt-0">Siempre en casa</h2>
+  {% if staples %}
+    <ul class="list">
+      {% for entry in staples %}
+        <li class="row between">
+          <span>{{ entry.ingredient.name }}</span>
+          {% if can_edit %}
+          <form method="post" action="{% url 'shopping:pantry_delete' entry.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted small">Sal, aceite, especias: lo que nunca falta. En la lista salen aparte, para que solo mires si os queda.</p>
+  {% endif %}
+  {% if can_edit and suggestions %}
+    <p class="small" style="margin:12px 0 6px">De vuestras recetas:</p>
+    <div class="row">
+      {% for ingredient in suggestions %}
+        <form method="post" action="{% url 'shopping:pantry_add' %}">
+          {% csrf_token %}
+          <input type="hidden" name="ingredient" value="{{ ingredient.pk }}">
+          <input type="hidden" name="kind" value="staple">
+          <button class="btn small" type="submit">+ {{ ingredient.name }}</button>
+        </form>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2 class="mt-0">Cantidades en casa</h2>
+  {% if stock %}
+    <ul class="list">
+      {% for entry in stock %}
+        <li class="row between">
+          <span>{{ entry.ingredient.name }} <span class="muted">{{ entry.quantity|qty:entry.unit }}</span></span>
+          {% if can_edit %}
+          <form method="post" action="{% url 'shopping:pantry_delete' entry.pk %}">{% csrf_token %}<button class="btn small ghost" type="submit">Quitar</button></form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted small">Por ejemplo, «tenemos 500 g de arroz»: se descuenta de la compra.</p>
+  {% endif %}
+  <p class="muted small" style="margin-bottom:0">Nada se gasta solo: cuando se acabe, quítalo o cambia la cantidad.</p>
+</section>
+
+{% if can_edit %}
+<form method="post" action="{% url 'shopping:pantry_add' %}" class="panel">
+  {% csrf_token %}
+  <h2 class="mt-0">Añadir a la despensa</h2>
+  {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  <div class="field{% if form.ingredient.errors %} has-error{% endif %}">
+    <label for="{{ form.ingredient.id_for_label }}">{{ form.ingredient.label }}</label>
+    <input type="search" data-filter-select placeholder="Escribe para buscar…" aria-label="Buscar ingrediente" autocomplete="off" style="margin-bottom:6px">
+    {{ form.ingredient }}
+    {% if form.ingredient.errors %}<ul class="errorlist">{% for e in form.ingredient.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  <fieldset class="field">
+    <legend>{{ form.kind.label }}</legend>
+    {% for radio in form.kind %}<label class="check">{{ radio.tag }} {{ radio.choice_label }}</label>{% endfor %}
+  </fieldset>
+  <div class="grid-2">
+    {% include "partials/field.html" with field=form.quantity %}
+    {% include "partials/field.html" with field=form.unit %}
+  </div>
+  <p class="muted small mt-0">La cantidad solo hace falta con «{{ form.kind.field.choices.1.1 }}».</p>
+  <button class="btn primary" type="submit">Guardar en la despensa</button>
+</form>
+{% endif %}
+{% endblock %}
