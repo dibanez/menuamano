@@ -26,9 +26,13 @@ def folded(html):
 def test_secondary_options_are_folded_by_default(client, household, admin_user, monday):
     html = meal_page(client, admin_user, household, monday)
     more = folded(html)
-    for title in ("Modalidad, notas y lo que se comió", "Mover o copiar", "Vaciar comida"):
+    for title in ("Modalidad, notas y lo que se comió", "Mover o copiar"):
         assert title in more
     assert '<details class="panel more" open' not in html
+    # Clearing the meal stays in sight, outside the fold, and still asks for a second tap.
+    assert "Vaciar comida" not in more
+    clear = re.search(r'<form[^>]*class="[^"]*meal-clear[^"]*"[^>]*>(.*?)</form>', html, re.S)
+    assert clear and 'data-confirm="Pulsa otra vez para vaciar"' in clear.group(1)
     assert "Cambiar esta receta" in html and "Ajustar raciones" in html
     assert ">Ajustar</summary>" not in html  # ingredient changes live in one fold per recipe
 

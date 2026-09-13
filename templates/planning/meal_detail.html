@@ -296,13 +296,15 @@
       <button class="btn" type="submit">Mover o copiar</button>
     </form>
   </section>
-  <section>
-    <form method="post" action="{% url 'planning:meal_delete' meal.pk %}" class="row between">
-      {% csrf_token %}
-      <span class="muted small">Vaciar quita asistentes, recetas y notas de esta comida.</span>
-      <button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para vaciar">Vaciar comida</button>
-    </form>
-  </section>
   {% endif %}
 </details>
+
+{% if can_edit %}
+{# Kept out of «Más opciones» so it can be found; it still asks for a second tap. #}
+<form method="post" action="{% url 'planning:meal_delete' meal.pk %}" class="panel flat row between meal-clear">
+  {% csrf_token %}
+  <span class="muted small">Vaciar quita asistentes, recetas y notas de esta comida.</span>
+  <button class="btn small danger" type="submit" data-confirm="Pulsa otra vez para vaciar">Vaciar comida</button>
+</form>
+{% endif %}
 {% endblock %}
