@@ -501,6 +501,8 @@ body:has(.landing) .topbar, .page:has(.landing) { max-width: 68rem; }
 .hero-list li span:last-child { font-variant-numeric: tabular-nums; font-weight: 650; }
 
 .landing-section { padding: 36px 0; border-top: 1px solid var(--line); }
+/* A note under a row of buttons («Sin tarjeta para empezar», «En iPhone…») needs air above it. */
+.landing .form-actions + p { margin-top: 12px; }
 .landing-section > p { max-width: 42rem; }
 .how { list-style: none; counter-reset: step; display: grid; gap: 14px; padding: 0; margin: 16px 0 0; }
 @media (min-width: 760px) { .how { grid-template-columns: repeat(3, 1fr); } }
