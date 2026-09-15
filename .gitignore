@@ -10,3 +10,4 @@ htmlcov/
 *.sqlite3
 .DS_Store
 .playwright-mcp/
+.mcp.json
