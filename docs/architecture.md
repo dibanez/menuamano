@@ -5,7 +5,9 @@
 Un único proyecto Django con apps por dominio. Las reglas viven en módulos de servicio sin
 dependencias de la interfaz (`foods/compatibility.py`, `planning/services.py`,
 `shopping/services.py`, `assistant/services.py`) y las vistas solo los orquestan. No hay
-colas, workers ni servicios externos aparte de PostgreSQL y, opcionalmente, OpenAI.
+colas, workers ni servicios externos aparte de PostgreSQL y, opcionalmente, OpenAI para Premium.
+En el plan gratuito, el navegador de cada persona llama a su propio proveedor de IA con su clave,
+que nunca llega al servidor; el servidor prepara la petición y valida la respuesta.
 
 ```
 households ─┬─ diners ──┐

@@ -8,7 +8,7 @@ from django.utils import timezone
 
 # Bump when the legal texts change in a way that requires accepting them again.
 LEGAL_VERSION = "2026-09-12"
-LEGAL_UPDATED = date(2026, 9, 12)
+LEGAL_UPDATED = date(2026, 9, 15)
 
 REQUIRED_OWNER_SETTINGS = ["LEGAL_OWNER_NAME", "LEGAL_OWNER_TAX_ID", "LEGAL_OWNER_ADDRESS", "LEGAL_CONTACT_EMAIL"]
 

@@ -9,6 +9,8 @@
 
 {% if ai_status.is_demo %}
   <div class="notice"><strong>Modo demostración</strong>{{ ai_status.detail }} Entiende frases sencillas sobre días, comidas, tiempo de preparación y número de personas.</div>
+{% elif ai_status.is_device %}
+  <div class="notice"><strong>Con tu clave de IA</strong>{{ ai_status.detail }} <a href="{% url 'assistant:device_key' %}">Configurar la IA en este dispositivo</a></div>
 {% elif not ai_status.available %}
   <div class="notice unknown"><strong>El asistente no está disponible</strong>{{ ai_status.detail }}</div>
 {% endif %}
@@ -38,7 +40,7 @@
 </div>
 
 {% if can_edit and ai_status.available and ai_allowed %}
-<form class="chat-form" method="post" action="{% url 'assistant:chat_send' %}"
+<form class="chat-form" method="post" action="{% url 'assistant:chat_send' %}" data-ai="{{ ai_status.mode }}"
       hx-post="{% url 'assistant:chat_send' %}" hx-target="#chat-log" hx-swap="beforeend"
       hx-disabled-elt="find button, find textarea" hx-on::after-request="if(event.detail.successful) this.reset()">
   {% csrf_token %}

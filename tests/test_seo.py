@@ -84,7 +84,7 @@ def test_sitemap_lists_the_public_pages(client, db, site):
     locs = re.findall(r"<loc>(.*?)</loc>", body)
     assert f"{SITE}/" in locs and f"{SITE}/cuenta/registro/" in locs and f"{SITE}/legal/privacidad/" in locs
     assert not any("/calendario/" in loc for loc in locs)
-    assert "<lastmod>2026-09-12</lastmod>" in body
+    assert "<lastmod>2026-09-15</lastmod>" in body
 
 
 def test_without_site_url_the_request_host_is_used(client, db, settings):

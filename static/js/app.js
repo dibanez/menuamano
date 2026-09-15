@@ -135,10 +135,9 @@ window.addEventListener("pageshow", () => {
 // working and a note says how long it usually takes. Nobody should think nothing happened.
 const busyButtons = new WeakMap();
 
-document.addEventListener("submit", (event) => {
-  const form = event.target;
-  if (!(form instanceof HTMLFormElement) || !form.dataset.busy || event.defaultPrevented) return;
-  const button = event.submitter || form.querySelector('button[type="submit"], button:not([type])');
+function showBusy(form, submitter) {
+  if (!form.dataset.busy) return;
+  const button = submitter || form.querySelector('button[type="submit"], button:not([type])');
   if (!button || form.classList.contains("is-busy")) return;
   busyButtons.set(button, [...button.childNodes].map((node) => node.cloneNode(true)));
   const spinner = document.createElement("span");
@@ -158,20 +157,28 @@ document.addEventListener("submit", (event) => {
   form.busyTimer = setTimeout(() => {
     note.textContent = "Está tardando más de lo normal. No cierres la página: en cuanto responda, verás la propuesta.";
   }, 25000);
+}
+
+function clearBusy(form) {
+  clearTimeout(form.busyTimer);
+  form.classList.remove("is-busy");
+  form.removeAttribute("aria-busy");
+  form.querySelectorAll(".busy-note").forEach((note) => note.remove());
+  form.querySelectorAll("button").forEach((button) => {
+    const original = busyButtons.get(button);
+    if (original) button.replaceChildren(...original);
+    button.removeAttribute("aria-disabled");
+  });
+}
+
+document.addEventListener("submit", (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || event.defaultPrevented) return;
+  showBusy(form, event.submitter);
 });
 
 window.addEventListener("pageshow", () => {
-  document.querySelectorAll("form.is-busy").forEach((form) => {
-    clearTimeout(form.busyTimer);
-    form.classList.remove("is-busy");
-    form.removeAttribute("aria-busy");
-    form.querySelectorAll(".busy-note").forEach((note) => note.remove());
-    form.querySelectorAll("button").forEach((button) => {
-      const original = busyButtons.get(button);
-      if (original) button.replaceChildren(...original);
-      button.removeAttribute("aria-disabled");
-    });
-  });
+  document.querySelectorAll("form.is-busy").forEach(clearBusy);
 });
 
 // Installable web app: the service worker caches static files and an offline page, never pages.
@@ -559,3 +566,402 @@ function toggleOffline(list, item, row, tick) {
   tick.setAttribute("aria-pressed", String(item.done));
   tick.setAttribute("aria-label", `${item.done ? "Desmarcar" : "Marcar comprado"}: ${item.name}`);
 }
+
+// Assistant with each person's own AI key (free plan). The key is kept only in this browser, per
+// account, and sent straight to the provider: menuamano's server never receives it. A request takes
+// two steps: the server prepares the data (anonymised, as for its own provider), this browser asks
+// the provider, and the form is then sent as usual with the answer, which the server validates.
+const AI_KEY_PREFIX = "menuamano:ai-key:";
+const AI_TIMEOUT_MS = 180000;
+const AI_INCOMPLETE = "La respuesta de la IA llegó incompleta. Prueba con una petición más acotada o con otro modelo.";
+const AI_REFUSED = "La IA no ha querido responder a esta petición.";
+
+class AIFailure extends Error {}
+
+function providerErrorMessage(status, body) {
+  const detail = String(body?.error?.message || body?.message || "").slice(0, 200);
+  if (status === 401 || status === 403) return "Tu proveedor de IA no acepta la clave o no te deja usar ese modelo.";
+  if (status === 404) return "Tu proveedor de IA no encuentra ese modelo. Revisa el nombre.";
+  if (status === 429) return "Tu cuenta del proveedor de IA ha llegado a su límite o no tiene saldo. Prueba más tarde o revisa tu cuenta.";
+  if (status === 400 || status === 422) return `Tu proveedor de IA ha rechazado la petición${detail ? `: ${detail}` : ". Prueba con otro modelo."}`;
+  return "Tu proveedor de IA ha devuelto un error. Inténtalo de nuevo más tarde.";
+}
+
+async function providerFetch(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(url, { ...options, signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+  } catch (error) {
+    throw new AIFailure(error.name === "AbortError"
+      ? "La IA ha tardado demasiado en responder. Inténtalo de nuevo más tarde."
+      : "No se ha podido conectar con tu proveedor de IA. Revisa la conexión; si sigue fallando, puede que ese proveedor no admita llamadas desde el navegador.");
+  } finally {
+    clearTimeout(timer);
+  }
+  let body = null;
+  try { body = await response.json(); } catch {}
+  if (!response.ok) throw new AIFailure(providerErrorMessage(response.status, body));
+  return body || {};
+}
+
+const bearer = (settings) => ({ Authorization: `Bearer ${settings.key}` });
+const jsonHeaders = (extra) => ({ "Content-Type": "application/json", ...extra });
+
+// Providers with an OpenAI-style Chat Completions API and structured outputs.
+function chatCompletions(base) {
+  return {
+    async ask(settings, job) {
+      const data = await providerFetch(`${base}/chat/completions`, {
+        method: "POST",
+        headers: jsonHeaders(bearer(settings)),
+        body: JSON.stringify({
+          model: settings.model,
+          max_tokens: job.max_output_tokens,
+          messages: [{ role: "system", content: job.instructions }, { role: "user", content: job.input }],
+          response_format: { type: "json_schema", json_schema: { name: job.schema_name, schema: job.schema, strict: true } },
+        }),
+      });
+      const choice = (data.choices || [])[0];
+      if (choice?.finish_reason === "length") throw new AIFailure(AI_INCOMPLETE);
+      if (choice?.message?.refusal) throw new AIFailure(AI_REFUSED);
+      let text = choice?.message?.content || "";
+      if (Array.isArray(text)) text = text.map((part) => part.text || "").join("");
+      return { text, model: data.model, inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens };
+    },
+    async check(settings) {
+      const data = await providerFetch(`${base}/models`, { headers: bearer(settings) });
+      return (data.data || []).map((model) => model.id);
+    },
+  };
+}
+
+const anthropicHeaders = (settings) => ({
+  "x-api-key": settings.key,
+  "anthropic-version": "2023-06-01",
+  "anthropic-dangerous-direct-browser-access": "true",
+});
+
+const AI_PROVIDERS = {
+  openai: {
+    async ask(settings, job) {
+      const data = await providerFetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: jsonHeaders(bearer(settings)),
+        body: JSON.stringify({
+          model: settings.model,
+          instructions: job.instructions,
+          input: [{ role: "user", content: job.input }],
+          text: { format: { type: "json_schema", name: job.schema_name, schema: job.schema, strict: true } },
+          max_output_tokens: job.max_output_tokens,
+          store: false,
+        }),
+      });
+      if (data.status === "incomplete") throw new AIFailure(AI_INCOMPLETE);
+      let text = "";
+      for (const item of data.output || []) {
+        if (item.type !== "message") continue;
+        for (const part of item.content || []) {
+          if (part.type === "refusal") throw new AIFailure(AI_REFUSED);
+          if (part.type === "output_text") text += part.text;
+        }
+      }
+      return { text, model: data.model, inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens };
+    },
+    async check(settings) {
+      const data = await providerFetch("https://api.openai.com/v1/models", { headers: bearer(settings) });
+      return (data.data || []).map((model) => model.id);
+    },
+  },
+  anthropic: {
+    // A forced tool call whose input follows the schema: Claude's way to answer with structured data.
+    async ask(settings, job) {
+      const data = await providerFetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: jsonHeaders(anthropicHeaders(settings)),
+        body: JSON.stringify({
+          model: settings.model,
+          max_tokens: job.max_output_tokens,
+          system: job.instructions,
+          messages: [{ role: "user", content: job.input }],
+          tools: [{ name: job.schema_name, description: "La respuesta del asistente.", input_schema: job.schema }],
+          tool_choice: { type: "tool", name: job.schema_name },
+        }),
+      });
+      if (data.stop_reason === "max_tokens") throw new AIFailure(AI_INCOMPLETE);
+      if (data.stop_reason === "refusal") throw new AIFailure(AI_REFUSED);
+      const call = (data.content || []).find((block) => block.type === "tool_use");
+      return {
+        text: call ? JSON.stringify(call.input) : "", model: data.model,
+        inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens,
+      };
+    },
+    async check(settings) {
+      const data = await providerFetch("https://api.anthropic.com/v1/models?limit=1000", { headers: anthropicHeaders(settings) });
+      return (data.data || []).map((model) => model.id);
+    },
+  },
+  gemini: {
+    async ask(settings, job) {
+      const model = settings.model.replace(/^models\//, "");
+      const data = await providerFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: jsonHeaders({ "x-goog-api-key": settings.key }),
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: job.instructions }] },
+          contents: [{ role: "user", parts: [{ text: job.input }] }],
+          generationConfig: { responseMimeType: "application/json", responseJsonSchema: job.schema, maxOutputTokens: job.max_output_tokens },
+        }),
+      });
+      const candidate = (data.candidates || [])[0];
+      if (!candidate) throw new AIFailure(AI_REFUSED);
+      if (candidate.finishReason === "MAX_TOKENS") throw new AIFailure(AI_INCOMPLETE);
+      if (["SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"].includes(candidate.finishReason)) throw new AIFailure(AI_REFUSED);
+      const text = (candidate.content?.parts || []).filter((part) => !part.thought).map((part) => part.text || "").join("");
+      return {
+        text, model: data.modelVersion || model,
+        inputTokens: data.usageMetadata?.promptTokenCount, outputTokens: data.usageMetadata?.candidatesTokenCount,
+      };
+    },
+    async check(settings) {
+      const data = await providerFetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", {
+        headers: { "x-goog-api-key": settings.key },
+      });
+      return (data.models || []).map((model) => model.name.replace(/^models\//, ""));
+    },
+  },
+  mistral: chatCompletions("https://api.mistral.ai/v1"),
+  openrouter: {
+    ask: chatCompletions("https://openrouter.ai/api/v1").ask,
+    async check(settings) {
+      await providerFetch("https://openrouter.ai/api/v1/key", { headers: bearer(settings) });  // its model list is public
+      const data = await providerFetch("https://openrouter.ai/api/v1/models");
+      return (data.data || []).map((model) => model.id);
+    },
+  },
+};
+
+const aiKeyName = () => AI_KEY_PREFIX + (document.body.dataset.user || "");
+
+function loadAIKey() {
+  const saved = store.get(aiKeyName());
+  return saved && AI_PROVIDERS[saved.provider] && saved.model && saved.key ? saved : null;
+}
+
+// Some models wrap the JSON in a Markdown code block.
+const cleanJSON = (text) => String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+
+async function prepareAIRequest(form) {
+  let response;
+  try {
+    response = await fetch(form.getAttribute("hx-post") || form.action, {
+      method: "POST", credentials: "same-origin",
+      headers: { "X-AI-Stage": "prepare", "X-CSRFToken": csrfToken() },
+      body: new FormData(form),
+    });
+  } catch {
+    throw new AIFailure("No se ha podido conectar con menuamano. Revisa la conexión.");
+  }
+  let data = null;
+  try { data = await response.json(); } catch {}
+  if (data?.error) throw new AIFailure(data.error);
+  if (!response.ok || !data?.token) throw new AIFailure("No se ha podido preparar la petición. Recarga la página e inténtalo de nuevo.");
+  return data;
+}
+
+function clearAIAnswer(form) {
+  form.querySelectorAll("input.ai-answer").forEach((input) => input.remove());
+  delete form.dataset.aiReady;
+}
+
+function attachAIAnswer(form, fields) {
+  clearAIAnswer(form);
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.className = "ai-answer";
+    input.name = name;
+    input.value = value ?? "";
+    form.append(input);
+  }
+}
+
+function showAIError(form, message) {
+  form.aiError?.remove();
+  const note = document.createElement("div");
+  note.className = "notice conflict ai-error";
+  note.setAttribute("role", "alert");
+  const link = document.createElement("a");
+  link.href = document.body.dataset.aiKeyUrl || "#";
+  link.textContent = "IA en este dispositivo";
+  note.append(`${message} `, link);
+  form.after(note);
+  form.aiError = note;
+}
+
+// Capture phase: this runs before HTMX and the other submit handlers, and holds the form back until
+// the provider has answered. Then the form is sent again, as usual, with the answer attached.
+document.addEventListener("submit", async (event) => {
+  const form = event.target;
+  if (!(form instanceof HTMLFormElement) || form.dataset.ai !== "device") return;
+  if (form.dataset.aiReady === "1") {
+    delete form.dataset.aiReady;
+    return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (form.classList.contains("ai-working")) return;
+  form.aiError?.remove();
+  clearAIAnswer(form);
+  const settings = loadAIKey();
+  if (!settings) {
+    showAIError(form, "Para usar el asistente con el plan gratuito, guarda antes tu clave de IA en este dispositivo.");
+    return;
+  }
+  const submitter = event.submitter;
+  form.classList.add("ai-working", "htmx-request");
+  showBusy(form, submitter);
+  try {
+    const job = await prepareAIRequest(form);
+    const started = performance.now();
+    const answer = await AI_PROVIDERS[settings.provider].ask(settings, job);
+    const output = cleanJSON(answer.text);
+    if (!output) throw new AIFailure("La IA no ha devuelto una propuesta válida. No se ha cambiado nada.");
+    attachAIAnswer(form, {
+      ai_token: job.token, ai_output: output, ai_provider: settings.provider, ai_model: answer.model || settings.model,
+      ai_input_tokens: answer.inputTokens, ai_output_tokens: answer.outputTokens,
+      ai_latency_ms: Math.round(performance.now() - started),
+    });
+  } catch (error) {
+    form.classList.remove("ai-working", "htmx-request");
+    clearBusy(form);
+    showAIError(form, error instanceof AIFailure ? error.message : "No se ha podido completar la petición al asistente. Inténtalo de nuevo.");
+    return;
+  }
+  form.classList.remove("ai-working", "htmx-request");
+  form.dataset.aiReady = "1";
+  form.requestSubmit(submitter?.form === form ? submitter : undefined);
+}, true);
+
+document.addEventListener("htmx:afterRequest", (event) => {
+  const form = event.detail.elt;
+  if (form instanceof HTMLFormElement && form.dataset.ai === "device") clearAIAnswer(form);
+});
+
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll('form[data-ai="device"]').forEach((form) => {
+    form.classList.remove("ai-working", "htmx-request");
+    clearAIAnswer(form);
+  });
+});
+
+// «IA en este dispositivo»: the form has no action and its fields no names, so nothing is ever sent.
+function setUpDeviceKey() {
+  const form = document.querySelector("[data-ai-key-form]");
+  if (!form) return;
+  const catalogue = JSON.parse(document.getElementById("ai-providers").textContent);
+  const provider = form.querySelector("#ai-provider");
+  const model = form.querySelector("#ai-model");
+  const key = form.querySelector("#ai-key");
+  const suggestions = document.getElementById("ai-models");
+  const keysLink = form.querySelector("[data-ai-keys-link]");
+  const status = form.querySelector("[data-ai-key-status]");
+  const saved = document.querySelector("[data-ai-key-saved]");
+  const forget = form.querySelector("[data-ai-key-forget]");
+
+  const say = (text, kind = "") => {
+    status.textContent = text;
+    status.className = `notice ${kind}`;
+    status.hidden = !text;
+  };
+
+  function showProvider() {
+    const info = catalogue[provider.value];
+    suggestions.replaceChildren(...info.models.map((name) => Object.assign(document.createElement("option"), { value: name })));
+    model.placeholder = info.models[0] || "El nombre del modelo en tu proveedor";
+    keysLink.href = info.keys_url;
+    keysLink.textContent = new URL(info.keys_url).host;
+    const current = loadAIKey();
+    key.required = !current || current.provider !== provider.value;
+    key.placeholder = key.required ? "" : "Déjala vacía para mantener la guardada";
+  }
+
+  function showSaved() {
+    const current = loadAIKey();
+    saved.hidden = !current;
+    forget.hidden = !current;
+    if (current) {
+      saved.textContent = `Guardada en este dispositivo: ${catalogue[current.provider].label}, modelo ${current.model}, clave terminada en ${current.key.slice(-4)}.`;
+    }
+    showProvider();
+  }
+
+  // What the form says now; an empty key keeps the saved one of the same provider.
+  function formSettings() {
+    const current = loadAIKey();
+    const typed = key.value.trim();
+    return {
+      provider: provider.value,
+      model: model.value.trim() || catalogue[provider.value].models[0] || "",
+      key: typed || (current && current.provider === provider.value ? current.key : ""),
+    };
+  }
+
+  function problem(settings) {
+    if (!settings.model) return "Escribe el modelo que quieres usar.";
+    if (!settings.key) return "Pega la clave de la API de tu proveedor.";
+    return "";
+  }
+
+  const current = loadAIKey();
+  if (current) {
+    provider.value = current.provider;
+    model.value = current.model;
+  }
+  showSaved();
+  provider.addEventListener("change", () => {
+    model.value = "";
+    showProvider();
+  });
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const settings = formSettings();
+    const error = problem(settings);
+    if (error) return say(error, "conflict");
+    if (!store.set(aiKeyName(), settings)) {
+      return say("Este navegador no deja guardar datos (quizá estás en una ventana privada). Sin guardar la clave no se puede usar el asistente.", "conflict");
+    }
+    key.value = "";
+    model.value = settings.model;
+    showSaved();
+    say("Clave guardada en este dispositivo.", "ok");
+  });
+
+  form.querySelector("[data-ai-key-test]").addEventListener("click", async () => {
+    const settings = formSettings();
+    const error = problem(settings);
+    if (error) return say(error, "conflict");
+    say("Comprobando la clave con tu proveedor…");
+    try {
+      const models = await AI_PROVIDERS[settings.provider].check(settings);
+      if (!models.length || models.includes(settings.model)) {
+        say("La clave funciona.", "ok");
+      } else {
+        say(`La clave funciona, pero tu cuenta no muestra el modelo «${settings.model}». Revisa el nombre.`, "unknown");
+      }
+    } catch (failure) {
+      say(failure instanceof AIFailure ? failure.message : "No se ha podido comprobar la clave.", "conflict");
+    }
+  });
+
+  forget.addEventListener("click", () => {
+    store.drop(aiKeyName());
+    key.value = "";
+    showSaved();
+    say("Clave borrada de este dispositivo.", "ok");
+  });
+}
+
+document.addEventListener("DOMContentLoaded", setUpDeviceKey);

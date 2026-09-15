@@ -6,8 +6,10 @@ hay que comprar y cómo se prepara cada plato. La interfaz está en español y p
 móvil.
 
 - Django 5.2 LTS, PostgreSQL 17, plantillas de Django y HTMX. Sin paso de build de frontend.
-- Asistente opcional con la API de OpenAI (Responses API con salidas estructuradas), usado
-  solo desde el backend. Hay un **modo demostración** determinista que no necesita clave.
+- Asistente con IA de dos maneras: en Premium, con la clave de OpenAI del servidor (Responses API
+  con salidas estructuradas); en el plan gratuito, con la clave de cada persona (OpenAI, Anthropic,
+  Google Gemini, Mistral u OpenRouter), que se guarda solo en su navegador y nunca llega al
+  servidor. Hay un **modo demostración** determinista que no necesita clave.
 
 ## Arranque rápido con Docker
 
@@ -43,7 +45,8 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirement
 ```
 
 Las pruebas nunca llaman a la API de pago: usan el proveedor de demostración, proveedores
-falsos y un cliente de OpenAI simulado.
+falsos y un cliente de OpenAI simulado. La llamada del navegador a su proveedor no se prueba
+aquí: los tests envían su respuesta igual que `static/js/app.js`.
 
 ## Configuración
 
@@ -64,6 +67,25 @@ Toda la configuración llega por variables de entorno (ver `.env.example`).
 
 Si `AI_PROVIDER=openai` y falta la clave o el modelo, el asistente aparece como «IA sin
 configurar» y el resto de la aplicación funciona igual.
+
+### Asistente con la clave de cada persona
+
+En los hogares sin Premium, el asistente usa la clave de IA de quien lo pide. Se guarda en «IA en
+este dispositivo» (`/asistente/clave/`), solo en el `localStorage` del navegador y por cuenta, y el
+navegador la envía directamente al proveedor: el servidor nunca la recibe ni la guarda. Cada
+petición va en dos pasos:
+
+1. El formulario se envía con la cabecera `X-AI-Stage: prepare`. El servidor responde con el
+   contexto anonimizado, las instrucciones, el esquema JSON de la respuesta y un token firmado de
+   la petición (hogar, persona, operación, fechas, texto y versiones de las comidas; caduca a los
+   15 minutos). No guarda nada.
+2. El navegador llama al proveedor (Responses de OpenAI, Messages de Anthropic con una herramienta
+   forzada, `generateContent` de Gemini o Chat Completions de Mistral y OpenRouter) y reenvía el
+   formulario con la respuesta y el token. El servidor la valida como cualquier otra y crea la
+   propuesta.
+
+Estas llamadas quedan en `AIRequestLog` con `key_source=device` y no cuentan para el cupo de
+Premium. Los proveedores y sus modelos sugeridos están en `assistant/device.py`.
 
 ## Despliegue en Dokploy
 
@@ -159,13 +181,12 @@ En iPhone y iPad solo llegan con la app instalada (iOS 16.4 o posterior).
 
 ### Pagos con Stripe
 
-Planes: **Gratis** (planificación completa, 7 peticiones de prueba al asistente con IA, que no se
-renuevan, y hasta 2 personas con cuenta) y **Premium**
-(4,99 €/mes o 49 €/año por hogar: asistente con IA con 150 peticiones al mes y hasta 8 personas
-con cuenta). Los límites se cambian con `FREE_MAX_MEMBERS`, `FREE_MAX_OWNED_HOUSEHOLDS` (hogares que puede crear una
-cuenta gratuita; administrar un hogar Premium quita el límite), `FREE_AI_TOTAL_LIMIT`
-(peticiones de prueba en total; 0 quita el asistente del plan gratuito), `PREMIUM_MAX_MEMBERS` y `PREMIUM_AI_MONTHLY_LIMIT`. En producción la facturación está activa por defecto (`*` en la tabla:
-obligatorias salvo `BILLING_ENABLED=false`).
+Planes: **Gratis** (todas las funciones; el asistente con IA usa la clave de cada persona,
+guardada en su dispositivo) y **Premium** (4,99 €/mes o 49 €/año por hogar: asistente con la IA
+del servidor, 150 peticiones al mes). Los límites se cambian con `HOUSEHOLD_MAX_MEMBERS` (personas
+con cuenta por hogar, 8 por defecto en los dos planes) y `PREMIUM_AI_MONTHLY_LIMIT` (0 deja
+también a Premium con la clave de cada dispositivo). En producción la facturación está activa por
+defecto (`*` en la tabla: obligatorias salvo `BILLING_ENABLED=false`).
 
 1. En Stripe crea el producto «menuamano Premium» con dos precios recurrentes en EUR: 4,99 € al mes
    y 49 € al año. Copia sus ids en `STRIPE_PRICE_MONTHLY` y `STRIPE_PRICE_YEARLY`.

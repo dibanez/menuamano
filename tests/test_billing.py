@@ -34,9 +34,7 @@ def billing_on(settings):
     settings.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET
     settings.STRIPE_PRICE_MONTHLY = "price_month"
     settings.STRIPE_PRICE_YEARLY = "price_year"
-    settings.FREE_MAX_MEMBERS = 2
-    settings.FREE_AI_TOTAL_LIMIT = 2
-    settings.PREMIUM_MAX_MEMBERS = 8
+    settings.HOUSEHOLD_MAX_MEMBERS = 2
     settings.PREMIUM_AI_MONTHLY_LIMIT = 3
     settings.SITE_URL = "https://menuamano.example.com"
     return settings
@@ -120,64 +118,62 @@ class NeverCalled:
         raise AssertionError("the provider must not be called")
 
 
-def test_free_households_get_trial_ai_requests_that_never_renew(billing_on, household, admin_user, monday, monkeypatch):
+def test_free_households_use_their_own_device_key(billing_on, household, admin_user, monday, monkeypatch):
+    assert entitlements.ai_mode(household) == entitlements.AI_DEVICE
+    allowed, message = entitlements.check_ai(household)
+    assert not allowed and "tu propia clave de IA" in message and "Premium" in message
+    monkeypatch.setattr(assistant_services, "get_provider", lambda operation=None: NeverCalled())
+    with pytest.raises(assistant_services.AssistantError, match="tu propia clave"):
+        assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
+
+
+def test_premium_households_use_the_server_key(billing_on, household):
+    make_premium(household)
+    assert entitlements.ai_mode(household) == entitlements.AI_SERVER
     assert entitlements.check_ai(household) == (True, "")
-    old = AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
-    AIRequestLog.objects.filter(pk=old.pk).update(created_at=entitlements.month_start() - timedelta(days=40))
-    AIRequestLog.objects.create(household=household, provider="demo", operation="chat", status="ok")  # free
-    assert entitlements.check_ai(household)[0]
-    AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
-    allowed, message = entitlements.check_ai(household)  # last month's request still counts
-    assert not allowed
-    assert "2 peticiones de prueba" in message and "pasad a Premium: 3 peticiones al mes" in message
-    assert "día 1" not in message
-    monkeypatch.setattr(assistant_services, "get_provider", lambda operation=None: NeverCalled())
-    with pytest.raises(assistant_services.AssistantError, match="pasad a Premium"):
-        assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
 
 
-def test_premium_lifts_the_trial_limit(billing_on, household):
-    for _ in range(2):
-        AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
-    assert not entitlements.check_ai(household)[0]
+def test_premium_without_a_server_quota_uses_device_keys(billing_on, household):
+    billing_on.PREMIUM_AI_MONTHLY_LIMIT = 0
     make_premium(household)
-    assert entitlements.check_ai(household)[0]  # 2 of 3 this month
+    assert entitlements.ai_mode(household) == entitlements.AI_DEVICE
 
 
-def test_free_ai_can_be_turned_off(billing_on, household, admin_user, monday, monkeypatch):
-    billing_on.FREE_AI_TOTAL_LIMIT = 0
-    monkeypatch.setattr(assistant_services, "get_provider", lambda operation=None: NeverCalled())
-    with pytest.raises(assistant_services.AssistantError, match="Premium"):
-        assistant_services.request_proposal(household, admin_user, "plan_range", monday, monday)
-
-
-def test_premium_ai_quota_counts_only_paid_calls(billing_on, household, admin_user, monday):
+def test_premium_ai_quota_counts_only_calls_with_the_server_key(billing_on, household):
     make_premium(household)
-    assert entitlements.check_ai(household)[0]
     for status in ("ok", "invalid", "error"):
         AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status=status)
     AIRequestLog.objects.create(household=household, provider="demo", operation="chat", status="ok")
-    assert entitlements.ai_calls_this_month(household) == 2  # "error" and demo calls are free
+    AIRequestLog.objects.create(household=household, provider="anthropic", operation="chat", status="ok", key_source="device")
+    assert entitlements.ai_calls_this_month(household) == 2  # errors, demo calls and device keys are free
     AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
     allowed, message = entitlements.check_ai(household)
-    assert not allowed and "3 peticiones" in message
+    assert not allowed and "3 peticiones" in message and "día 1" in message
     old = AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
     AIRequestLog.objects.filter(pk=old.pk).update(created_at=entitlements.month_start() - timedelta(days=1))
     assert entitlements.ai_calls_this_month(household) == 3
 
 
-def test_free_chat_works_until_the_quota_runs_out(billing_on, client, household, admin_user):
+def test_free_chat_asks_for_a_key_on_the_device(billing_on, client, household, admin_user):
     assert client.login(email=admin_user.email, password=PASSWORD)
-    assert 'name="message"' in client.get(reverse("assistant:chat")).content.decode()
+    page = client.get(reverse("assistant:chat")).content.decode()
+    assert 'name="message"' in page and 'data-ai="device"' in page and "Con tu clave de IA" in page
     plan_page = client.get(reverse("billing:plan")).content.decode()
-    assert "Peticiones de prueba" in plan_page and "0 de 2" in plan_page and "día 1" not in plan_page
-    for _ in range(2):
+    assert "con tu propia clave" in plan_page and "este mes:" not in plan_page
+
+
+def test_premium_chat_works_until_the_quota_runs_out(billing_on, client, household, admin_user):
+    make_premium(household)
+    assert client.login(email=admin_user.email, password=PASSWORD)
+    page = client.get(reverse("assistant:chat")).content.decode()
+    assert 'name="message"' in page and 'data-ai="device"' not in page
+    for _ in range(3):
         AIRequestLog.objects.create(household=household, provider="openai", operation="chat", status="ok")
     page = client.get(reverse("assistant:chat")).content.decode()
-    assert 'name="message"' not in page and "pasad a Premium" in page
+    assert 'name="message"' not in page and "El cupo se renueva el día 1" in page
 
 
-def test_member_limit_applies_to_invitations_and_premium_raises_it(billing_on, client, household, admin_user):
+def test_member_limit_applies_to_invitations(billing_on, client, household, admin_user):
     add_member(household, make_user("second@example.com"), Role.EDITOR)
     invitation, token = Invitation.issue(household, Role.READER, admin_user)
     assert client.login(email=admin_user.email, password=PASSWORD)
@@ -190,7 +186,7 @@ def test_member_limit_applies_to_invitations_and_premium_raises_it(billing_on, c
     assert client.post(reverse("households:invitation", args=[token])).status_code == 409
     assert not household.memberships.filter(user=third).exists()
 
-    make_premium(household)
+    billing_on.HOUSEHOLD_MAX_MEMBERS = 3
     client.post(reverse("households:invitation", args=[token]))
     assert household.memberships.filter(user=third).exists()
 

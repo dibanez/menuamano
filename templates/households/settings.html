@@ -91,6 +91,7 @@
     <li><a href="{% url 'planning:rules' %}">Reglas recurrentes y excepciones</a></li>
     <li><a href="{% url 'foods:list' %}">Ingredientes del hogar</a></li>
     <li><a href="{% url 'billing:plan' %}">Plan y facturación</a></li>
+    {% if ai_status.is_device %}<li><a href="{% url 'assistant:device_key' %}">IA en este dispositivo</a></li>{% endif %}
   </ul>
 </section>
 {% endblock %}

@@ -21,24 +21,15 @@ NEW_LINK_SESSION_KEY = "new_invitation_link"
 @login_required
 def onboarding(request):
     form = NewHouseholdForm(request.POST or None)
-    can_create = entitlements.can_create_household(request.user)
-    if request.method == "POST":
-        if not can_create:  # enforced here, not only by hiding the form
-            messages.error(request, entitlements.household_limit_message())
-            return redirect("households:onboarding")
-        if form.is_valid():
-            with transaction.atomic():
-                household = form.save()
-                Membership.objects.create(user=request.user, household=household, role=Role.ADMIN)
-            request.session[SESSION_KEY] = household.pk
-            messages.success(request, f"Hogar «{household.name}» creado. Añade ahora a quienes coméis en casa.")
-            return redirect("diners:create")
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            household = form.save()
+            Membership.objects.create(user=request.user, household=household, role=Role.ADMIN)
+        request.session[SESSION_KEY] = household.pk
+        messages.success(request, f"Hogar «{household.name}» creado. Añade ahora a quienes coméis en casa.")
+        return redirect("diners:create")
     memberships = Membership.objects.filter(user=request.user).select_related("household")
-    context = {
-        "form": form, "memberships": memberships, "can_create": can_create,
-        "limit_message": "" if can_create else entitlements.household_limit_message(),
-    }
-    return render(request, "households/onboarding.html", context)
+    return render(request, "households/onboarding.html", {"form": form, "memberships": memberships})
 
 
 @login_required
@@ -76,7 +67,7 @@ def settings_view(request):
 @require_POST
 def add_member(request):
     if not entitlements.can_add_member(request.household):
-        messages.error(request, entitlements.member_limit_message(request.household))
+        messages.error(request, entitlements.member_limit_message())
         return redirect("households:settings")
     form = AddMemberForm(request.POST, household=request.household, prefix="m")
     if form.is_valid():
@@ -133,7 +124,7 @@ def invitation_create(request):
         messages.error(request, "Elige un rol válido para la invitación.")
         return redirect("households:settings")
     if not entitlements.can_add_member(request.household):
-        messages.error(request, entitlements.member_limit_message(request.household))
+        messages.error(request, entitlements.member_limit_message())
         return redirect("households:settings")
     if email:
         try:

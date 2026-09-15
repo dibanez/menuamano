@@ -6,6 +6,7 @@ app_name = "assistant"
 
 urlpatterns = [
     path("", views.chat, name="chat"),
+    path("clave/", views.device_key, name="device_key"),
     path("enviar/", views.chat_send, name="chat_send"),
     path("proponer-menu/", views.plan_range, name="plan_range"),
     path("generar-receta/", views.generate_recipe, name="generate_recipe"),

@@ -253,7 +253,7 @@
     {% endif %}
   </form>
   {% if ai_status.available and ai_allowed %}
-    <form method="post" action="{% url 'assistant:replace_meal' meal.pk %}" class="ai-cta" data-busy="Buscando una alternativa…">{% csrf_token %}
+    <form method="post" action="{% url 'assistant:replace_meal' meal.pk %}" class="ai-cta" data-busy="Buscando una alternativa…" data-ai="{{ ai_status.mode }}">{% csrf_token %}
       <span class="ai-cta-or">o</span>
       <button class="btn ai" type="submit">
         <svg class="icon" aria-hidden="true"><use href="#i-chat"/></svg>

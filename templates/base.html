@@ -24,7 +24,7 @@
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' data-user="{% if user.is_authenticated %}{{ user.pk }}{% endif %}">
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' data-user="{% if user.is_authenticated %}{{ user.pk }}{% endif %}" data-ai-key-url="{% url 'assistant:device_key' %}">
   {% include "partials/icons.html" %}
   {% with section=request.resolver_match.app_name %}
   <header class="topbar">
@@ -46,6 +46,7 @@
           {% if household %}
             <a href="{% url 'households:settings' %}">Configuración del hogar</a>
             <a href="{% url 'billing:plan' %}">Plan{% if billing_plan %}: {{ billing_plan.name }}{% endif %}</a>
+            {% if ai_status.is_device %}<a href="{% url 'assistant:device_key' %}">IA en este dispositivo</a>{% endif %}
             <a href="{% url 'diners:list' %}">Comensales</a>
             <a href="{% url 'foods:list' %}">Ingredientes</a>
             <a href="{% url 'planning:rules' %}">Reglas y excepciones</a>

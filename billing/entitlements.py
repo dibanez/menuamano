@@ -1,4 +1,10 @@
-"""What each household may use according to its plan. Checked in the backend, not just hidden."""
+"""What each household may use according to its plan. Checked in the backend, not just hidden.
+
+Every feature is free. The assistant works in one of two ways:
+* server: Premium households use the server's AI key, with a monthly quota;
+* device: the rest use their own key, kept in the browser of each device, which sends it straight
+  to the provider. The server never receives it, and those calls cost it nothing.
+"""
 
 from dataclasses import dataclass
 
@@ -8,8 +14,16 @@ from django.utils import timezone
 from .models import Subscription
 from .plans import FREE, PREMIUM, get_plan
 
+AI_SERVER = "server"
+AI_DEVICE = "device"
+
 # AI calls that reached the provider and therefore cost money.
 BILLABLE_AI_STATUSES = ("ok", "incomplete", "invalid", "refused")
+
+DEVICE_KEY_MESSAGE = (
+    "Con el plan gratuito, el asistente usa tu propia clave de IA, guardada solo en este dispositivo. "
+    "Configúrala en «IA en este dispositivo» o pasad a Premium, que la incluye."
+)
 
 
 def subscription_for(household):
@@ -29,10 +43,12 @@ def month_start():
 
 
 def ai_calls(household, since=None):
-    """Billable AI calls of the household, ever or since a moment. Demo calls are free."""
+    """Calls paid with the server's key, ever or since a moment. Demo and device calls are free."""
     from assistant.models import AIRequestLog
 
-    calls = AIRequestLog.objects.filter(household=household, status__in=BILLABLE_AI_STATUSES).exclude(provider="demo")
+    calls = AIRequestLog.objects.filter(
+        household=household, status__in=BILLABLE_AI_STATUSES, key_source=AI_SERVER
+    ).exclude(provider="demo")
     if since is not None:
         calls = calls.filter(created_at__gte=since)
     return calls.count()
@@ -42,63 +58,27 @@ def ai_calls_this_month(household):
     return ai_calls(household, since=month_start())
 
 
-def ai_calls_counted(household, plan):
-    """Calls that count against the plan: this month's for a monthly quota, all of them for a trial."""
-    return ai_calls_this_month(household) if plan.ai_renews else ai_calls(household)
+def ai_mode(household):
+    """How the household reaches the assistant: the server's key (Premium) or each device's own key."""
+    return AI_SERVER if household_plan(household).has_server_ai else AI_DEVICE
 
 
 def check_ai(household):
-    """(allowed, message). The demo provider is free and never counts against the quota."""
+    """(allowed, message) for a request with the server's key. Device requests never need it."""
     plan = household_plan(household)
-    if not plan.has_ai:
-        return False, "El asistente con IA forma parte del plan Premium."
-    if ai_calls_counted(household, plan) >= plan.ai_limit:
-        if plan.ai_renews:
-            return False, f"Habéis usado las {plan.ai_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
-        return False, (
-            f"Habéis usado las {plan.ai_limit} peticiones de prueba del asistente. Para seguir usándolo, "
-            f"pasad a Premium: {get_plan(PREMIUM).ai_monthly_limit} peticiones al mes."
-        )
+    if not plan.has_server_ai:
+        return False, DEVICE_KEY_MESSAGE
+    if ai_calls_this_month(household) >= plan.ai_monthly_limit:
+        return False, f"Habéis usado las {plan.ai_monthly_limit} peticiones al asistente de este mes. El cupo se renueva el día 1."
     return True, ""
 
 
-def administered_households(user):
-    from households.models import Household, Role
-
-    return Household.objects.filter(memberships__user=user, memberships__role=Role.ADMIN).distinct()
-
-
-def can_create_household(user):
-    """A free account creates up to its limit; administering any Premium household lifts the limit.
-
-    Joining a household through an invitation is not creating one, so it never counts.
-    """
-    if not settings.BILLING_ENABLED:
-        return True
-    owned = list(administered_households(user))
-    if len(owned) < get_plan(FREE).max_owned_households:
-        return True
-    return any(household_plan(household).code == PREMIUM for household in owned)
-
-
-def household_limit_message():
-    limit = get_plan(FREE).max_owned_households
-    allowed = "un hogar" if limit == 1 else f"{limit} hogares"
-    return (
-        f"Con el plan gratuito puedes crear {allowed}. Con Premium en uno de tus hogares puedes crear "
-        "todos los que necesites."
-    )
-
-
 def can_add_member(household):
-    return household.memberships.count() < household_plan(household).max_members
+    return household.memberships.count() < settings.HOUSEHOLD_MAX_MEMBERS
 
 
-def member_limit_message(household):
-    plan = household_plan(household)
-    if plan.code == FREE:
-        return f"El plan gratuito admite hasta {plan.max_members} personas con cuenta. Con Premium podéis ser hasta {get_plan(PREMIUM).max_members}."
-    return f"El hogar ya tiene el máximo de {plan.max_members} personas con cuenta."
+def member_limit_message():
+    return f"El hogar ya tiene el máximo de {settings.HOUSEHOLD_MAX_MEMBERS} personas con cuenta."
 
 
 @dataclass
@@ -107,12 +87,11 @@ class Usage:
     max_members: int
     ai_calls: int
     ai_limit: int
-    ai_renews: bool
 
 
 def usage(household):
     plan = household_plan(household)
     return Usage(
         members=household.memberships.count(), max_members=plan.max_members,
-        ai_calls=ai_calls_counted(household, plan), ai_limit=plan.ai_limit, ai_renews=plan.ai_renews,
+        ai_calls=ai_calls_this_month(household), ai_limit=plan.ai_monthly_limit,
     )

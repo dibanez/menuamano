@@ -6,7 +6,7 @@
 {% include "legal/_owner.html" %}
 
 <h2>2. El servicio</h2>
-<p>menuamano permite a un hogar planificar sus comidas, registrar quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. {% if free.has_ai %}Incluye unas pocas peticiones de prueba al asistente con inteligencia artificial; para seguir usándolo hace falta el plan Premium, que además admite más personas con cuenta en el hogar.{% else %}El plan Premium añade un asistente con inteligencia artificial y admite más personas con cuenta en el hogar.{% endif %}</p>
+<p>menuamano permite a un hogar planificar sus comidas, registrar quién come en cada ocasión y sus restricciones alimentarias, guardar recetas y preparar la lista de la compra. Todas sus funciones son gratuitas, incluido un asistente con inteligencia artificial que funciona con la clave de tu propio proveedor de IA. El plan Premium incluye el asistente sin necesidad de clave.</p>
 
 <h2>3. Tu cuenta</h2>
 <ul>
@@ -21,9 +21,10 @@
 
 <h2>5. Planes y precios</h2>
 <ul>
-  <li><strong>{{ free.name }}:</strong> gratuito, con planificación completa{% if free.has_ai %}, {{ free.ai_total_limit }} peticiones de prueba al asistente con IA por hogar, que no se renuevan,{% endif %} hasta {{ free.max_members }} personas con cuenta en el hogar y {% if free.max_owned_households == 1 %}un hogar por cuenta{% else %}hasta {{ free.max_owned_households }} hogares por cuenta{% endif %}.</li>
-  <li><strong>{{ premium.name }}:</strong> {{ prices.monthly }} al mes o {{ prices.yearly }} al año por hogar, impuestos incluidos. Incluye el asistente con IA (hasta {{ premium.ai_monthly_limit }} peticiones al mes por hogar), hasta {{ premium.max_members }} personas con cuenta y crear todos los hogares que se necesiten.</li>
+  <li><strong>{{ free.name }}:</strong> gratuito, con todas las funciones, hasta {{ free.max_members }} personas con cuenta por hogar y todos los hogares que se necesiten. El asistente con IA funciona con la clave de tu propio proveedor de IA.</li>
+  <li><strong>{{ premium.name }}:</strong> {{ prices.monthly }} al mes o {{ prices.yearly }} al año por hogar, impuestos incluidos. Incluye el asistente con IA sin clave propia, hasta {{ premium.ai_monthly_limit }} peticiones al mes por hogar.</li>
 </ul>
+<p>Si usas el asistente con tu propia clave, la contratas tú con tu proveedor de IA (OpenAI, Anthropic, Google, Mistral, OpenRouter u otro) y aceptas sus condiciones; el proveedor te cobra directamente el uso que hagas. La clave se guarda solo en tu dispositivo y tu navegador la envía directamente al proveedor: menuamano no la recibe ni la guarda, y no responde de los cargos, límites o fallos de tu cuenta con el proveedor.</p>
 <p>Premium lo contrata una persona administradora del hogar y lo disfrutan todas sus personas miembro. El pago se realiza mediante Stripe. La suscripción se renueva automáticamente al final de cada periodo (mensual o anual) hasta que la canceles.</p>
 <p>Puedes cancelar en cualquier momento desde «Plan del hogar» → «Gestionar la suscripción». La cancelación tiene efecto al final del periodo ya pagado y hasta entonces se mantiene Premium; no se devuelven periodos parciales salvo en los casos previstos por la ley. Si un cobro falla, Stripe lo reintentará durante unos días; si no se completa, el hogar vuelve al plan gratuito sin perder sus datos.</p>
 <p>Si cambiamos el precio, te avisaremos con antelación y el nuevo precio se aplicará en la siguiente renovación. Podrás cancelar antes si no estás de acuerdo.</p>

@@ -33,6 +33,7 @@ from recipes import services as recipe_services
 from recipes.models import Recipe, RecipeIngredient, RecipeStep
 
 from .context import build_context
+from .device import PREPARE, DeviceReply, prepared
 from .models import AIRequestLog, Proposal
 from .providers import ProviderError, get_provider
 from .schemas import MealChange
@@ -59,10 +60,13 @@ class AssistantError(Exception):
 # --- Request ------------------------------------------------------------------------------------
 
 
-def _log(household, user, provider_name, operation, status, started, result=None, error_code=""):
+def _log(household, user, provider_name, operation, status, started, result=None, error_code="", reply=None):
+    """`reply` is the DeviceReply when a device's own key answered: it is free and timed by the browser."""
+    latency_ms = reply.latency_ms if reply and reply.latency_ms is not None else int((time.monotonic() - started) * 1000)
     AIRequestLog.objects.create(
         household=household, user=user, provider=provider_name, operation=operation, status=status,
-        error_code=error_code[:64], latency_ms=int((time.monotonic() - started) * 1000),
+        key_source=AIRequestLog.KeySource.DEVICE if reply else AIRequestLog.KeySource.SERVER,
+        error_code=error_code[:64], latency_ms=latency_ms,
         model=(result.model if result else "")[:80],
         input_tokens=result.input_tokens if result else None,
         output_tokens=result.output_tokens if result else None,
@@ -70,33 +74,65 @@ def _log(household, user, provider_name, operation, status, started, result=None
     )
 
 
-def request_proposal(household, user, operation, start, end, text="", focus=None, history=()):
-    """Ask the provider for changes and store them as a pending proposal. Never edits meals."""
+def _server_provider(household, user, operation, started):
+    """The server's provider, if the household's plan includes it."""
     allowed, message = entitlements.check_ai(household)
     if not allowed:
         raise AssistantError(message)  # enforced here too, not only by hiding buttons
-    started = time.monotonic()
     try:
-        provider = get_provider(operation)
+        return get_provider(operation)
     except ProviderError as exc:
         _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
         raise AssistantError(exc.user_message) from exc
 
-    context = build_context(household, start, end, operation, user_request=text, focus=focus, history=history)
-    base_versions = {
+
+def _checked_claims(reply, household, user, operation, start, end, text="", focus=None):
+    try:
+        return reply.claims(household, user, operation, start, end, text=text, focus=focus)
+    except ProviderError as exc:
+        raise AssistantError(exc.user_message) from exc
+
+
+def _base_versions(household, start, end):
+    return {
         planning.slot_key(m.date, m.meal_type): m.version
         for m in Meal.objects.filter(household=household, date__gte=start, date__lte=end)
     }
+
+
+def request_proposal(household, user, operation, start, end, text="", focus=None, history=(), device=None):
+    """Ask the provider for changes and store them as a pending proposal. Never edits meals.
+
+    `device` is None to use the server's provider, PREPARE to return instead what the browser sends
+    to its own provider, or the DeviceReply the browser got back from it.
+    """
+    started = time.monotonic()
+    reply = device if isinstance(device, DeviceReply) else None
+    if reply is None and device != PREPARE:
+        provider = _server_provider(household, user, operation, started)
+
+    context = build_context(household, start, end, operation, user_request=text, focus=focus, history=history)
+    if device == PREPARE:
+        return prepared(
+            household, user, operation, start, end, context.data, text=text, focus=focus,
+            base_versions=_base_versions(household, start, end),
+        )
+    if reply is not None:
+        provider = reply
+        # The versions seen when the request was prepared: changes made meanwhile make it stale.
+        base_versions = _checked_claims(reply, household, user, operation, start, end, text, focus)["v"]
+    else:
+        base_versions = _base_versions(household, start, end)
 
     try:
         result = provider.generate(context.data, user_id=user.pk if user else None)  # outside any transaction
     except ProviderError as exc:
         logger.warning("assistant provider error: provider=%s code=%s", provider.name, exc.code)
-        _log(household, user, provider.name, operation, exc.status, started, error_code=exc.code)
+        _log(household, user, provider.name, operation, exc.status, started, error_code=exc.code, reply=reply)
         raise AssistantError(exc.user_message) from exc
 
     items, new_recipes, notes = validate_output(household, context, result.output, start, end)
-    _log(household, user, provider.name, operation, AIRequestLog.Status.OK, started, result=result)
+    _log(household, user, provider.name, operation, AIRequestLog.Status.OK, started, result=result, reply=reply)
     with transaction.atomic():
         proposal = Proposal.objects.create(
             household=household, created_by=user, operation=operation, provider=provider.name,
@@ -112,38 +148,47 @@ def request_proposal(household, user, operation, start, end, text="", focus=None
     return proposal
 
 
-def request_import(household, user, url):
-    """Read a recipe from a web page and store it as a proposal to review. Never saves the recipe."""
-    allowed, message = entitlements.check_ai(household)
-    if not allowed:
-        raise AssistantError(message)
-    try:
-        source = importer.read_recipe(url)  # network: outside any transaction
-    except importer.RecipeImportError as exc:
-        raise AssistantError(exc.message) from exc
+def request_import(household, user, url, device=None):
+    """Read a recipe from a web page and store it as a proposal to review. Never saves the recipe.
+
+    `device` works as in request_proposal.
+    """
     operation = Proposal.Operation.IMPORT_RECIPE
     started = time.monotonic()
-    try:
-        provider = get_provider(operation)
-    except ProviderError as exc:
-        _log(household, user, "none", operation, exc.status, started, error_code=exc.code)
-        raise AssistantError(exc.user_message) from exc
-    # The page and the ingredient names only: nothing about the people of the household.
-    context = {
-        "operation": str(operation),
-        "source": source,
-        "known_ingredients": list(
-            Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
-        ),
-        "units": [u.value for u in Unit],
-    }
+    today = timezone.localdate()
+    reply = device if isinstance(device, DeviceReply) else None
+    if reply is not None:
+        provider, context = reply, {}
+        # The page was read when the request was prepared: it is not fetched again.
+        source = _checked_claims(reply, household, user, operation, today, today, text=url)["src"]
+    else:
+        if device != PREPARE:
+            provider = _server_provider(household, user, operation, started)
+        try:
+            source = importer.read_recipe(url)  # network: outside any transaction
+        except importer.RecipeImportError as exc:
+            raise AssistantError(exc.message) from exc
+        # The page and the ingredient names only: nothing about the people of the household.
+        context = {
+            "operation": str(operation),
+            "source": source,
+            "known_ingredients": list(
+                Ingredient.objects.for_household(household).order_by("name").values_list("name", flat=True)
+            ),
+            "units": [u.value for u in Unit],
+        }
+        if device == PREPARE:
+            return prepared(
+                household, user, operation, today, today, context, text=url,
+                source={"url": source["url"], "format": source["format"]},
+            )
     try:
         result = provider.generate(context, user_id=user.pk if user else None)
     except ProviderError as exc:
         logger.warning("assistant provider error: provider=%s code=%s", provider.name, exc.code)
-        _log(household, user, provider.name, operation, exc.status, started, error_code=exc.code)
+        _log(household, user, provider.name, operation, exc.status, started, error_code=exc.code, reply=reply)
         raise AssistantError(exc.user_message) from exc
-    _log(household, user, provider.name, operation, AIRequestLog.Status.OK, started, result=result)
+    _log(household, user, provider.name, operation, AIRequestLog.Status.OK, started, result=result, reply=reply)
 
     recipes = [_validate_new_recipe(household, raw) for raw in result.output.new_recipes[:1]]
     if not recipes:
@@ -157,7 +202,6 @@ def request_import(household, user, url):
         check = evaluate(_new_recipe_facts(recipe, reviews), everyone)
         recipe["status"] = {compatibility.OK: ITEM_OK, compatibility.UNKNOWN: ITEM_REVIEW}.get(check.status, ITEM_CONFLICT)
         recipe["issues"] = [i.message for i in check.issues if i.level != "warning"][:10]
-    today = timezone.localdate()
     with transaction.atomic():
         proposal = Proposal.objects.create(
             household=household, created_by=user, operation=operation, provider=provider.name,

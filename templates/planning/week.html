@@ -31,7 +31,7 @@
   </section>
   {% if ai_status.available and ai_allowed %}
   <section>
-    <form method="post" action="{% url 'assistant:plan_range' %}" data-busy="Preparando la propuesta…">
+    <form method="post" action="{% url 'assistant:plan_range' %}" data-busy="Preparando la propuesta…" data-ai="{{ ai_status.mode }}">
       {% csrf_token %}
       <input type="hidden" name="start" value="{{ start|date:'Y-m-d' }}">
       <input type="hidden" name="end" value="{{ end|date:'Y-m-d' }}">

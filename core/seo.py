@@ -55,13 +55,11 @@ def _price(label):
 
 
 def landing_faqs(free, premium):
-    if free.has_ai:
-        ai_answer = (
-            f"Sí, con {free.ai_total_limit} peticiones de prueba para conocerlo. Para seguir usándolo, "
-            f"Premium incluye {premium.ai_monthly_limit} peticiones al mes."
-        )
-    else:
-        ai_answer = "No. El asistente con IA forma parte del plan Premium."
+    ai_answer = (
+        "Sí, con tu propia clave de OpenAI, Anthropic (Claude), Google Gemini, Mistral u OpenRouter. La clave se "
+        "guarda solo en tu dispositivo, que la envía directamente a tu proveedor, y el uso te lo cobra él. "
+        f"Con Premium no hace falta clave: incluye {premium.ai_monthly_limit} peticiones al mes."
+    )
     return [
         {
             "question": "¿Tienen que tener cuenta todas las personas de casa?",

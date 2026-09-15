@@ -15,7 +15,7 @@
         <a class="btn primary" href="{% url 'accounts:signup' %}">Crear cuenta gratis</a>
         <a class="btn" href="{% url 'accounts:login' %}">Entrar</a>
       </div>
-      <p class="muted small">Gratis para planificar a mano. Sin tarjeta para empezar.</p>
+      <p class="muted small">Todas las funciones, gratis. Sin tarjeta para empezar.</p>
       <a class="install-hint hide-in-app" href="{% url 'core:install' %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
         <span><strong>También en el móvil.</strong> Instálala como una app, sin tienda de apps.</span>
@@ -128,9 +128,8 @@
           <li>Comensales ilimitados, con alergias y gustos</li>
           <li>Recetario, sobras y lista de la compra automática</li>
           <li>Despensa, recordatorios en el móvil y el menú en tu calendario</li>
-          {% if free.has_ai %}<li>Asistente con IA para probarlo: {{ free.ai_total_limit }} peticiones</li>{% endif %}
-          <li>Hasta {{ free.max_members }} personas con cuenta en el hogar</li>
-          <li>{% if free.max_owned_households == 1 %}Un hogar{% else %}Hasta {{ free.max_owned_households }} hogares{% endif %}</li>
+          <li>Asistente con IA con tu propia clave (OpenAI, Claude, Gemini, Mistral u OpenRouter), guardada solo en tu dispositivo</li>
+          <li>Hasta {{ free.max_members }} personas con cuenta y todos los hogares que necesites</li>
         </ul>
         <a class="btn block" href="{% url 'accounts:signup' %}">Empezar gratis</a>
       </article>
@@ -140,11 +139,9 @@
         <p class="muted small plan-alt">o {{ prices.yearly }} al año</p>
         <ul class="plan-features">
           <li>Todo lo del plan gratuito</li>
-          <li>Asistente con IA: propone menús y cambios que revisas antes de aplicar</li>
-          <li>Recetas de cualquier web, pasadas a tu recetario con un enlace</li>
+          <li>Asistente con IA incluido, sin configurar claves</li>
+          <li>Propone menús y cambios que revisas antes de aplicar, y pasa a tu recetario recetas de cualquier web</li>
           <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
-          <li>Hasta {{ premium.max_members }} personas con cuenta en el hogar</li>
-          <li>Todos los hogares que necesites</li>
         </ul>
         <a class="btn primary block" href="{% url 'accounts:signup' %}">Probar menuamano</a>
         <p class="muted small">Te suscribes desde tu hogar cuando quieras. Cancelas cuando quieras.</p>

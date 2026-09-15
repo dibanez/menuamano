@@ -14,9 +14,15 @@ class AIRequestLog(models.Model):
         TIMEOUT = "timeout", "Tiempo agotado"
         NOT_CONFIGURED = "not_configured", "Sin configurar"
 
+    class KeySource(models.TextChoices):
+        SERVER = "server", "Clave del servidor"
+        DEVICE = "device", "Clave del dispositivo"
+
     household = models.ForeignKey("households.Household", null=True, on_delete=models.SET_NULL, related_name="+")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     provider = models.CharField(max_length=16)
+    # Only server calls cost money and count against the Premium quota; device calls use a person's own key.
+    key_source = models.CharField(max_length=8, choices=KeySource.choices, default=KeySource.SERVER)
     model = models.CharField(max_length=80, blank=True)
     operation = models.CharField(max_length=32)
     status = models.CharField(max_length=16, choices=Status.choices)

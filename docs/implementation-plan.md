@@ -135,6 +135,9 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
 - [x] Límites en el backend: IA solo en Premium con cupo mensual; personas con cuenta por plan.
 - [x] OpenAI: esfuerzo de razonamiento configurable (`low` por defecto) y más margen de salida
       para modelos que razonan como `gpt-5.6-luna`.
+- [x] Todo gratis salvo la IA del servidor: el plan gratuito usa la clave de IA de cada persona
+      (OpenAI, Anthropic, Gemini, Mistral u OpenRouter), guardada en su navegador, que llama al
+      proveedor directamente; Premium incluye la IA del servidor con cupo mensual.
 
 ### Pendiente o conocido
 
@@ -148,6 +151,9 @@ pasan sin llamadas reales a OpenAI. La interfaz se ha revisado en el navegador a
   SDK 3.13 instalado (firmas, excepciones y tipos) y con dobles de prueba, pero no con una clave
   real. Primer paso para continuar: fijar `AI_PROVIDER=openai`, `OPENAI_API_KEY` y `OPENAI_MODEL`
   en `.env`, pedir una propuesta semanal y revisar `AIRequestLog`.
+- **Claves en el dispositivo sin probar contra los proveedores**: las llamadas del navegador siguen
+  la documentación de cada API, pero falta probarlas con claves reales. Mistral puede no admitir
+  llamadas desde el navegador (CORS); en ese caso la app lo dice al fallar.
 - **Invitaciones**: el correo de destino es informativo; el enlace sirve a quien lo abra primero.
 - **Correo**: sin verificación de la dirección al registrarse y sin bajas automáticas cuando una
   dirección rebota (los rebotes solo se registran). No se ha probado contra Mailgun real.

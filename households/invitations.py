@@ -40,8 +40,8 @@ def accept(token, user):
             return membership, False  # the link stays usable for someone else
         if not entitlements.can_add_member(invitation.household):
             raise InvitationError(
-                "Este hogar ya tiene el máximo de personas con cuenta de su plan. "
-                "Pide a quien te invitó que amplíe el plan o libere un hueco.",
+                "Este hogar ya tiene el máximo de personas con cuenta. "
+                "Pide a quien te invitó que libere un hueco.",
                 status=409,
             )
         membership = Membership.objects.create(user=user, household=invitation.household, role=invitation.role)

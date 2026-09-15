@@ -21,17 +21,10 @@
     <h1>Crea tu hogar</h1>
     <p class="muted">Un hogar es el espacio que compartís para planificar comidas y compras. Después podrás invitar a más personas.</p>
   {% endif %}
-  {% if can_create %}
   <form method="post" class="panel">
     {% csrf_token %}
     {% include "partials/form_fields.html" %}
     <button class="btn primary block" type="submit">Crear hogar</button>
   </form>
-  {% else %}
-  <div class="notice">
-    <strong>Crear otro hogar</strong>
-    {{ limit_message }} <a href="{% url 'billing:plan' %}">Ver el plan del hogar</a>
-  </div>
-  {% endif %}
 </div>
 {% endblock %}

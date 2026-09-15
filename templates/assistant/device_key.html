@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}IA en este dispositivo · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>IA en este dispositivo</h1>
+  <p class="lead">Con el plan gratuito, el asistente usa tu propia clave de IA. Se guarda solo en este navegador, que la envía directamente a tu proveedor: menuamano nunca la recibe ni la guarda.</p>
+</div>
+
+{% if not ai_status.is_device %}
+  <div class="notice ok"><strong>Este hogar tiene Premium</strong>El asistente usa la IA incluida en el plan, así que no necesitas clave.</div>
+{% endif %}
+
+<section class="panel">
+  <h2 class="mt-0">Tu clave</h2>
+  <p class="notice ok" data-ai-key-saved hidden></p>
+  <form data-ai-key-form>
+    <div class="field">
+      <label for="ai-provider">Proveedor</label>
+      <select id="ai-provider">{% for code, provider in providers.items %}<option value="{{ code }}">{{ provider.label }}</option>{% endfor %}</select>
+    </div>
+    <div class="field">
+      <label for="ai-model">Modelo</label>
+      <input id="ai-model" type="text" list="ai-models" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <datalist id="ai-models"></datalist>
+      <div class="help">Elige uno de la lista o escribe cualquier modelo de tu cuenta que admita respuestas con formato JSON.</div>
+    </div>
+    <div class="field">
+      <label for="ai-key">Clave de la API</label>
+      <input id="ai-key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="help">Créala en <a data-ai-keys-link target="_blank" rel="noopener noreferrer"></a>. Mejor una clave solo para menuamano y, si tu proveedor lo permite, con un límite de gasto.</div>
+    </div>
+    <p data-ai-key-status role="status" hidden></p>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Guardar en este dispositivo</button>
+      <button class="btn" type="button" data-ai-key-test>Probar la clave</button>
+      <button class="btn danger" type="button" data-ai-key-forget hidden>Borrar de este dispositivo</button>
+    </div>
+  </form>
+</section>
+
+<section class="panel flat">
+  <h2>Cómo funciona</h2>
+  <ul>
+    <li>Cuando pides algo al asistente, menuamano prepara los datos del hogar con códigos en lugar de nombres (C1, C2…) y tu navegador se los envía a tu proveedor con tu clave.</li>
+    <li>La respuesta vuelve a menuamano, que la comprueba con las alergias y las reglas del hogar. No cambia nada hasta que revisas la propuesta y la aplicas.</li>
+    <li>Tu proveedor te cobra el uso según su tarifa. menuamano no cobra nada por usar tu clave.</li>
+    <li>La clave se guarda para tu cuenta en este navegador: en cada dispositivo tienes que guardarla de nuevo. Si compartes el dispositivo, bórrala al terminar.</li>
+  </ul>
+  <p class="muted small">Con <a href="{% url 'billing:plan' %}">Premium</a> no necesitas clave: el asistente viene incluido para todo el hogar.</p>
+</section>
+{{ providers|json_script:"ai-providers" }}
+{% endblock %}
