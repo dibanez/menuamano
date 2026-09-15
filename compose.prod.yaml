@@ -61,7 +61,7 @@ services:
       LEGAL_REGISTRY: ${LEGAL_REGISTRY:-}
       LEGAL_HOSTING_PROVIDER: ${LEGAL_HOSTING_PROVIDER:-}
       # Google Tag Manager: public pages only by default, with Consent Mode v2 and a consent banner.
-      GTM_CONTAINER_ID: ${GTM_CONTAINER_ID:-GTM-WWR8DTN8}
+      GTM_CONTAINER_ID: ${GTM_CONTAINER_ID:-}
       GTM_SCOPE: ${GTM_SCOPE:-public}
       COOKIE_CONSENT_BANNER: ${COOKIE_CONSENT_BANNER:-true}
       # Billing with Stripe. With BILLING_ENABLED=true (default) Django refuses to start without

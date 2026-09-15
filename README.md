@@ -1,15 +1,41 @@
 # menuamano
 
+**Pruébala en [www.menuamano.com](https://www.menuamano.com/)**: crea una cuenta gratis y planifica
+la semana de tu casa.
+
 Aplicación web para organizar la alimentación de un hogar: qué coméis, quién come en casa,
 qué recetas encajan con las restricciones de cada persona, qué cantidades hacen falta, qué
-hay que comprar y cómo se prepara cada plato. La interfaz está en español y pensada para el
-móvil.
+hay que comprar y cómo se prepara cada plato. La interfaz está en español, pensada para el
+móvil, y se instala como una app desde el navegador.
 
-- Django 5.2 LTS, PostgreSQL 17, plantillas de Django y HTMX. Sin paso de build de frontend.
-- Asistente con IA de dos maneras: en Premium, con la clave de OpenAI del servidor (Responses API
-  con salidas estructuradas); en el plan gratuito, con la clave de cada persona (OpenAI, Anthropic,
-  Google Gemini, Mistral u OpenRouter), que se guarda solo en su navegador y nunca llega al
-  servidor. Hay un **modo demostración** determinista que no necesita clave.
+> *In English: menuamano is a household meal planner (Spanish interface) that checks every meal
+> against each person's allergies and diets, builds the shopping list and suggests menus with AI.
+> Try it at [www.menuamano.com](https://www.menuamano.com/). The code is free software under the
+> AGPL-3.0.*
+
+## Qué hace
+
+- **Calendario** de desayunos, comidas, meriendas y cenas, con quién come en cada una, reglas
+  recurrentes («cena fuera los viernes») y excepciones.
+- **Comensales** con alergias, intolerancias, dietas, gustos y tamaño de ración. Cada receta se
+  comprueba con quien la come; si falta información de un ingrediente, queda «pendiente de
+  revisión» en vez de darse por segura.
+- **Recetario** con versiones y favoritas, sobras y platos distintos por persona en la misma comida.
+- **Lista de la compra** con las cantidades justas, ordenada por secciones, que se ve sin conexión
+  y se comparte por WhatsApp.
+- **Despensa** con fechas de caducidad, **recordatorios** en el móvil y el **menú en tu
+  calendario** (Google, iPhone, Outlook).
+- **Asistente con IA** que propone menús, cambios y recetas, e importa recetas de cualquier web.
+  Nada se aplica sin revisarlo. Usa la clave de IA de cada persona (OpenAI, Anthropic, Google
+  Gemini, Mistral u OpenRouter), que se guarda solo en su navegador, o la del servidor en Premium.
+
+## Tecnología
+
+- Django 5.2 LTS, PostgreSQL 17, plantillas de Django y HTMX. Sin paso de build de frontend: un
+  CSS y un JavaScript escritos a mano.
+- IA con salidas estructuradas que el servidor vuelve a validar con los datos y las reglas del
+  hogar. Hay un **modo demostración** determinista que no necesita clave.
+- Docker Compose para desarrollo y producción, con gunicorn y WhiteNoise.
 
 ## Arranque rápido con Docker
 
@@ -44,9 +70,9 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirement
 .venv/bin/python -m pytest
 ```
 
-Las pruebas nunca llaman a la API de pago: usan el proveedor de demostración, proveedores
-falsos y un cliente de OpenAI simulado. La llamada del navegador a su proveedor no se prueba
-aquí: los tests envían su respuesta igual que `static/js/app.js`.
+Las pruebas nunca llaman a APIs de pago: usan el proveedor de demostración, proveedores
+falsos y clientes simulados de OpenAI y Stripe. La llamada del navegador a su proveedor de IA no
+se prueba aquí: los tests envían su respuesta igual que `static/js/app.js`.
 
 ## Configuración
 
@@ -87,10 +113,18 @@ petición va en dos pasos:
 Estas llamadas quedan en `AIRequestLog` con `key_source=device` y no cuentan para el cupo de
 Premium. Los proveedores y sus modelos sugeridos están en `assistant/device.py`.
 
+## Tu propia instalación
+
+Para usar menuamano solo en tu casa no hace falta Stripe: con `BILLING_ENABLED=false` todos los
+hogares tienen las funciones de Premium, y con `AI_PROVIDER=openai` y tu clave de OpenAI el
+asistente usa la del servidor. Si abres tu instalación al público, revisa los textos legales y
+rellena tus datos (ver «Textos legales»), y usa otro nombre y otro logotipo (ver «Licencia»).
+
 ## Despliegue en Dokploy
 
-`compose.prod.yaml` está preparado para Dokploy (gunicorn, `DEBUG=False`, cookies seguras, HSTS,
-estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
+`compose.prod.yaml` está preparado para Dokploy, aunque sirve para cualquier servidor con Docker
+Compose (gunicorn, `DEBUG=False`, cookies seguras, HSTS, estáticos con WhiteNoise y PostgreSQL con
+volumen con nombre).
 
 1. Crea un servicio **Docker Compose** desde el repositorio, con la ruta `./compose.prod.yaml`.
 2. En **Environment** define las variables. Dokploy las escribe en un `.env` y el compose las lee
@@ -114,7 +148,7 @@ estáticos con WhiteNoise y PostgreSQL con volumen con nombre).
    | `SITE_URL` | Recomendada | `https://tu-dominio`: URL canónica, `sitemap.xml` y enlaces en correos enviados desde webhooks |
    | `AI_PROVIDER` | No | `demo` (por defecto) u `openai` |
    | `OPENAI_REASONING_EFFORT` | No | `low` por defecto; vacío si el modelo no razona |
-   | `GTM_CONTAINER_ID` | No | `GTM-WWR8DTN8` por defecto; vacío para no cargar Tag Manager |
+   | `GTM_CONTAINER_ID` | No | Tu contenedor de Google Tag Manager (`GTM-…`); vacío por defecto, sin analítica |
    | `GTM_SCOPE`, `COOKIE_CONSENT_BANNER` | No | `public` y `true`: ver «Analítica» |
    | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
    | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
@@ -220,7 +254,7 @@ y derecho de desistimiento).
 
 ### Analítica (Google Tag Manager)
 
-Con `GTM_CONTAINER_ID` se carga el contenedor de Tag Manager.
+Con `GTM_CONTAINER_ID` se carga tu contenedor de Tag Manager; sin él no se carga nada.
 
 - **Consentimiento**: el Consent Mode v2 empieza con analítica y publicidad **denegadas** y un
   banner propio pide permiso. La elección se guarda en el navegador y se puede cambiar desde el
@@ -241,15 +275,17 @@ correos se quedarían en los logs.
 
 ```
 config/       settings por entorno, urls
-core/         inicio, vocabulario común, filtros de plantilla, comando load_demo
+core/         inicio, landing, SEO, textos legales, vocabulario común y comando load_demo
 accounts/     usuario (acceso por correo)
-households/   hogares, miembros, roles y el middleware del hogar activo
+households/   hogares, miembros, roles, invitaciones y el middleware del hogar activo
 foods/        catálogo de ingredientes, rasgos (alérgenos), unidades y motor de compatibilidad
 diners/       comensales, restricciones, preferencias, asistencia habitual, peso y sus permisos
-recipes/      recetas, versiones, favoritas
+recipes/      recetas, versiones, favoritas e importación desde otras webs
 planning/     calendario, comidas, snapshots de recetas, reglas, excepciones y regeneración
-shopping/     listas de compra calculadas
-assistant/    proveedores de IA, contexto seudonimizado, propuestas y chat
+shopping/     listas de compra calculadas y despensa
+assistant/    proveedores de IA, clave en el dispositivo, contexto seudonimizado, propuestas y chat
+billing/      planes, límites y suscripciones con Stripe
+reminders/    recordatorios con notificaciones push
 templates/, static/   interfaz
 tests/        pruebas (pytest)
 docs/         plan de implementación y arquitectura
@@ -263,3 +299,21 @@ Más detalle en [`docs/architecture.md`](docs/architecture.md) y el estado del t
 Inventario automático, congelador, lotes de sobras, precios, nutrición e integraciones con
 supermercados. La despensa recoge lo que anotáis: lo comprado se guarda desde la lista con su
 caducidad y el asistente lo usa antes de que caduque, pero nada se gasta solo («Gastado»).
+
+## Contribuir
+
+Las contribuciones son bienvenidas: errores, mejoras de la interfaz, recetas de ejemplo o nuevas
+funciones. Lee [`CONTRIBUTING.md`](CONTRIBUTING.md) antes de abrir un pull request y, para cambios
+grandes, abre antes un issue para comentarlo.
+
+Si encuentras una vulnerabilidad, no abras un issue público: sigue
+[`SECURITY.md`](SECURITY.md).
+
+## Licencia
+
+menuamano es software libre con la licencia [GNU Affero General Public License v3.0](LICENSE)
+(AGPL-3.0). Puedes usarlo, estudiarlo, modificarlo y compartirlo; si ofreces una versión
+modificada como servicio web, tienes que publicar su código con la misma licencia.
+
+La marca menuamano y su logotipo no forman parte de la licencia: si publicas tu propia versión,
+usa otro nombre y otro logotipo.
