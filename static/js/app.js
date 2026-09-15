@@ -1032,3 +1032,17 @@ function setUpWizard() {
 }
 
 document.addEventListener("DOMContentLoaded", setUpWizard);
+
+// The chat form empties itself once its message is sent (no inline handlers: see the CSP).
+document.addEventListener("htmx:afterRequest", (event) => {
+  const form = event.detail.elt;
+  if (form instanceof HTMLFormElement && form.matches(".chat-form") && event.detail.successful) form.reset();
+});
+
+// Signing out forgets every AI key kept on this device (see «IA en este dispositivo»).
+document.addEventListener("submit", (event) => {
+  if (!(event.target instanceof HTMLFormElement) || !event.target.hasAttribute("data-logout")) return;
+  try {
+    Object.keys(localStorage).filter((name) => name.startsWith(AI_KEY_PREFIX)).forEach((name) => localStorage.removeItem(name));
+  } catch {}
+});

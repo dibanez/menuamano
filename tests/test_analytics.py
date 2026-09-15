@@ -19,12 +19,17 @@ def test_not_loaded_without_container(client, db):
     assert "googletagmanager" not in html and "consent-banner" not in html
 
 
-def test_public_pages_load_gtm_with_consent_denied_first(client, db, gtm):
-    for url in ["/", reverse("accounts:login"), reverse("accounts:signup"), reverse("accounts:password_reset")]:
+def test_marketing_pages_load_gtm_with_consent_denied_first(client, db, gtm):
+    for url in ["/", reverse("core:install"), reverse("core:legal_page", args=["privacidad"])]:
         html = client.get(url).content.decode()
         assert f'"{GTM}"' in html, url
         assert html.index('gtag("consent", "default"') < html.index("googletagmanager.com/gtm.js"), url
         assert 'id="consent-banner"' in html
+
+
+def test_pages_with_passwords_or_tokens_never_load_gtm(client, db, gtm):
+    for url in [reverse("accounts:login"), reverse("accounts:signup"), reverse("accounts:password_reset")]:
+        assert "googletagmanager" not in client.get(url).content.decode(), url
 
 
 def test_signed_in_pages_do_not_load_gtm_by_default(client, household, admin_user, gtm):

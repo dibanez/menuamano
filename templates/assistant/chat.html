@@ -42,7 +42,7 @@
 {% if can_edit and ai_status.available and ai_allowed %}
 <form class="chat-form" method="post" action="{% url 'assistant:chat_send' %}" data-ai="{{ ai_status.mode }}"
       hx-post="{% url 'assistant:chat_send' %}" hx-target="#chat-log" hx-swap="beforeend"
-      hx-disabled-elt="find button, find textarea" hx-on::after-request="if(event.detail.successful) this.reset()">
+      hx-disabled-elt="find button, find textarea">
   {% csrf_token %}
   <label class="sr-only" for="message">Mensaje</label>
   <div class="row" style="align-items:flex-end">

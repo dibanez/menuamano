@@ -76,12 +76,6 @@
     </ul>
   {% endif %}
 
-  <h3>Añadir a alguien con cuenta</h3>
-  <form method="post" action="{% url 'households:add_member' %}">
-    {% csrf_token %}
-    {% with form=member_form %}{% include "partials/form_fields.html" %}{% endwith %}
-    <button class="btn" type="submit">Añadir al hogar</button>
-  </form>
 </section>
 
 <section class="panel flat">

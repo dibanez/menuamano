@@ -16,7 +16,7 @@ from reminders.models import PushSubscription, ReminderPreference
 
 from .factories import PASSWORD, add_member, make_diner, make_recipe, make_user
 
-ENDPOINT = "https://push.example.com/send/abc"
+ENDPOINT = "https://fcm.googleapis.com/fcm/send/abc"
 
 
 @pytest.fixture

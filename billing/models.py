@@ -18,6 +18,8 @@ class Subscription(models.Model):
     current_period_end = models.DateTimeField("renovación", null=True, blank=True)
     cancel_at_period_end = models.BooleanField("se cancela al final del periodo", default=False)
     started_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    # `created` time of the last Stripe event applied: Stripe may deliver events out of order.
+    stripe_event_at = models.BigIntegerField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

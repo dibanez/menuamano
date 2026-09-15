@@ -20,6 +20,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from billing import entitlements
+from core import throttle
 from core.choices import MealType
 from diners.models import Diner
 from foods import compatibility
@@ -44,6 +45,7 @@ MAX_CHANGES = 62
 MAX_NEW_RECIPES = 5
 MAX_INGREDIENTS = 40
 MAX_STEPS = 30
+IMPORTS_PER_HOUR = 20  # every import makes the server fetch a web page
 
 ITEM_OK = "ok"
 ITEM_REVIEW = "review"
@@ -157,6 +159,8 @@ def request_import(household, user, url, device=None):
     started = time.monotonic()
     today = timezone.localdate()
     reply = device if isinstance(device, DeviceReply) else None
+    if reply is None and user is not None and not throttle.allow(f"import:user:{user.pk}", IMPORTS_PER_HOUR, timedelta(hours=1)):
+        raise AssistantError("Has importado muchas recetas en poco rato. Espera un poco y vuelve a probar.")
     if reply is not None:
         provider, context = reply, {}
         # The page was read when the request was prepared: it is not fetched again.

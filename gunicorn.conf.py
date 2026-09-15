@@ -6,4 +6,5 @@ client sent. Requests that do not pass through Traefik (the container health che
 The rest of the line keeps gunicorn's default format, which the log dashboards parse.
 """
 
+logger_class = "core.gunicorn_logging.RedactingLogger"  # hides the tokens of calendar and invitation links
 access_log_format = '%({x-real-ip}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'

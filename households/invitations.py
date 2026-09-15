@@ -35,6 +35,13 @@ def accept(token, user):
             Invitation.objects.select_for_update().select_related("household").filter(token_hash=hash_token(token)).first()
         )
         check_usable(invitation)
+        # An invitation sent to an address is for that person only; links without one are shareable.
+        if invitation.email and invitation.email.lower() != user.email.lower():
+            raise InvitationError(
+                "Esta invitación es para otra dirección de correo. Entra con la cuenta de ese correo "
+                "o pide un enlace nuevo.",
+                status=403,
+            )
         membership = Membership.objects.filter(user=user, household=invitation.household).first()
         if membership is not None:
             return membership, False  # the link stays usable for someone else

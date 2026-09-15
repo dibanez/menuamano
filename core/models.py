@@ -22,3 +22,13 @@ class EmailEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} → {self.recipient}"
+
+
+class ThrottleEvent(models.Model):
+    """One attempt at a rate-limited action: signing in, sending an email, importing a recipe…"""
+
+    key = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["key", "created_at"])]

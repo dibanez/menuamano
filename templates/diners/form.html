@@ -8,6 +8,7 @@
 <form method="post" class="panel">
   {% csrf_token %}
   {% include "partials/form_fields.html" %}
+  {% if "linked_user" not in form.fields %}{% include "diners/_linked_account.html" %}{% endif %}
   <div class="form-actions">
     <button class="btn primary" type="submit">Guardar</button>
     <a class="btn ghost" href="{% if diner %}{% url 'diners:detail' diner.pk %}{% else %}{% url 'diners:list' %}{% endif %}">Cancelar</a>

@@ -1,8 +1,8 @@
 __pycache__/
 *.py[cod]
 .venv/
-.env
-.env.production
+.env*
+!.env.example
 staticfiles/
 .pytest_cache/
 .coverage

@@ -14,9 +14,11 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = env_int("DJANGO_HSTS_SECONDS", 3600)
+# A year. Not for subdomains: other services may live on them.
+SECURE_HSTS_SECONDS = env_int("DJANGO_HSTS_SECONDS", 31536000)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
+EMAIL_IN_BACKGROUND = env_bool("EMAIL_IN_BACKGROUND", True)
 
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},

@@ -1,0 +1,5 @@
+<div class="field">
+  <span class="label">Cuenta en menuamano</span>
+  <p class="mt-0">{% if diner.linked_user %}{{ diner.linked_user }}{% else %}Sin cuenta{% endif %}</p>
+  <div class="help">{% if diner.linked_user %}La cuenta vinculada decide quién ve su historial de peso: solo esa persona puede quitar el vínculo.{% else %}Solo la administración del hogar puede vincular una cuenta a este comensal.{% endif %}</div>
+</div>

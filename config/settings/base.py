@@ -7,7 +7,7 @@ from config.env import env_bool, env_float, env_int, env_list, env_str
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = env_str("DJANGO_SECRET_KEY", "insecure-development-key")
+SECRET_KEY = env_str("DJANGO_SECRET_KEY", "")  # required in production; local.py has a development default
 DEBUG = False
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1"])
 
@@ -37,8 +37,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "core.middleware.HealthCheckMiddleware",  # first: health probes skip host checks and redirects
     "core.middleware.RetiredWebhookMiddleware",  # 406 to the removed Mailgun webhook, without logging
-    "core.middleware.CanonicalHostMiddleware",  # bare domain → SITE_URL's host (GET and HEAD only)
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",  # Content-Security-Policy and Permissions-Policy
+    "core.middleware.CanonicalHostMiddleware",  # bare domain → SITE_URL's host (GET and HEAD only), with HSTS
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -69,6 +70,7 @@ TEMPLATES = [
                 "assistant.context_processors.ai_mode",
                 "billing.context_processors.billing",
                 "core.context_processors.analytics",
+                "core.context_processors.security",
                 "core.seo.seo_context",
             ],
         },
@@ -214,6 +216,16 @@ OPENAI_MAX_RETRIES = env_int("OPENAI_MAX_RETRIES", 2)
 OPENAI_MAX_OUTPUT_TOKENS = env_int("OPENAI_MAX_OUTPUT_TOKENS", 16000)
 # none, low, medium, high… Empty = do not send the parameter (for models without reasoning).
 OPENAI_REASONING_EFFORT = env_str("OPENAI_REASONING_EFFORT", "low")
+
+# Error reports emailed to DJANGO_ADMINS never include form data or cookies.
+DEFAULT_EXCEPTION_REPORTER_FILTER = "core.reporting.PrivateExceptionReporterFilter"
+# The CSRF token reaches JavaScript through the page (hx-headers), never through the cookie.
+CSRF_COOKIE_HTTPONLY = True
+# Path of the Django admin: a less obvious one keeps password-guessing bots away.
+ADMIN_URL = env_str("DJANGO_ADMIN_URL", "admin/")
+# Send account emails from a background thread, so the answer does not take longer when the
+# address has an account.
+EMAIL_IN_BACKGROUND = False
 
 LOGGING = {
     "version": 1,

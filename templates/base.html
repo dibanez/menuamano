@@ -21,6 +21,7 @@
   {% block seo %}{% endblock %}
   {% include "partials/gtm_head.html" %}
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <meta name="htmx-config" content='{"allowEval": false, "allowScriptTags": false}'>
   <script src="{% static 'js/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
 </head>
@@ -57,7 +58,7 @@
           {% if household %}<a href="{% url 'reminders:settings' %}">Recordatorios</a>{% endif %}
           <a href="{% url 'core:legal' %}">Información legal y privacidad</a>
           <hr>
-          <form method="post" action="{% url 'accounts:logout' %}">
+          <form method="post" action="{% url 'accounts:logout' %}" data-logout>
             {% csrf_token %}
             <button type="submit">Cerrar sesión ({{ user.short_name }})</button>
           </form>

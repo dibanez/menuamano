@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth import login, views as auth_views
 from django.contrib.auth.decorators import login_required
@@ -5,7 +7,9 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.debug import sensitive_post_parameters
 
+from core import throttle
 from core.emails import send_email
 from core.legal import needs_consent, record_consent
 
@@ -16,6 +20,9 @@ class MenuLoginView(LoginView):
     template_name = "accounts/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True
+
+
+login_view = throttle.limit_failed_logins(MenuLoginView.as_view())
 
 
 class MenuLogoutView(LogoutView):
@@ -29,10 +36,13 @@ def _safe_next(request):
     return ""
 
 
+@sensitive_post_parameters("password1", "password2")
 def signup(request):
     next_url = _safe_next(request)
     if request.user.is_authenticated:
         return redirect(next_url or "core:home")
+    if request.method == "POST" and not throttle.allow(f"signup:ip:{throttle.client_ip(request)}", 10, timedelta(hours=1)):
+        return throttle.too_many(request)
     form = SignupForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         user = form.save()
@@ -73,6 +83,15 @@ class MenuPasswordResetView(auth_views.PasswordResetView):
     template_name = "accounts/password_reset.html"
     form_class = MenuPasswordResetForm
     success_url = reverse_lazy("accounts:password_reset_done")
+
+    def post(self, request, *args, **kwargs):
+        # Both limits apply whether or not the address has an account, so they reveal nothing.
+        email = (request.POST.get("email") or "").strip().lower()[:150]
+        if not throttle.allow(f"reset:ip:{throttle.client_ip(request)}", 10, timedelta(hours=1)):
+            return throttle.too_many(request)
+        if email and not throttle.allow(f"reset:account:{email}", 3, timedelta(hours=1)):
+            return throttle.too_many(request)
+        return super().post(request, *args, **kwargs)
 
 
 class MenuPasswordResetDoneView(auth_views.PasswordResetDoneView):

@@ -118,7 +118,7 @@ def test_reader_can_read_but_not_edit(client, household, monday):
     assert client.get(reverse("planning:week")).status_code == 200
     assert client.post(reverse("planning:meal_update", args=[meal.pk]), {"mode": "free"}).status_code == 403
     assert client.get(reverse("recipes:create")).status_code == 403
-    assert client.post(reverse("households:add_member"), {"m-email": "x@example.com"}).status_code == 403
+    assert client.post(reverse("households:invitation_create"), {"role": "reader"}).status_code == 403
 
 
 # --- Weight -----------------------------------------------------------------------------------------

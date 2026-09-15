@@ -75,7 +75,8 @@ def test_invitation_is_sent_by_email(client, household, admin_user):
     assert invitation.email == "marta@example.com"
     message = mail.outbox[0]
     assert message.to == ["marta@example.com"]
-    assert household.name in message.subject
+    assert message.subject == "Te han invitado a un hogar en menuamano"  # no text chosen by others in the subject
+    assert household.name in message.body
     link = client.get(reverse("households:settings")).context["new_link"]
     assert link in message.body and link in message.alternatives[0][0]
 

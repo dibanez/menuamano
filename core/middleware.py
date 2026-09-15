@@ -1,3 +1,4 @@
+import secrets
 from urllib.parse import quote, urlsplit
 
 from django.conf import settings
@@ -76,7 +77,7 @@ class LegalConsentMiddleware:
     """Signed-in people must accept the current terms and the health-data consent to use the app."""
 
     EXEMPT_PREFIXES = (
-        "/legal/", "/cuenta/condiciones/", "/cuenta/salir/", "/static/", "/admin/",
+        "/legal/", "/cuenta/condiciones/", "/cuenta/salir/", "/static/",
         "/plan/stripe/", HEALTH_PATH,
         # Fetched by browsers and crawlers, not pages: a redirect would break them.
         "/sw.js", "/manifest.webmanifest", "/offline/", "/robots.txt", "/sitemap.xml", "/favicon.ico",
@@ -84,9 +85,61 @@ class LegalConsentMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
+        self.exempt = (*self.EXEMPT_PREFIXES, f"/{settings.ADMIN_URL}")
 
     def __call__(self, request):
         user = getattr(request, "user", None)
-        if needs_consent(user) and not request.path.startswith(self.EXEMPT_PREFIXES):
+        if needs_consent(user) and not request.path.startswith(self.exempt):
             return redirect(f"{reverse('accounts:legal_consent')}?next={quote(request.get_full_path())}")
         return self.get_response(request)
+
+
+# Origins the browser may call with a person's own AI key (see assistant/device.py).
+AI_PROVIDER_ORIGINS = (
+    "https://api.openai.com", "https://api.anthropic.com", "https://generativelanguage.googleapis.com",
+    "https://api.mistral.ai", "https://openrouter.ai",
+)
+GOOGLE_TAG_ORIGINS = (
+    "https://www.googletagmanager.com", "https://*.googletagmanager.com", "https://*.google-analytics.com",
+    "https://*.analytics.google.com",
+)
+# Checkout and the customer portal are reached by redirecting a form's answer.
+STRIPE_ORIGINS = ("https://checkout.stripe.com", "https://billing.stripe.com")
+PERMISSIONS_POLICY = "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+
+
+class SecurityHeadersMiddleware:
+    """Content-Security-Policy and Permissions-Policy for every response.
+
+    Scripts come only from this site, plus Tag Manager's inline snippet, which carries the
+    request's nonce. Signed-in pages may call the AI providers people bring their own key for;
+    Tag Manager's pages (signed-out visitors only) may call Google's tag hosts instead.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.csp_nonce = secrets.token_urlsafe(16)
+        response = self.get_response(request)
+        tags = GOOGLE_TAG_ORIGINS if getattr(request, "loads_tag_manager", False) else ()
+        user = getattr(request, "user", None)
+        providers = AI_PROVIDER_ORIGINS if user is not None and user.is_authenticated else ()
+        policy = {
+            "default-src": ["'self'"],
+            "script-src": ["'self'", f"'nonce-{request.csp_nonce}'", *tags],
+            "style-src": ["'self'", "'unsafe-inline'"],  # style attributes in the templates
+            "img-src": ["'self'", "data:", *tags],
+            "connect-src": ["'self'", *providers, *tags],
+            "font-src": ["'self'"],
+            "manifest-src": ["'self'"],
+            "worker-src": ["'self'"],
+            "frame-src": ["'none'"],
+            "object-src": ["'none'"],
+            "base-uri": ["'none'"],
+            "form-action": ["'self'", *STRIPE_ORIGINS],
+            "frame-ancestors": ["'none'"],
+        }
+        response.headers.setdefault("Content-Security-Policy", "; ".join(f"{k} {' '.join(v)}" for k, v in policy.items()))
+        response.headers.setdefault("Permissions-Policy", PERMISSIONS_POLICY)
+        return response

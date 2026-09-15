@@ -126,8 +126,12 @@ def _retrieve_subscription(subscription_id):
     return _client().v1.subscriptions.retrieve(subscription_id)
 
 
-def apply_subscription(data, household=None):
-    """Copy a Stripe subscription into the household's `Subscription` row."""
+def apply_subscription(data, household=None, event_created=None):
+    """Copy a Stripe subscription into the household's `Subscription` row.
+
+    `event_created` is the time of the webhook event that carried it: an event older than the
+    last one applied is ignored, so a late retry cannot bring back a cancelled plan.
+    """
     subscription_id = _get(data, "id", "")
     customer_id = _object_id(_get(data, "customer"))
     row = Subscription.objects.filter(stripe_subscription_id=subscription_id).first() if subscription_id else None
@@ -142,6 +146,11 @@ def apply_subscription(data, household=None):
     if row is None:
         logger.warning("Stripe subscription %s does not match any household", subscription_id)
         return None
+    if event_created is not None and row.stripe_event_at and event_created < row.stripe_event_at:
+        logger.info("Stripe event for subscription %s is older than the last one applied: ignored", subscription_id)
+        return row
+    if event_created is not None:
+        row.stripe_event_at = event_created
 
     items = _get(_get(data, "items", {}), "data", []) or []
     item = items[0] if len(items) else None
@@ -205,9 +214,9 @@ def _dispatch(event):
         if isinstance(subscription, str):
             subscription = _retrieve_subscription(subscription)
         if subscription:
-            apply_subscription(subscription, household)
+            apply_subscription(subscription, household, event_created=event.created)
     elif event.type in SUBSCRIPTION_EVENTS:
-        apply_subscription(obj)
+        apply_subscription(obj, event_created=event.created)
     elif event.type == "invoice.payment_failed":
         _notify_payment_failed(obj)
 

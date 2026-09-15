@@ -1,8 +1,13 @@
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+from core.throttle import limit_failed_logins
+
+admin.site.login = limit_failed_logins(admin.site.login)
+
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path("cuenta/", include("accounts.urls")),
     path("hogar/", include("households.urls")),
     path("comensales/", include("diners.urls")),

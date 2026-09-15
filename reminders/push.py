@@ -6,7 +6,9 @@ service (Google, Apple, Mozilla) only relays them. Devices that are gone are for
 
 import json
 import logging
+from urllib.parse import urlsplit
 
+import requests
 from django.conf import settings
 from django.utils import timezone
 
@@ -16,6 +18,31 @@ TTL_SECONDS = 6 * 60 * 60  # a reminder that arrives much later is no longer use
 TIMEOUT_SECONDS = 10
 MAX_FAILURES = 5
 GONE = {404, 410}
+MAX_DEVICES = 10
+# The browsers' push services. The server posts only to them: an endpoint is chosen by the browser,
+# so anything else would let a person point the server at other machines.
+PUSH_HOSTS = {"fcm.googleapis.com", "android.googleapis.com", "updates.push.services.mozilla.com"}
+PUSH_HOST_SUFFIXES = (".push.apple.com", ".notify.windows.com")
+
+
+def is_push_service(endpoint):
+    try:
+        parts = urlsplit(endpoint)
+        port = parts.port
+    except (TypeError, ValueError):
+        return False
+    host = (parts.hostname or "").lower()
+    return (
+        parts.scheme == "https" and port in (None, 443) and not parts.username
+        and (host in PUSH_HOSTS or host.endswith(PUSH_HOST_SUFFIXES))
+    )
+
+
+def _session():
+    """HTTP session that never follows a redirect: push services answer directly."""
+    session = requests.Session()
+    session.max_redirects = 0
+    return session
 
 
 def configured():
@@ -35,11 +62,13 @@ def _post(subscription, data):
     """Deliver one message. Returns the push service's HTTP status (0 when unreachable)."""
     from pywebpush import WebPushException, webpush
 
+    if not is_push_service(subscription.endpoint):
+        return 410  # saved before the check existed: forget it
     try:
         response = webpush(
             subscription_info={"endpoint": subscription.endpoint, "keys": {"p256dh": subscription.p256dh, "auth": subscription.auth}},
             data=data, vapid_private_key=settings.VAPID_PRIVATE_KEY, vapid_claims={"sub": subject()},
-            ttl=TTL_SECONDS, timeout=TIMEOUT_SECONDS,
+            ttl=TTL_SECONDS, timeout=TIMEOUT_SECONDS, requests_session=_session(),
         )
     except WebPushException as exc:
         return getattr(exc.response, "status_code", 0) or 0

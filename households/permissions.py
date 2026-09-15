@@ -35,6 +35,10 @@ def resolve_membership(request):
 
 def activate_household(request, household_id):
     """Switch the active household if (and only if) the user belongs to it."""
+    try:
+        household_id = int(household_id)
+    except (TypeError, ValueError):
+        raise PermissionDenied("Not a member of this household") from None
     membership = Membership.objects.filter(user=request.user, household_id=household_id).first()
     if membership is None:
         raise PermissionDenied("Not a member of this household")

@@ -1,4 +1,7 @@
+import threading
+
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, UserCreationForm
 from django.urls import reverse
 from django.utils import timezone
@@ -85,5 +88,10 @@ class MenuPasswordResetForm(PasswordResetForm):
 
     def send_mail(self, subject_template_name, email_template_name, context, from_email, to_email,
                   html_email_template_name=None):
-        # Same page whether or not the address exists; send failures are only logged.
-        send_email("password_reset", to_email, "Restablece tu contraseña de menuamano", context)
+        # Same page whether or not the address exists; send failures are only logged. In the
+        # background, sending does not make the answer slower when the account exists.
+        args = ("password_reset", to_email, "Restablece tu contraseña de menuamano", context)
+        if settings.EMAIL_IN_BACKGROUND:
+            threading.Thread(target=send_email, args=args, daemon=True).start()
+        else:
+            send_email(*args)

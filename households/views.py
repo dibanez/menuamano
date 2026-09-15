@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -8,14 +10,17 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from billing import entitlements
+from core import throttle
 from core.emails import send_email
+from diners.models import HealthDataAccess
 
 from . import invitations
-from .forms import AddMemberForm, HouseholdForm, NewHouseholdForm
+from .forms import HouseholdForm, NewHouseholdForm
 from .models import INVITATION_DAYS, Invitation, Membership, Role
 from .permissions import SESSION_KEY, activate_household, household_required
 
 NEW_LINK_SESSION_KEY = "new_invitation_link"
+INVITATION_EMAILS_PER_DAY = 20
 
 
 @login_required
@@ -44,7 +49,6 @@ def switch(request):
 def settings_view(request):
     household = request.household
     form = HouseholdForm(request.POST or None, instance=household, prefix="h")
-    member_form = AddMemberForm(household=household, prefix="m")
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Configuración guardada.")
@@ -52,7 +56,6 @@ def settings_view(request):
     members = household.memberships.select_related("user").order_by("created_at")
     context = {
         "form": form,
-        "member_form": member_form,
         "members": members,
         "roles": Role.choices,
         "invitations": household.invitations.usable(),
@@ -61,23 +64,6 @@ def settings_view(request):
         "invitation_days": INVITATION_DAYS,
     }
     return render(request, "households/settings.html", context)
-
-
-@household_required(Role.ADMIN)
-@require_POST
-def add_member(request):
-    if not entitlements.can_add_member(request.household):
-        messages.error(request, entitlements.member_limit_message())
-        return redirect("households:settings")
-    form = AddMemberForm(request.POST, household=request.household, prefix="m")
-    if form.is_valid():
-        Membership.objects.create(user=form.user, household=request.household, role=form.cleaned_data["role"])
-        messages.success(request, f"{form.user} ya forma parte del hogar.")
-    else:
-        for errors in form.errors.values():
-            for error in errors:
-                messages.error(request, error)
-    return redirect("households:settings")
 
 
 def _admins_left(household, excluding):
@@ -107,7 +93,14 @@ def remove_member(request, pk):
     if member.role == Role.ADMIN and not _admins_left(request.household, member):
         messages.error(request, "No puedes quitar a la última persona administradora.")
     else:
-        member.delete()
+        with transaction.atomic():
+            # Their account stops controlling the household's diners, which pass to the admins,
+            # and nobody keeps access to that health data until an admin grants it again.
+            diners = request.household.diners.filter(linked_user=member.user)
+            HealthDataAccess.objects.filter(diner__in=diners).delete()
+            diners.update(linked_user=None)
+            HealthDataAccess.objects.filter(diner__household=request.household, user=member.user).delete()
+            member.delete()
         messages.success(request, "Miembro eliminado del hogar.")
     return redirect("households:settings")
 
@@ -132,13 +125,19 @@ def invitation_create(request):
         except ValidationError:
             messages.error(request, "El correo no es válido. Revísalo o deja el campo vacío para copiar el enlace.")
             return redirect("households:settings")
+        if not throttle.allow(f"invite:household:{request.household.pk}", INVITATION_EMAILS_PER_DAY, timedelta(days=1)):
+            messages.error(
+                request, "Hoy ya se han enviado muchas invitaciones por correo desde este hogar. Crea el enlace "
+                "sin correo y compártelo tú, o prueba mañana.",
+            )
+            return redirect("households:settings")
     invitation, token = Invitation.issue(request.household, role, request.user, email=email)
     link = request.build_absolute_uri(reverse("households:invitation", args=[token]))
     request.session[NEW_LINK_SESSION_KEY] = link
     if not email:
         messages.success(request, f"Invitación creada. Copia el enlace y compártelo: sirve una vez y caduca en {INVITATION_DAYS} días.")
     elif send_email(
-        "invitation", email, f"Te han invitado a «{request.household.name}» en menuamano",
+        "invitation", email, "Te han invitado a un hogar en menuamano",
         {"household": request.household, "inviter": request.user, "role": invitation.get_role_display(),
          "link": link, "expires_at": invitation.expires_at},
     ):

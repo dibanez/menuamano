@@ -14,7 +14,8 @@ RUN pip install -r requirements.txt \
 
 COPY . .
 
-RUN useradd --create-home --uid 1000 app && chown -R app:app /app
+# The code stays read-only for the app user: it only writes the static files collected at startup.
+RUN useradd --create-home --uid 1000 app && mkdir -p /app/staticfiles && chown app:app /app/staticfiles
 USER app
 
 EXPOSE 8000

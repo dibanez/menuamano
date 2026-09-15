@@ -16,17 +16,25 @@ import json
 import re
 import socket
 import ssl
+import time
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlsplit
 
 MAX_BYTES = 2_000_000
-TIMEOUT_SECONDS = 10
+TIMEOUT_SECONDS = 10  # per network operation
+DEADLINE_SECONDS = 25  # for the whole page, redirects included: a page that trickles in is given up
 MAX_REDIRECTS = 3
 MAX_TEXT = 12_000
 MAX_INGREDIENTS = 60
 MAX_STEPS = 40
 USER_AGENT = "menuamano/1.0 (importador de recetas; +https://www.menuamano.com)"
 REDIRECTS = {301, 302, 303, 307, 308}
+# IPv6 ranges that carry an IPv4 address inside (IPv4-compatible and mapped, NAT64, 6to4, Teredo):
+# the address inside could be a private one, so they are refused.
+EMBEDDED_IPV4_NETWORKS = [
+    ipaddress.ip_network(network)
+    for network in ("::/96", "::ffff:0:0/96", "64:ff9b::/96", "64:ff9b:1::/48", "2002::/16", "2001::/32")
+]
 
 
 class RecipeImportError(Exception):
@@ -55,6 +63,12 @@ def check_url(url):
     return parts
 
 
+def _is_public(address):
+    if not address.is_global:
+        return False
+    return address.version == 4 or not any(address in network for network in EMBEDDED_IPV4_NETWORKS)
+
+
 def public_address(host, port):
     """The address to connect to, only if every address of the name is on the public internet."""
     try:
@@ -62,7 +76,7 @@ def public_address(host, port):
     except (socket.gaierror, UnicodeError):
         raise RecipeImportError("No se encuentra esa página. Revisa el enlace.") from None
     addresses = [ipaddress.ip_address(info[4][0].split("%", 1)[0]) for info in infos]
-    if not addresses or any(not address.is_global for address in addresses):
+    if not addresses or not all(_is_public(address) for address in addresses):
         raise RecipeImportError("Ese enlace no lleva a una página pública de internet.")
     return str(addresses[0])
 
@@ -87,8 +101,34 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = self._tls.wrap_socket(sock, server_hostname=self.host)  # the certificate is still checked
 
 
+def _read(response, deadline):
+    """The body, within MAX_BYTES and before `deadline`."""
+    chunks, size = [], 0
+    while True:
+        if time.monotonic() > deadline:
+            raise RecipeImportError("La página tarda demasiado en responder. Prueba más tarde.")
+        chunk = response.read1(64 * 1024)
+        if not chunk:
+            return b"".join(chunks)
+        size += len(chunk)
+        if size > MAX_BYTES:
+            raise RecipeImportError("La página es demasiado grande para leerla.")
+        chunks.append(chunk)
+
+
+def _decode(body, charset):
+    """The page's text in its declared charset, or UTF-8 when that is unknown or not a text one."""
+    try:
+        return body.decode(charset or "utf-8", errors="replace")
+    except LookupError:
+        return body.decode("utf-8", errors="replace")
+
+
 def fetch_html(url):
+    deadline = time.monotonic() + DEADLINE_SECONDS
     for _ in range(MAX_REDIRECTS + 1):
+        if time.monotonic() > deadline:
+            raise RecipeImportError("La página tarda demasiado en responder. Prueba más tarde.")
         parts = check_url(url)
         secure = parts.scheme == "https"
         port = parts.port or (443 if secure else 80)
@@ -111,10 +151,7 @@ def fetch_html(url):
                 raise RecipeImportError(f"La página no se ha podido abrir (error {response.status}).")
             if "html" not in (response.getheader("Content-Type") or "").lower():
                 raise RecipeImportError("Ese enlace no es una página web con una receta.")
-            body = response.read(MAX_BYTES + 1)
-            if len(body) > MAX_BYTES:
-                raise RecipeImportError("La página es demasiado grande para leerla.")
-            return body.decode(response.headers.get_content_charset() or "utf-8", errors="replace")
+            return _decode(_read(response, deadline), response.headers.get_content_charset())
         except (OSError, http.client.HTTPException) as exc:  # includes timeouts and TLS errors
             raise RecipeImportError("No se ha podido abrir la página. Revisa el enlace o prueba más tarde.") from exc
         finally:
@@ -213,26 +250,30 @@ def _servings(value):
     return None
 
 
+def _schema_recipe(recipe):
+    ingredients = recipe["recipeIngredient"]
+    return {
+        "format": "schema.org",
+        "name": _clean(recipe.get("name"), 120),
+        "description": _clean(recipe.get("description"), 500),
+        "servings": _servings(recipe.get("recipeYield")),
+        "prep_minutes": _minutes(recipe.get("prepTime")),
+        "cook_minutes": _minutes(recipe.get("cookTime")),
+        "ingredients": [_clean(i, 200) for i in (ingredients if isinstance(ingredients, list) else [ingredients])][:MAX_INGREDIENTS],
+        "instructions": _steps(recipe.get("recipeInstructions"))[:MAX_STEPS],
+    }
+
+
 def extract(page):
     parser = _PageParser()
     parser.feed(page)
     for block in parser.json_blocks:
         try:
             recipe = _find_recipe(json.loads(block))
-        except ValueError:
+            if recipe and recipe.get("recipeIngredient"):
+                return _schema_recipe(recipe)
+        except (ValueError, RecursionError):  # malformed or absurdly nested data: try the next block
             continue
-        if recipe and recipe.get("recipeIngredient"):
-            ingredients = recipe["recipeIngredient"]
-            return {
-                "format": "schema.org",
-                "name": _clean(recipe.get("name"), 120),
-                "description": _clean(recipe.get("description"), 500),
-                "servings": _servings(recipe.get("recipeYield")),
-                "prep_minutes": _minutes(recipe.get("prepTime")),
-                "cook_minutes": _minutes(recipe.get("cookTime")),
-                "ingredients": [_clean(i, 200) for i in (ingredients if isinstance(ingredients, list) else [ingredients])][:MAX_INGREDIENTS],
-                "instructions": _steps(recipe.get("recipeInstructions"))[:MAX_STEPS],
-            }
     text = re.sub(r"\s+", " ", " ".join(parser.text)).strip()
     if len(text) < 200:
         raise RecipeImportError("No se ha encontrado ninguna receta en esa página.")

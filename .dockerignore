@@ -5,5 +5,8 @@
 .pytest_cache
 .playwright-mcp
 staticfiles
-.env
-.env.production
+.env*
+!.env.example
+.mcp.json
+.codex
+.claude

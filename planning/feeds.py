@@ -4,6 +4,7 @@ Each meal is an event at a customary time for its meal type. Events carry the re
 many people eat, never who: the link may end up in a third-party calendar.
 """
 
+import re
 from datetime import datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from zoneinfo import ZoneInfo
@@ -28,12 +29,18 @@ MEAL_TIMES = {
 }
 
 
+LINE_BREAKS = re.compile("\r\n|[\r\u2028\u2029]")
+CONTROL_CHARACTERS = re.compile("[\x00-\x08\x0b-\x1f\x7f]")
+
+
 def escape(text):
-    """Escape a TEXT value: backslash, semicolon, comma and line breaks."""
-    return (
-        str(text).replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
-        .replace("\r\n", "\\n").replace("\n", "\\n")
-    )
+    """Escape a TEXT value: backslash, semicolon, comma and every kind of line break.
+
+    Other control characters are dropped: a stray carriage return must never start a new line
+    (and so a new property) in the calendars of the household's members.
+    """
+    text = CONTROL_CHARACTERS.sub("", LINE_BREAKS.sub("\n", str(text)))
+    return text.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
 
 
 def fold(line):

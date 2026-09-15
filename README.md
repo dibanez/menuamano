@@ -152,7 +152,8 @@ volumen con nombre).
    | `GTM_CONTAINER_ID` | No | Tu contenedor de Google Tag Manager (`GTM-…`); vacío por defecto, sin analítica |
    | `GTM_SCOPE`, `COOKIE_CONSENT_BANNER` | No | `public` y `true`: ver «Analítica» |
    | `OPENAI_API_KEY`, `OPENAI_MODEL` | Con `openai` | Clave y modelo |
-   | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS`, `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
+   | `DJANGO_ADMIN_URL` | Recomendada | Ruta del admin de Django (`admin/` por defecto) |
+   | `GUNICORN_WORKERS`, `DJANGO_HSTS_SECONDS` (un año por defecto), `OPENAI_TIMEOUT_SECONDS`… | No | Ajustes finos |
 
 3. En **Domains** añade el dominio para el servicio `menuamano-web`, puerto `8000`, con HTTPS. Dokploy
    añade las etiquetas de Traefik y la red al desplegar; el compose no publica puertos.
@@ -262,8 +263,8 @@ Con `GTM_CONTAINER_ID` se carga tu contenedor de Tag Manager; sin él no se carg
   enlace «Cookies» del pie de la landing. Configura en GTM los tags de Google con la comprobación
   de consentimiento integrada. Si prefieres un CMP (Cookiebot, etc.) dentro de GTM, pon
   `COOKIE_CONSENT_BANNER=false`.
-- **Alcance**: por defecto (`GTM_SCOPE=public`) solo se carga para visitantes sin sesión: landing,
-  acceso, registro y recuperación de contraseña. Dentro de la app los títulos y las rutas contienen
+- **Alcance**: por defecto (`GTM_SCOPE=public`) solo se carga para visitantes sin sesión en la landing,
+  las páginas legales e «Instalar la app». Dentro de la app los títulos y las rutas contienen
   nombres y datos de salud (peso, alergias), así que `GTM_SCOPE=all` solo si tienes base legal y
   configuras GTM para no enviarlos.
 - No se incluye el `<noscript>` de GTM, porque cargaría tags sin consentimiento.

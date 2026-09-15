@@ -68,7 +68,7 @@ def diner_setup(request, pk):
 @household_required(Role.EDITOR)
 def diner_edit(request, pk):
     diner = _diner(request, pk)
-    form = DinerForm(request.POST or None, instance=diner, household=request.household)
+    form = DinerForm(request.POST or None, instance=diner, household=request.household, user=request.user)
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Perfil guardado.")
