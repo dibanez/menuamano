@@ -23,7 +23,7 @@ OG_IMAGE = "img/og-menuamano.png"
 LANDING_TITLE = "menuamano · menú semanal, alergias y lista de la compra"
 LANDING_DESCRIPTION = (
     "Planifica las comidas de casa teniendo en cuenta las alergias de cada persona, con recetas, "
-    "sobras y la lista de la compra con cantidades justas. Gratis para empezar."
+    "sobras y la lista de la compra con cantidades justas. Todas las funciones, gratis."
 )
 # Areas that need an account: never worth crawling.
 PRIVATE_PREFIXES = (
@@ -93,7 +93,8 @@ def landing_faqs(free, premium):
             "question": "¿Qué datos ve la inteligencia artificial?",
             "answer": (
                 "Solo lo necesario para proponer el menú: códigos en lugar de nombres, grupos de edad, restricciones y "
-                "recetas. Nunca nombres, fechas de nacimiento ni pesos."
+                "recetas. Nunca nombres, fechas de nacimiento ni pesos. Con tu propia clave, tu navegador envía esos "
+                "datos directamente a tu proveedor de IA, y menuamano nunca ve la clave."
             ),
         },
         {
