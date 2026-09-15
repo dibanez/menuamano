@@ -27,8 +27,8 @@ CACHE_SECONDS = 24 * 60 * 60
 RETRY_STATUSES = {502, 503, 504}
 RETRY_PAUSE_SECONDS = 1
 FIELDS = (
-    "code,product_name,product_name_es,brands,quantity,stores,allergens_tags,traces_tags,ingredients_text_es,"
-    "ingredients_text"
+    "code,product_name,product_name_es,brands,quantity,stores,allergens_tags,traces_tags,ingredients_tags,"
+    "ingredients_text_es,ingredients_text"
 )
 BARCODE = re.compile(r"^\d{8,14}$")
 
@@ -39,6 +39,14 @@ ALLERGENS = {
     "en:celery": Trait.CELERY, "en:mustard": Trait.MUSTARD, "en:sesame-seeds": Trait.SESAME,
     "en:sulphur-dioxide-and-sulphites": Trait.SULPHITES, "en:lupin": Trait.LUPIN, "en:molluscs": Trait.MOLLUSCS,
 }
+
+# Ingredient tags that mean added sugars, for people with diabetes. Open Food Facts also tags the
+# parent of each ingredient (cane sugar is tagged en:sugar too), so the common ones are enough.
+ADDED_SUGAR_TAGS = frozenset({
+    "en:sugar", "en:added-sugar", "en:glucose", "en:glucose-syrup", "en:glucose-fructose-syrup",
+    "en:fructose-glucose-syrup", "en:fructose", "en:dextrose", "en:invert-sugar", "en:syrup", "en:honey",
+    "en:molasses", "en:caramel",
+})
 
 
 class OpenFoodFactsError(Exception):
@@ -86,7 +94,10 @@ def _product(data):
         "quantity": (data.get("quantity") or "").strip()[:30],  # e.g. «400 g»: tells sizes of one product apart
         "stores": ", ".join(s.strip() for s in (data.get("stores") or "").split(",") if s.strip())[:120],
         "ingredients": (data.get("ingredients_text_es") or data.get("ingredients_text") or "").strip()[:600],
-        "allergens": _traits(allergens),
+        # Added sugars are not an allergen, but the review needs them for people with diabetes.
+        "allergens": sorted(set(_traits(allergens)) | (
+            {str(Trait.ADDED_SUGAR)} if ADDED_SUGAR_TAGS & set(data.get("ingredients_tags") or []) else set()
+        )),
         "traces": _traits(traces),
         # Declared allergens outside the EU list (they are shown, never guessed into a trait).
         "other_allergens": [t.split(":", 1)[-1] for t in allergens + traces if t not in ALLERGENS][:6],

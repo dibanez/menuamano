@@ -6,7 +6,7 @@
   <h1>{{ diner.alias }}</h1>
   <span class="row">
     {% if can_view_health %}<a class="btn small" href="{% url 'diners:weight' diner.pk %}">Seguimiento de peso</a>{% endif %}
-    {% if can_edit %}<a class="btn small" href="{% url 'diners:edit' diner.pk %}">Editar perfil</a>{% endif %}
+    {% if can_edit %}<a class="btn small primary" href="{% url 'diners:setup' diner.pk %}">Configurar</a><a class="btn small" href="{% url 'diners:edit' diner.pk %}">Más datos</a>{% endif %}
   </span>
   <p class="lead">
     {% if diner.age is not None %}{{ diner.age }} años. {% endif %}Ración habitual: {{ diner.portion_factor|num }}.
@@ -17,7 +17,7 @@
 
 <section class="panel">
   <h2>Restricciones obligatorias</h2>
-  <p class="muted small">Alergias, intolerancias y dietas que nunca se relajan. Se comprueban en cada comida.</p>
+  <p class="muted small">Alergias, intolerancias, dietas y diabetes: nunca se relajan y se comprueban en cada comida.</p>
   <ul class="list">
     {% for r in restrictions %}
       <li class="row between">

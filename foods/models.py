@@ -36,6 +36,8 @@ class Trait(models.TextChoices):
     PORK = "pork", "Cerdo"
     ALCOHOL = "alcohol", "Alcohol"
     ANIMAL_ORIGIN = "animal_origin", "Origen animal"
+    # For people with diabetes: sugar, honey, syrups and other sugars added to a food.
+    ADDED_SUGAR = "added_sugar", "Azúcares añadidos"
 
 
 ALLERGEN_TRAITS = frozenset(
@@ -65,6 +67,7 @@ IMPLIED_TRAITS = {
 DIET_PRESETS = {
     "vegetarian": ("Dieta vegetariana", [Trait.MEAT, Trait.FISH, Trait.CRUSTACEANS, Trait.MOLLUSCS]),
     "vegan": ("Dieta vegana", [Trait.ANIMAL_ORIGIN]),
+    "pescatarian": ("Dieta pescetariana", [Trait.MEAT]),
     "no_pork": ("Sin cerdo", [Trait.PORK]),
     "no_alcohol": ("Sin alcohol", [Trait.ALCOHOL]),
 }

@@ -12,7 +12,7 @@ from .models import User
 TERMS_LABEL = "Tengo 14 años o más y acepto las condiciones de uso y la política de privacidad."
 HEALTH_LABEL = (
     "Consiento de forma explícita que menuamano trate los datos de salud que registre (alergias, "
-    "intolerancias, dietas y, si lo uso, el peso) para planificar las comidas, y declaro que tengo "
+    "intolerancias, dietas, diabetes y, si lo uso, el peso) para planificar las comidas, y declaro que tengo "
     "el permiso de las personas cuyos datos introduzca o que soy su representante legal."
 )
 

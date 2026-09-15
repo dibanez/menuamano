@@ -608,3 +608,11 @@ body:has(.tabbar) .consent { bottom: calc(var(--tabbar-h) + env(safe-area-inset-
 .nowrap { white-space: nowrap; }
 .mt-0 { margin-top: 0; }
 .footer-note { color: var(--muted); font-size: 0.85rem; margin-top: 24px; }
+
+/* Diner configurator: one step per screen once app.js takes over. */
+.wizard-count { margin: 0 0 8px; color: var(--muted); font-size: 0.9rem; font-weight: 650; }
+.wizard-step h2:focus { outline: none; }
+.wizard-more { margin-top: 14px; }
+.wizard-more > summary { margin-bottom: 10px; }
+.choice-grid.wide { grid-template-columns: 1fr; }
+@media (min-width: 560px) { .choice-grid.wide { grid-template-columns: 1fr 1fr; } }

@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from core.choices import MealType, Weekday
+from foods.compatibility import LABEL_REMINDER
 from foods.models import DIET_PRESETS
 from households.models import Role
 from households.permissions import household_required
@@ -13,6 +14,7 @@ from . import services
 from .forms import (
     DietPresetForm,
     DinerForm,
+    DinerWizardForm,
     GrantForm,
     PreferencesForm,
     RestrictionsForm,
@@ -35,16 +37,32 @@ def diner_list(request):
     return render(request, "diners/list.html", {"diners": diners})
 
 
+# The configurator's steps and their fields: after a failed save it opens on the first step with errors.
+WIZARD_STEPS = (("alias", "birth_date", "portion"), ("diet", "extras"), ("allergies",), ("intolerances", "ingredients"), ("diabetes",))
+
+
+def _configure(request, diner=None):
+    form = DinerWizardForm(request.POST or None, household=request.household, diner=diner)
+    if request.method == "POST" and form.is_valid():
+        saved = services.save_profile(diner or Diner(household=request.household), form.cleaned_data)
+        if diner is None:
+            messages.success(request, f"{saved.alias} añadido. Se tendrá en cuenta en cada comida en la que esté.")
+        else:
+            messages.success(request, "Perfil guardado. Las comidas previstas se han vuelto a comprobar.")
+        return redirect("diners:detail", saved.pk)
+    start = next((i for i, fields in enumerate(WIZARD_STEPS) if any(f in form.errors for f in fields)), 0)
+    context = {"form": form, "diner": diner, "start_step": start, "label_reminder": LABEL_REMINDER}
+    return render(request, "diners/wizard.html", context)
+
+
 @household_required(Role.EDITOR)
 def diner_create(request):
-    form = DinerForm(request.POST or None, household=request.household)
-    if request.method == "POST" and form.is_valid():
-        diner = form.save(commit=False)
-        diner.household = request.household
-        diner.save()
-        messages.success(request, f"{diner.alias} añadido. Marca ahora sus alergias o restricciones, si las tiene.")
-        return redirect("diners:detail", diner.pk)
-    return render(request, "diners/form.html", {"form": form})
+    return _configure(request)
+
+
+@household_required(Role.EDITOR)
+def diner_setup(request, pk):
+    return _configure(request, _diner(request, pk))
 
 
 @household_required(Role.EDITOR)

@@ -965,3 +965,67 @@ function setUpDeviceKey() {
 }
 
 document.addEventListener("DOMContentLoaded", setUpDeviceKey);
+
+// Diner configurator: one question per screen, and a summary before saving. Without JavaScript
+// every step is on the page and the form is sent as it is.
+function setUpWizard() {
+  const form = document.querySelector("[data-wizard]");
+  if (!form) return;
+  const steps = [...form.querySelectorAll("[data-step]")];
+  const count = form.querySelector("[data-wizard-count]");
+  const back = form.querySelector("[data-wizard-back]");
+  const next = form.querySelector("[data-wizard-next]");
+  const save = form.querySelector("[data-wizard-save]");
+  const summary = form.querySelector("[data-wizard-summary]");
+  let current = 0;
+
+  function answers(step) {
+    const values = [];
+    step.querySelectorAll("input").forEach((input) => {
+      if (input.type === "search" || input.type === "hidden") return;
+      if (input.type === "checkbox" || input.type === "radio") {
+        if (input.checked) values.push(input.closest("label").textContent.trim());
+      } else if (input.value.trim()) {
+        values.push(input.type === "date" ? input.value.split("-").reverse().join("/") : input.value.trim());
+      }
+    });
+    return values;
+  }
+
+  function fillSummary() {
+    summary.replaceChildren(...steps.slice(0, -1).map((step) => {
+      const item = document.createElement("li");
+      const title = document.createElement("strong");
+      title.textContent = `${step.dataset.title}: `;
+      item.append(title, answers(step).join(", ") || "ninguna");
+      return item;
+    }));
+  }
+
+  function show(index, focus = true) {
+    current = index;
+    steps.forEach((step, i) => { step.hidden = i !== index; });
+    back.hidden = index === 0;
+    next.hidden = index === steps.length - 1;
+    save.hidden = index !== steps.length - 1;
+    count.hidden = false;
+    count.textContent = `Paso ${index + 1} de ${steps.length}: ${steps[index].dataset.title}`;
+    if (index === steps.length - 1) fillSummary();
+    if (focus) steps[index].querySelector("h2").focus();
+  }
+
+  const valid = () => [...steps[current].querySelectorAll("input, select, textarea")].every((field) => field.reportValidity());
+
+  next.addEventListener("click", () => { if (valid()) show(current + 1); });
+  back.addEventListener("click", () => show(current - 1));
+  // Enter in a text field moves on instead of saving before the last step.
+  form.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.target.tagName !== "INPUT" || current === steps.length - 1) return;
+    event.preventDefault();
+    next.click();
+  });
+  form.classList.add("is-stepped");
+  show(Math.min(Number(form.dataset.startStep) || 0, steps.length - 1), false);
+}
+
+document.addEventListener("DOMContentLoaded", setUpWizard);

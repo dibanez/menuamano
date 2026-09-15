@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{% if diner %}Configurar {{ diner.alias }}{% else %}Nuevo comensal{% endif %} · menuamano{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{% if diner %}{{ diner.alias }}{% else %}Nuevo comensal{% endif %}</h1>
+  <p class="lead">Unas pocas preguntas. Con las respuestas, menuamano comprueba cada comida en la que esté esta persona.</p>
+</div>
+
+{# app.js shows one step at a time; without JavaScript every step is on the page. #}
+<form method="post" class="wizard" data-wizard data-start-step="{{ start_step }}">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<ul class="errorlist nonfield">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+  <p class="wizard-count" data-wizard-count aria-live="polite" hidden></p>
+
+  <section class="panel wizard-step" data-step data-title="Quién es">
+    <h2 class="mt-0" tabindex="-1">¿Quién es?</h2>
+    {% include "partials/field.html" with field=form.alias %}
+    {% include "partials/field.html" with field=form.birth_date %}
+    <fieldset class="field">
+      <legend>{{ form.portion.label }}</legend>
+      <div class="choice-grid">{% for radio in form.portion %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+      <div class="help">{{ form.portion.help_text }}</div>
+    </fieldset>
+  </section>
+
+  <section class="panel wizard-step" data-step data-title="Alimentación">
+    <h2 class="mt-0" tabindex="-1">¿Qué tipo de alimentación sigue?</h2>
+    <fieldset class="field">
+      <legend class="sr-only">{{ form.diet.label }}</legend>
+      <div class="choice-grid wide">{% for radio in form.diet %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+    </fieldset>
+    <fieldset class="field">
+      <legend>{{ form.extras.label }}</legend>
+      <div class="choice-grid">{% for checkbox in form.extras %}<label class="choice">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% endfor %}</div>
+    </fieldset>
+  </section>
+
+  <section class="panel wizard-step" data-step data-title="Alergias">
+    <h2 class="mt-0" tabindex="-1">¿Tiene alguna alergia?</h2>
+    <p class="muted small">Marca todas las que tenga. Si no tiene ninguna, sigue sin marcar nada.</p>
+    <fieldset class="field">
+      <legend class="sr-only">{{ form.allergies.label }}</legend>
+      <div class="choice-grid">{% for checkbox in form.allergies %}<label class="choice">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% endfor %}</div>
+    </fieldset>
+  </section>
+
+  <section class="panel wizard-step" data-step data-title="Intolerancias">
+    <h2 class="mt-0" tabindex="-1">¿Alguna intolerancia?</h2>
+    <fieldset class="field">
+      <legend class="sr-only">{{ form.intolerances.label }}</legend>
+      <div class="choice-grid wide">{% for checkbox in form.intolerances %}<label class="choice">{{ checkbox.tag }}<span>{{ checkbox.choice_label }}</span></label>{% endfor %}</div>
+    </fieldset>
+    <details class="wizard-more"{% if form.initial.ingredients %} open{% endif %}>
+      <summary class="link-btn">Otro ingrediente que no pueda tomar</summary>
+      {% include "diners/_checklist.html" with field=form.ingredients %}
+    </details>
+  </section>
+
+  <section class="panel wizard-step" data-step data-title="Diabetes">
+    <h2 class="mt-0" tabindex="-1">¿Tiene diabetes?</h2>
+    <fieldset class="field">
+      <legend class="sr-only">{{ form.diabetes.label }}</legend>
+      <div class="choice-grid">{% for radio in form.diabetes %}<label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}</div>
+    </fieldset>
+    <p class="muted small">Con diabetes no se le proponen recetas con azúcares añadidos (azúcar, miel, mermelada, siropes…) y el asistente da prioridad a verduras, legumbres e integrales. menuamano no calcula raciones de hidratos ni sustituye las indicaciones de su equipo médico.</p>
+  </section>
+
+  <section class="panel wizard-step" data-step data-title="Resumen">
+    <h2 class="mt-0" tabindex="-1">Resumen</h2>
+    <ul class="list" data-wizard-summary><li class="muted">Revisa las respuestas y guarda.</li></ul>
+    <p class="muted small">{{ label_reminder }}</p>
+  </section>
+
+  <div class="form-actions wizard-nav">
+    <button class="btn" type="button" data-wizard-back hidden>Atrás</button>
+    <button class="btn primary" type="button" data-wizard-next hidden>Siguiente</button>
+    <button class="btn primary" type="submit" data-wizard-save>{% if diner %}Guardar cambios{% else %}Guardar comensal{% endif %}</button>
+    <a class="btn ghost" href="{% if diner %}{% url 'diners:detail' diner.pk %}{% else %}{% url 'diners:list' %}{% endif %}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

@@ -42,6 +42,9 @@ Rules:
   may only be a plate for the other attendees.
   Avoid recipes whose `review_for` contains an attendee when an alternative exists.
   If no compatible option exists, use mode "pending", no recipes, and explain it in `warnings`.
+- People with "diabetes" in `health` never get added sugars (they are in their restrictions). For them
+  also prefer vegetables, legumes, whole grains and whole fruit, and keep refined starches and sweet
+  dishes moderate. Never give medical advice, carbohydrate counts or doses.
 - Prefer the household's existing recipes (by id). Respect `dislikes` and `likes` when possible.
 - Do not repeat recipes unless the request asks for it: never use a recipe already planned in another
   slot of `slots`, in `recent_recipe_ids` (the two weeks before) or in `upcoming_recipe_ids` (the two

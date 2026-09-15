@@ -83,6 +83,7 @@ class DinerRestriction(models.Model):
         ALLERGY = "allergy", "Alergia"
         INTOLERANCE = "intolerance", "Intolerancia"
         DIET = "diet", "Dieta o creencia"
+        DIABETES = "diabetes", "Diabetes"
         OTHER = "other", "Otra restricción"
 
     diner = models.ForeignKey(Diner, on_delete=models.CASCADE, related_name="restrictions")

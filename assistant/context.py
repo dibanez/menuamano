@@ -72,6 +72,7 @@ def build_context(household, start, end, operation, user_request="", focus=None,
                 "age_group": diner.age_group,
                 "portion": float(diner.portion_factor),
                 "restrictions": sorted(TRAIT_LABELS.get(t, t) for t in rules.traits),
+                "health": sorted({"diabetes" for r in diner.restrictions.all() if r.kind == "diabetes"}),
                 "avoid_ingredients": sorted(rules.ingredient_names),
                 "dislikes": sorted(
                     p.ingredient.name if p.ingredient_id else p.text for p in diner.preferences.all() if p.kind == "dislike"

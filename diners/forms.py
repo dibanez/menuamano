@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from django import forms
 from django.db.models import Case, IntegerField, Value, When
@@ -7,6 +8,7 @@ from accounts.models import User
 from foods.models import DIET_PRESETS, Ingredient, Trait
 
 from .models import Diner, DinerPreference, DinerRestriction, WeightMeasurement
+from .services import ALLERGY_TRAITS, wizard_initial
 
 DATE_WIDGET = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
 
@@ -39,6 +41,75 @@ class DinerForm(forms.ModelForm):
         if value and value > date.today():
             raise forms.ValidationError("La fecha de nacimiento no puede estar en el futuro.")
         return value
+
+
+PORTION_CHOICES = [
+    ("0.50", "Pequeña (niños pequeños)"),
+    ("0.75", "Infantil"),
+    ("1.00", "Normal (adulto)"),
+    ("1.25", "Grande (mucho apetito)"),
+]
+DIET_CHOICES = [
+    ("omnivore", "Come de todo"),
+    ("vegetarian", "Vegetariana (sin carne ni pescado)"),
+    ("vegan", "Vegana (nada de origen animal)"),
+    ("pescatarian", "Pescetariana (sin carne, con pescado)"),
+]
+EXTRA_CHOICES = [("no_pork", "Sin cerdo"), ("no_alcohol", "Sin alcohol")]
+INTOLERANCE_CHOICES = [(Trait.LACTOSE, "Lactosa"), (Trait.GLUTEN, "Gluten (celiaquía o sensibilidad)")]
+DIABETES_CHOICES = [("no", "No"), ("yes", "Sí")]
+
+
+class DinerWizardForm(forms.Form):
+    """The configurator: who the person is, their diet, allergies, intolerances and diabetes."""
+
+    alias = forms.CharField(label="Nombre o alias", max_length=60)
+    birth_date = forms.DateField(
+        label="Fecha de nacimiento", required=False, widget=DATE_WIDGET,
+        help_text="Opcional. Solo se usa para saber la edad; nunca se envía completa a la IA.",
+    )
+    portion = forms.ChoiceField(
+        label="¿Cuánto suele comer?", widget=forms.RadioSelect,
+        help_text="Sirve para calcular las cantidades de la compra.",
+    )
+    diet = forms.ChoiceField(label="Tipo de alimentación", choices=DIET_CHOICES, widget=forms.RadioSelect)
+    extras = forms.MultipleChoiceField(
+        label="Además", choices=EXTRA_CHOICES, required=False, widget=forms.CheckboxSelectMultiple,
+    )
+    allergies = forms.MultipleChoiceField(
+        label="Alergias", choices=[(t, Trait(t).label) for t in ALLERGY_TRAITS], required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    intolerances = forms.MultipleChoiceField(
+        label="Intolerancias", choices=INTOLERANCE_CHOICES, required=False, widget=forms.CheckboxSelectMultiple,
+    )
+    ingredients = forms.ModelMultipleChoiceField(
+        label="Otros ingredientes que no puede tomar", queryset=Ingredient.objects.none(), required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+    diabetes = forms.ChoiceField(label="Diabetes", choices=DIABETES_CHOICES, widget=forms.RadioSelect)
+
+    def __init__(self, *args, household, diner=None, **kwargs):
+        initial = wizard_initial(diner) if diner else {"portion": "1.00", "diet": "omnivore", "diabetes": "no"}
+        kwargs.setdefault("initial", initial)
+        super().__init__(*args, **kwargs)
+        portions = list(PORTION_CHOICES)
+        if initial["portion"] not in dict(portions):  # a custom size set in «Más datos»
+            number = initial["portion"].rstrip("0").rstrip(".").replace(".", ",")
+            portions.append((initial["portion"], f"La actual: {number}"))
+        self.fields["portion"].choices = portions
+        self.fields["ingredients"].queryset = selected_first(
+            Ingredient.objects.for_household(household), initial.get("ingredients", [])
+        )
+
+    def clean_birth_date(self):
+        value = self.cleaned_data.get("birth_date")
+        if value and value > date.today():
+            raise forms.ValidationError("La fecha de nacimiento no puede estar en el futuro.")
+        return value
+
+    def clean_portion(self):
+        return Decimal(self.cleaned_data["portion"])
 
 
 class RestrictionsForm(forms.Form):

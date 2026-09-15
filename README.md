@@ -17,7 +17,8 @@ móvil, y se instala como una app desde el navegador.
 
 - **Calendario** de desayunos, comidas, meriendas y cenas, con quién come en cada una, reglas
   recurrentes («cena fuera los viernes») y excepciones.
-- **Comensales** con alergias, intolerancias, dietas, gustos y tamaño de ración. Cada receta se
+- **Comensales** configurados en unas pocas preguntas: dieta (vegetariana, vegana, pescetariana…),
+  alergias, intolerancias, diabetes (sin azúcares añadidos), gustos y tamaño de ración. Cada receta se
   comprueba con quien la come; si falta información de un ingrediente, queda «pendiente de
   revisión» en vez de darse por segura.
 - **Recetario** con versiones y favoritas, sobras y platos distintos por persona en la misma comida.

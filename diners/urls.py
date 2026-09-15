@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.diner_list, name="list"),
     path("nuevo/", views.diner_create, name="create"),
     path("<int:pk>/", views.diner_detail, name="detail"),
+    path("<int:pk>/configurar/", views.diner_setup, name="setup"),
     path("<int:pk>/editar/", views.diner_edit, name="edit"),
     path("<int:pk>/restricciones/", views.restrictions_save, name="restrictions_save"),
     path("<int:pk>/restricciones/dieta/", views.preset_add, name="preset_add"),

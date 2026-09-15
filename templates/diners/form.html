@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <h1>{% if diner %}Editar {{ diner.alias }}{% else %}Nuevo comensal{% endif %}</h1>
-  <p class="lead">Las alergias y restricciones se añaden en el siguiente paso, en el perfil.</p>
+  <p class="lead">Altura, observaciones y cuenta vinculada. La dieta, las alergias, las intolerancias y la diabetes se cambian en «Configurar».</p>
 </div>
 <form method="post" class="panel">
   {% csrf_token %}

@@ -48,11 +48,12 @@ def test_main_flow(client):
     household.save()
 
     # Diners, one with an egg allergy.
-    for alias, portion in [("Marta", "1"), ("Jon", "1"), ("Iker", "0.5")]:
-        client.post(reverse("diners:create"), {"alias": alias, "portion_factor": portion, "is_active": "on"})
+    for alias, portion, allergies in [("Marta", "1.00", []), ("Jon", "1.00", []), ("Iker", "0.50", ["egg"])]:
+        client.post(reverse("diners:create"), {
+            "alias": alias, "portion": portion, "diet": "omnivore", "allergies": allergies, "diabetes": "no",
+        })
     iker = Diner.objects.get(household=household, alias="Iker")
-    client.post(reverse("diners:restrictions_save", args=[iker.pk]), {"r-kind": "allergy", "r-traits": ["egg"]})
-    assert iker.restrictions.count() == 1
+    assert list(iker.restrictions.values_list("trait", "kind")) == [("egg", "allergy")]
 
     # Recipes.
     client.post(reverse("recipes:create"), recipe_payload("Arroz con verduras", [("Arroz", "400", "g"), ("Calabacín", "2", "unit")]))
