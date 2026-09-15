@@ -56,7 +56,8 @@ def _price(label):
 
 def landing_faqs(free, premium):
     ai_answer = (
-        "Sí, con tu propia clave de OpenAI, Anthropic (Claude), Google Gemini, Mistral u OpenRouter. La clave se "
+        "Sí, entero: propone menús y cambios, crea recetas e importa las de cualquier web. Funciona con tu propia "
+        "clave de OpenAI, Anthropic (Claude), Google Gemini, Mistral u OpenRouter. La clave se "
         "guarda solo en tu dispositivo, que la envía directamente a tu proveedor, y el uso te lo cobra él. "
         f"Con Premium no hace falta clave: incluye {premium.ai_monthly_limit} peticiones al mes."
     )

@@ -18,7 +18,7 @@
     <p class="mt-0">Peticiones al asistente con IA este mes: <strong>{{ usage.ai_calls }} de {{ usage.ai_limit }}</strong>. El cupo se renueva el día 1.</p>
     <div class="progress" role="progressbar" aria-label="Uso del asistente este mes" aria-valuemin="0" aria-valuemax="{{ usage.ai_limit }}" aria-valuenow="{{ usage.ai_calls }}"><span style="width:{% widthratio usage.ai_calls usage.ai_limit 100 %}%"></span></div>
   {% else %}
-    <p class="mt-0">Asistente con IA: con tu propia clave, guardada solo en cada dispositivo. <a href="{% url 'assistant:device_key' %}">Configurar la IA en este dispositivo</a></p>
+    <p class="mt-0">Asistente con IA: propone menús y cambios, crea recetas e importa las de cualquier web, con tu propia clave guardada solo en cada dispositivo. <a href="{% url 'assistant:device_key' %}">Configurar la IA en este dispositivo</a></p>
   {% endif %}
 </section>
 
@@ -46,7 +46,6 @@
   <ul class="plan-features">
     <li>Asistente con IA incluido, sin crear ni guardar claves en cada dispositivo</li>
     <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes para todo el hogar</li>
-    <li>Propone menús, alternativas y recetas, e importa recetas de cualquier web: todo lo revisas antes de aplicarlo</li>
   </ul>
   {% if is_household_admin and billing_enabled %}
     <div class="grid-2">

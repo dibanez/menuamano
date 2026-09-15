@@ -133,7 +133,8 @@
           <li>Comensales ilimitados, con alergias y gustos</li>
           <li>Recetario, sobras y lista de la compra automática</li>
           <li>Despensa, recordatorios en el móvil y el menú en tu calendario</li>
-          <li>Asistente con IA con tu propia clave (OpenAI, Claude, Gemini, Mistral u OpenRouter), guardada solo en tu dispositivo</li>
+          <li>Asistente con IA: propone menús y cambios que revisas antes de aplicar, crea recetas y pasa a tu recetario las de cualquier web</li>
+          <li>Con tu propia clave de IA (OpenAI, Claude, Gemini, Mistral u OpenRouter), guardada solo en tu dispositivo</li>
           <li>Hasta {{ free.max_members }} personas con cuenta y todos los hogares que necesites</li>
         </ul>
         <a class="btn block" href="{% url 'accounts:signup' %}">Empezar gratis</a>
@@ -145,7 +146,6 @@
         <ul class="plan-features">
           <li>Todo lo del plan gratuito</li>
           <li>Asistente con IA incluido, sin configurar claves</li>
-          <li>Propone menús y cambios que revisas antes de aplicar, y pasa a tu recetario recetas de cualquier web</li>
           <li>Hasta {{ premium.ai_monthly_limit }} peticiones al asistente al mes</li>
         </ul>
         <a class="btn primary block" href="{% url 'accounts:signup' %}">Probar menuamano</a>

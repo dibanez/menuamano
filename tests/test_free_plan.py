@@ -25,6 +25,8 @@ def test_plans_say_everything_is_free(billing_on, client, db):
     landing = client.get("/").content.decode()
     assert "Todas las funciones, gratis" in landing and "todos los hogares que necesites" in landing
     assert "tu propia clave" in landing and "sin configurar claves" in landing
+    free_plan = landing[landing.index("<h3>Gratis</h3>"):landing.index("Empezar gratis")]
+    assert "propone menús y cambios" in free_plan and "las de cualquier web" in free_plan
     terms = client.get(reverse("core:legal_page", args=["condiciones"])).content.decode()
     assert "todos los hogares que se necesiten" in terms and "menuamano no la recibe ni la guarda" in terms
     privacy = client.get(reverse("core:legal_page", args=["privacidad"])).content.decode()
