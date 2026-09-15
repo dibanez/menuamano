@@ -38,11 +38,11 @@ def diner_list(request):
 
 
 # The configurator's steps and their fields: after a failed save it opens on the first step with errors.
-WIZARD_STEPS = (("alias", "birth_date", "portion"), ("diet", "extras"), ("allergies",), ("intolerances", "ingredients"), ("diabetes",))
+WIZARD_STEPS = (("alias", "linked_user", "birth_date", "portion"), ("diet", "extras"), ("allergies",), ("intolerances", "ingredients"), ("diabetes",))
 
 
 def _configure(request, diner=None):
-    form = DinerWizardForm(request.POST or None, household=request.household, diner=diner)
+    form = DinerWizardForm(request.POST or None, household=request.household, diner=diner, user=request.user)
     if request.method == "POST" and form.is_valid():
         saved = services.save_profile(diner or Diner(household=request.household), form.cleaned_data)
         if diner is None:

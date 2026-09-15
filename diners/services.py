@@ -52,6 +52,7 @@ def wizard_initial(diner):
         "intolerances": intolerances,
         "ingredients": [r.ingredient_id for r in diner.restrictions.all() if r.ingredient_id],
         "diabetes": "yes" if Trait.ADDED_SUGAR in traits else "no",
+        "linked_user": diner.linked_user_id,
     }
 
 
@@ -86,6 +87,8 @@ def save_profile(diner, data):
     wanted = _wanted_restrictions(data)
     ingredients = {i.pk: i for i in data["ingredients"]}
     diner.alias, diner.birth_date, diner.portion_factor = data["alias"], data["birth_date"], data["portion"]
+    if "linked_user" in data:
+        diner.linked_user = data["linked_user"]
     with transaction.atomic(), batch_restriction_changes(diner.household):
         diner.save()
         for restriction in diner.restrictions.order_by("pk"):

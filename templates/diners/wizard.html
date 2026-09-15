@@ -15,6 +15,7 @@
   <section class="panel wizard-step" data-step data-title="Quién es">
     <h2 class="mt-0" tabindex="-1">¿Quién es?</h2>
     {% include "partials/field.html" with field=form.alias %}
+    {% include "partials/field.html" with field=form.linked_user %}
     {% include "partials/field.html" with field=form.birth_date %}
     <fieldset class="field">
       <legend>{{ form.portion.label }}</legend>

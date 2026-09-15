@@ -989,6 +989,9 @@ function setUpWizard() {
         values.push(input.type === "date" ? input.value.split("-").reverse().join("/") : input.value.trim());
       }
     });
+    step.querySelectorAll("select").forEach((select) => {
+      if (select.value) values.push(`cuenta de ${select.selectedOptions[0].textContent.trim()}`);
+    });
     return values;
   }
 

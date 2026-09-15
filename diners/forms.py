@@ -88,11 +88,32 @@ class DinerWizardForm(forms.Form):
         widget=forms.CheckboxSelectMultiple,
     )
     diabetes = forms.ChoiceField(label="Diabetes", choices=DIABETES_CHOICES, widget=forms.RadioSelect)
+    linked_user = forms.ModelChoiceField(
+        label="Cuenta en menuamano", queryset=User.objects.none(), required=False, empty_label="Sin cuenta",
+        help_text="Si esta persona tiene cuenta, podrá gestionar quién ve su historial de peso.",
+    )
 
-    def __init__(self, *args, household, diner=None, **kwargs):
-        initial = wizard_initial(diner) if diner else {"portion": "1.00", "diet": "omnivore", "diabetes": "no"}
+    def __init__(self, *args, household, diner=None, user=None, **kwargs):
+        if diner:
+            initial = wizard_initial(diner)
+        else:
+            initial = {"portion": "1.00", "diet": "omnivore", "diabetes": "no"}
+            # The first diner a person creates is usually themselves: their account comes linked.
+            if user is not None and not household.diners.filter(linked_user=user).exists():
+                initial["linked_user"] = user.pk
+                if user.display_name:
+                    initial["alias"] = user.display_name
         kwargs.setdefault("initial", initial)
         super().__init__(*args, **kwargs)
+        # Members whose account is not linked to another diner of this household yet.
+        taken = household.diners.exclude(pk=diner.pk if diner else None).exclude(linked_user=None)
+        self.fields["linked_user"].queryset = (
+            User.objects.filter(memberships__household=household)
+            .exclude(pk__in=taken.values_list("linked_user", flat=True)).order_by("email")
+        )
+        self.fields["linked_user"].label_from_instance = (
+            lambda member: f"{member} (tú)" if user is not None and member.pk == user.pk else str(member)
+        )
         portions = list(PORTION_CHOICES)
         if initial["portion"] not in dict(portions):  # a custom size set in «Más datos»
             number = initial["portion"].rstrip("0").rstrip(".").replace(".", ",")

@@ -8,6 +8,7 @@ from django.urls import reverse
 from assistant.context import build_context
 from core.choices import MealType
 from diners import services
+from diners.forms import DinerWizardForm
 from diners.models import Diner, DinerRestriction
 from foods import openfoodfacts
 from foods.models import Trait
@@ -67,6 +68,7 @@ def test_the_configurator_opens_with_what_the_diner_has(logged, household):
     assert services.wizard_initial(leo) == {
         "alias": "Leo", "birth_date": None, "portion": "1.00", "diet": "vegan", "extras": ["no_alcohol"],
         "allergies": ["sesame"], "intolerances": ["gluten"], "ingredients": [], "diabetes": "yes",
+        "linked_user": None,
     }
     before = sorted(leo.restrictions.values_list("pk", flat=True))
     services.save_profile(leo, profile(**{k: v for k, v in services.wizard_initial(leo).items() if k != "portion"}))
@@ -121,6 +123,39 @@ def test_a_wrong_answer_reopens_its_step(logged, household):
     page = logged.post(reverse("diners:create"), answers(diet="keto")).content.decode()
     assert 'data-start-step="1"' in page
     assert not Diner.objects.filter(alias="Leo").exists()
+
+
+def test_your_first_diner_comes_linked_to_your_account(logged, household, admin_user):
+    admin_user.display_name = "Ana"
+    admin_user.save()
+    form = DinerWizardForm(household=household, user=admin_user)
+    assert form.initial["linked_user"] == admin_user.pk and form.initial["alias"] == "Ana"
+    assert "Ana (tú)" in logged.get(reverse("diners:create")).content.decode()
+    logged.post(reverse("diners:create"), answers(alias="Ana", linked_user=admin_user.pk))
+    assert Diner.objects.get(alias="Ana").linked_user == admin_user
+
+    # Once linked, the next diner starts without an account, and yours is no longer offered.
+    form = DinerWizardForm(household=household, user=admin_user)
+    assert "linked_user" not in form.initial and admin_user not in form.fields["linked_user"].queryset
+    logged.post(reverse("diners:create"), answers(alias="Leo"))
+    assert Diner.objects.get(alias="Leo").linked_user is None
+
+
+def test_only_members_of_the_household_can_be_linked(logged, household):
+    outsider = make_user("fuera@example.com")
+    page = logged.post(reverse("diners:create"), answers(linked_user=outsider.pk)).content.decode()
+    assert 'data-start-step="0"' in page and not Diner.objects.filter(alias="Leo").exists()
+
+
+def test_editing_keeps_the_link_to_the_account(logged, household, admin_user):
+    ana = make_diner(household, "Ana")
+    ana.linked_user = admin_user
+    ana.save()
+    form = DinerWizardForm(household=household, diner=ana, user=admin_user)
+    assert form.initial["linked_user"] == admin_user.pk and admin_user in form.fields["linked_user"].queryset
+    logged.post(reverse("diners:setup", args=[ana.pk]), answers(alias="Ana", linked_user=admin_user.pk, allergies=["egg"]))
+    ana.refresh_from_db()
+    assert ana.linked_user == admin_user and restrictions(ana) == {("egg", "allergy")}
 
 
 def test_readers_cannot_configure_diners(client, household):
