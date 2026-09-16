@@ -8,6 +8,7 @@
 """
 
 import logging
+import re
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -229,43 +230,87 @@ def _summary(summary, notes):
 # --- Validation ---------------------------------------------------------------------------------
 
 
-def _match_ingredient(household, name):
+def _singular(word):
+    if word.endswith("es") and len(word) > 4:
+        return word[:-2]
+    if word.endswith("s") and len(word) > 3:
+        return word[:-1]
+    return word
+
+
+def _ingredient_index(household):
+    """Every name and alias the household can use, normalised."""
+    index = {}
+    for ingredient in Ingredient.objects.for_household(household):
+        index.setdefault(ingredient.normalized_name, ingredient)
+        for alias in ingredient.aliases:
+            index.setdefault(normalize_name(alias), ingredient)
+    return index
+
+
+def _match_ingredient(household, name, index=None):
+    """The ingredient behind a name the AI wrote, or None when it is a new one.
+
+    Plurals and an extra word at the end are tolerated («pimiento verde italiano» is the
+    catalogue's «pimiento verde»), because they do not change what the food contains. A word that
+    does change it never matches: «leche sin lactosa» is not «leche», and a one-word name is never
+    matched by its beginning, so «leche de avena» stays a new ingredient.
+    """
     key = normalize_name(name)
     if not key:
         return None
-    candidates = Ingredient.objects.for_household(household)
-    found = candidates.filter(normalized_name=key).first()
-    if found:
-        return found
-    for ingredient in candidates.exclude(aliases=[]):
-        if key in {normalize_name(a) for a in ingredient.aliases}:
-            return ingredient
-    return None
+    index = _ingredient_index(household) if index is None else index
+    words = key.split()
+    for variant in (key, " ".join([*words[:-1], _singular(words[-1])])):
+        if variant in index:
+            return index[variant]
+    best = ""
+    for other in index:
+        if len(other.split()) < 2 or not key.startswith(f"{other} ") or key[len(other) + 1:].startswith("sin "):
+            continue
+        if len(other) > len(best):
+            best = other
+    return index[best] if best else None
+
+
+PAIR = re.compile(r"\s+y\s+", re.IGNORECASE)
+
+
+def _split_pair(household, name, index):
+    """«Sal y pimienta» → the two ingredients, when both are known. Otherwise the name as it is."""
+    parts = PAIR.split(name)
+    if len(parts) != 2:
+        return [name]
+    found = [_match_ingredient(household, part, index) for part in parts]
+    return found if all(found) else [name]
 
 
 def _validate_new_recipe(household, raw):
     problems = []
     lines = []
+    index = _ingredient_index(household)
     for line in raw.ingredients[:MAX_INGREDIENTS]:
         name = line.name.strip()[:100]
         if not name:
             continue
-        ingredient = _match_ingredient(household, name)
+        ingredient = _match_ingredient(household, name, index)
         quantity = None
         if line.quantity is not None:
             if line.quantity < 0 or line.quantity > 100000:
                 problems.append(f"Cantidad no válida para {name}.")
                 continue
             quantity = str(Decimal(str(line.quantity)).quantize(Decimal("0.001")))
-        lines.append(
-            {
-                "name": ingredient.name if ingredient else name,
-                "ingredient_id": ingredient.pk if ingredient else None,
-                "quantity": quantity,
-                "unit": line.unit if line.unit in Unit.values else Unit.G,
-                "optional": bool(line.optional),
-            }
-        )
+        unit = line.unit if line.unit in Unit.values else Unit.G
+        for part in _split_pair(household, name, index) if ingredient is None else [ingredient or name]:
+            lines.append(
+                {
+                    "name": part.name if hasattr(part, "name") else part,
+                    "ingredient_id": part.pk if hasattr(part, "pk") else None,
+                    "quantity": quantity,
+                    "unit": unit,
+                    "optional": bool(line.optional),
+                }
+            )
     steps = [s.strip()[:1000] for s in raw.steps if s.strip()][:MAX_STEPS]
     if not lines:
         problems.append("La receta no tiene ingredientes válidos.")
@@ -706,13 +751,21 @@ def _create_recipe(household, user, data):
 
 
 def _is_stale(proposal):
+    """True when a meal this proposal would change has changed since it was generated.
+
+    Only the slots it touches count: a proposal that just brings a recipe (imported or generated)
+    never goes stale because the week moved on.
+    """
+    slots = {f"{item['date']}|{item['meal_type']}" for item in proposal.items}
+    if not slots:
+        return False
     current = {
         planning.slot_key(m.date, m.meal_type): m.version
         for m in Meal.objects.filter(
             household=proposal.household, date__gte=proposal.start_date, date__lte=proposal.end_date
         )
     }
-    return current != proposal.base_versions
+    return any(current.get(slot) != proposal.base_versions.get(slot) for slot in slots)
 
 
 def apply_proposal(proposal, user, accepted_review=()):
